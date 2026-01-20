@@ -37,18 +37,23 @@ export const getTranslations = async () => {
 }
 
 // Save translations to storage (and Firebase if configured)
-export const saveTranslations = async (translations) => {
+export const saveTranslations = async (translations, firebaseOnly = false) => {
   try {
     // Try to save to Firebase first (if configured)
     try {
       await saveToFirebase(translations)
     } catch (firebaseError) {
-      // Firebase not configured or error - continue with localStorage
-      console.log('Firebase not available, using localStorage')
+      // Firebase not configured or error
+      console.log('Firebase not available:', firebaseError.message)
+      if (firebaseOnly) {
+        throw firebaseError
+      }
     }
 
-    // Also save to localStorage as backup
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(translations))
+    // Also save to localStorage as backup (unless we only want Firebase)
+    if (!firebaseOnly) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(translations))
+    }
 
     return { success: true }
   } catch (error) {

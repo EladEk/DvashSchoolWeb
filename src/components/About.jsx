@@ -1,4 +1,5 @@
 import { useTranslation } from '../contexts/TranslationContext'
+import EditableText from './EditableText'
 import './About.css'
 
 const About = () => {
@@ -7,22 +8,50 @@ const About = () => {
   return (
     <section id="about" className="about">
       <div className="container">
-        <h2 className="section-title">{t('about.title')}</h2>
+        <h2 className="section-title">
+          <EditableText translationKey="about.title">
+            {t('about.title')}
+          </EditableText>
+        </h2>
         <div className="about-content">
           <div className="about-text">
-            <h3>{t('about.background')}</h3>
-            <p>{t('about.text1')}</p>
-            <p>{t('about.text2')}</p>
+            <h3>
+              <EditableText translationKey="about.background">
+                {t('about.background')}
+              </EditableText>
+            </h3>
+            <p>
+              <EditableText translationKey="about.text1">
+                {t('about.text1')}
+              </EditableText>
+            </p>
+            <p>
+              <EditableText translationKey="about.text2">
+                {t('about.text2')}
+              </EditableText>
+            </p>
           </div>
           <div className="about-images">
             <div className="image-placeholder">
-              <p>{t('about.image1')}</p>
+              <p>
+                <EditableText translationKey="about.image1">
+                  {t('about.image1')}
+                </EditableText>
+              </p>
             </div>
             <div className="image-placeholder">
-              <p>{t('about.image2')}</p>
+              <p>
+                <EditableText translationKey="about.image2">
+                  {t('about.image2')}
+                </EditableText>
+              </p>
             </div>
             <div className="image-placeholder">
-              <p>{t('about.image3')}</p>
+              <p>
+                <EditableText translationKey="about.image3">
+                  {t('about.image3')}
+                </EditableText>
+              </p>
             </div>
           </div>
         </div>

@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { useAdmin } from './contexts/AdminContext'
 import Header from './components/Header'
 import Footer from './components/Footer'
+import AdminIndicator from './components/AdminIndicator'
 import Home from './pages/Home'
 import FAQ from './pages/FAQ'
 import ContactPage from './pages/ContactPage'
@@ -9,10 +11,13 @@ import AdminDashboard from './pages/AdminDashboard'
 import AdminRoute from './components/AdminRoute'
 import './App.css'
 
-function App() {
+function AppContent() {
+  const { isAdminMode } = useAdmin()
+
   return (
     <Router>
-      <div className="App">
+      <div className={`App ${isAdminMode ? 'admin-mode' : ''}`}>
+        <AdminIndicator />
         <Header />
         <Routes>
           <Route path="/" element={<Home />} />
@@ -33,6 +38,10 @@ function App() {
       </div>
     </Router>
   )
+}
+
+function App() {
+  return <AppContent />
 }
 
 export default App

@@ -4,6 +4,11 @@
   position: sticky;
   top: 0;
   z-index: 1000;
+  border-bottom: 1px solid var(--light-gray);
+}
+
+.header-main {
+  border-bottom: 1px solid var(--light-gray);
 }
 
 .header-container {
@@ -13,6 +18,43 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.subtitle-nav-wrapper {
+  background-color: var(--white);
+  border-bottom: 1px solid var(--light-gray);
+}
+
+.subtitle-nav {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.75rem 2rem;
+}
+
+.subtitle-nav-list {
+  display: flex;
+  list-style: none;
+  gap: 2rem;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+}
+
+.subtitle-nav-list li a {
+  color: var(--text-color);
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
+  transition: color 0.3s ease;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.subtitle-nav-list li a:hover {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
 }
 
 .logo h1 {
@@ -97,5 +139,19 @@
     gap: 1rem;
     align-items: flex-start;
     width: 100%;
+  }
+
+  .subtitle-nav {
+    padding: 0.5rem 1rem;
+  }
+
+  .subtitle-nav-list {
+    gap: 1rem;
+    font-size: 0.9rem;
+  }
+
+  .subtitle-nav-list li a {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
   }
 }

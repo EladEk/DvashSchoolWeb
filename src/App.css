@@ -3,3 +3,13 @@
   display: flex;
   flex-direction: column;
 }
+
+.App.admin-mode {
+  padding-top: 60px;
+}
+
+@media (max-width: 768px) {
+  .App.admin-mode {
+    padding-top: 100px;
+  }
+}

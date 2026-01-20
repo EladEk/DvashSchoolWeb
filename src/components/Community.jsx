@@ -1,4 +1,5 @@
 import { useTranslation } from '../contexts/TranslationContext'
+import EditableText from './EditableText'
 import './Community.css'
 
 const Community = () => {
@@ -9,8 +10,16 @@ const Community = () => {
       <div className="container">
         <div className="community-content">
           <div className="community-text">
-            <h2 className="section-title">{t('community.title')}</h2>
-            <p>{t('community.text')}</p>
+            <h2 className="section-title">
+              <EditableText translationKey="community.title">
+                {t('community.title')}
+              </EditableText>
+            </h2>
+            <p>
+              <EditableText translationKey="community.text">
+                {t('community.text')}
+              </EditableText>
+            </p>
           </div>
         </div>
       </div>

@@ -1,0 +1,44 @@
+.edit-button {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  background-color: var(--primary-color);
+  color: var(--white);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.edit-button:hover {
+  transform: scale(1.1);
+  background-color: var(--secondary-color);
+}
+
+.admin-mode .editable-text {
+  position: relative;
+}
+
+.admin-mode .editable-text:hover .edit-button {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .edit-button {
+    opacity: 1;
+    width: 28px;
+    height: 28px;
+  }
+}
