@@ -32,43 +32,55 @@ export const getDefaultTranslations = async () => {
 
 // Load translations from storage or fallback to default (optimized for speed)
 export const getTranslations = async (skipFirebase = false) => {
-  // Return cached translations if available (for quick access)
+  // Return cached translations if available (for quick access) - but only if skipFirebase
+  // If not skipping Firebase, we want fresh data
   if (translationsCache && skipFirebase) {
     return translationsCache
   }
 
   try {
-    // Try to load from localStorage first (fastest)
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      translationsCache = parsed
-      return parsed
-    }
-
-    // Try Firebase only if not skipped (can be slow)
+    // Try Firebase first if not skipped (most up-to-date source)
     if (!skipFirebase) {
       try {
         // Add timeout for Firebase operations
         const firebasePromise = loadFromFirebase()
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Firebase timeout')), 2000)
+          setTimeout(() => reject(new Error('Firebase timeout')), 5000)
         )
         
         const firebaseTranslations = await Promise.race([firebasePromise, timeoutPromise])
-        if (firebaseTranslations) {
+        if (firebaseTranslations && (firebaseTranslations.he || firebaseTranslations.en)) {
+          // Update cache and localStorage with Firebase data
           translationsCache = firebaseTranslations
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(firebaseTranslations))
+          console.log('✅ Loaded translations from Firebase')
           return firebaseTranslations
         }
       } catch (firebaseError) {
-        // Firebase timeout or error - continue to defaults
+        // Firebase timeout or error - continue to localStorage/defaults
         console.log('Firebase not available or timeout:', firebaseError.message)
+      }
+    }
+
+    // Try to load from localStorage (fallback if Firebase failed or skipped)
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        if (parsed && (parsed.he || parsed.en)) {
+          translationsCache = parsed
+          console.log('✅ Loaded translations from localStorage')
+          return parsed
+        }
+      } catch (parseError) {
+        console.error('Error parsing localStorage translations:', parseError)
       }
     }
 
     // Fallback to default translations (cached)
     const defaults = await getDefaultTranslations()
     translationsCache = defaults
+    console.log('✅ Loaded default translations')
     return defaults
   } catch (error) {
     console.error('Error loading translations:', error)
@@ -137,25 +149,55 @@ export const exportTranslations = (translations) => {
   }, 100)
 }
 
+// Deep merge function to properly merge nested objects
+const deepMerge = (target, source) => {
+  if (!source || typeof source !== 'object') {
+    return target
+  }
+  
+  const result = { ...target }
+  
+  for (const key in source) {
+    if (source.hasOwnProperty(key)) {
+      if (
+        source[key] &&
+        typeof source[key] === 'object' &&
+        !Array.isArray(source[key]) &&
+        target[key] &&
+        typeof target[key] === 'object' &&
+        !Array.isArray(target[key])
+      ) {
+        // Recursively merge nested objects
+        result[key] = deepMerge(target[key], source[key])
+      } else {
+        // Overwrite with source value (or set if doesn't exist)
+        result[key] = source[key]
+      }
+    }
+  }
+  
+  return result
+}
+
 // Load translations from Firebase (when configured)
 export const loadFromFirebase = async () => {
   try {
-    // Import Firebase services
-    const { db } = await import('./firebase')
-    const { doc, getDoc } = await import('firebase/firestore')
+    const { loadTranslationsFromDB } = await import('./firebaseDB')
+    const firebaseData = await loadTranslationsFromDB()
     
-    if (!db) {
-      return null
-    }
-    
-    const heDoc = await getDoc(doc(db, 'translations', 'he'))
-    const enDoc = await getDoc(doc(db, 'translations', 'en'))
-    
-    if (heDoc.exists() || enDoc.exists()) {
-      return {
-        he: heDoc.exists() ? heDoc.data() : {},
-        en: enDoc.exists() ? enDoc.data() : {}
+    if (firebaseData) {
+      console.log('📥 Raw Firebase data:', firebaseData)
+      // Deep merge with defaults to ensure all keys exist
+      const defaults = await getDefaultTranslations()
+      const merged = {
+        he: deepMerge(defaults.he || {}, firebaseData.he || {}),
+        en: deepMerge(defaults.en || {}, firebaseData.en || {})
       }
+      console.log('📥 Merged translations (sample):', {
+        'he.hero': merged.he?.hero,
+        'en.hero': merged.en?.hero
+      })
+      return merged
     }
     
     return null
@@ -232,13 +274,7 @@ const getNestedValue = (obj, path) => {
 // Save only changed translations to Firebase (optimized)
 export const saveToFirebase = async (translations, onlyChanged = true) => {
   try {
-    // Import Firebase services
-    const { db } = await import('./firebase')
-    const { doc, updateDoc, setDoc } = await import('firebase/firestore')
-    
-    if (!db) {
-      throw new Error('Firebase not configured')
-    }
+    const { saveAllTranslationsToDB } = await import('./firebaseDB')
     
     if (onlyChanged) {
       loadChangedKeys()
@@ -248,48 +284,19 @@ export const saveToFirebase = async (translations, onlyChanged = true) => {
         return { success: true, skipped: true }
       }
       
-      // Build update objects with only changed fields
-      const heUpdates = {}
-      const enUpdates = {}
-      
-      for (const key of changedKeys) {
-        const heValue = getNestedValue(translations.he, key)
-        const enValue = getNestedValue(translations.en, key)
-        
-        if (heValue !== undefined) {
-          setNestedField(heUpdates, key, heValue)
-        }
-        if (enValue !== undefined) {
-          setNestedField(enUpdates, key, enValue)
-        }
-      }
-      
-      // Use updateDoc with merge for partial updates (faster than setDoc)
-      const promises = []
-      
-      if (Object.keys(heUpdates).length > 0) {
-        promises.push(updateDoc(doc(db, 'translations', 'he'), heUpdates))
-      }
-      
-      if (Object.keys(enUpdates).length > 0) {
-        promises.push(updateDoc(doc(db, 'translations', 'en'), enUpdates))
-      }
-      
-      if (promises.length > 0) {
-        await Promise.all(promises)
-      }
-      
       // Store changed count before clearing
       const changedCount = changedKeys.size
+      
+      // Save all translations (FirebaseDB will handle optimization)
+      await saveAllTranslationsToDB(translations)
       
       // Clear changed keys after successful save
       clearChangedKeys()
       
       return { success: true, changedCount }
     } else {
-      // Fallback: save everything (for import/export scenarios)
-      await setDoc(doc(db, 'translations', 'he'), translations.he, { merge: true })
-      await setDoc(doc(db, 'translations', 'en'), translations.en, { merge: true })
+      // Save everything (for import/export scenarios)
+      await saveAllTranslationsToDB(translations)
       clearChangedKeys()
       return { success: true }
     }

@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { useAdmin } from './contexts/AdminContext'
+import { useTranslation } from './contexts/TranslationContext'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import AdminIndicator from './components/AdminIndicator'
@@ -15,7 +16,18 @@ import './App.css'
 
 function AppContent() {
   const { isAdminMode } = useAdmin()
+  const { isLoading } = useTranslation()
   useScrollToHash() // Now this is inside Router context
+
+  // Show loader while translations are loading
+  if (isLoading) {
+    return (
+      <div className="app-loader">
+        <div className="loader-spinner"></div>
+        <p>טוען...</p>
+      </div>
+    )
+  }
 
   return (
     <div className={`App ${isAdminMode ? 'admin-mode' : ''}`}>

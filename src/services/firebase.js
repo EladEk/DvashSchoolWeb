@@ -1,7 +1,7 @@
 // Firebase configuration and service
 import { initializeApp } from 'firebase/app'
 import { getAnalytics } from 'firebase/analytics'
-import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
 // Your web app's Firebase configuration
@@ -33,21 +33,10 @@ export const storage = getStorage(app)
 // Export analytics
 export { analytics }
 
-// Contact form submission service
+// Contact form submission service (delegates to centralized DB service)
 export const submitContactForm = async (formData) => {
-  try {
-    const docRef = await addDoc(collection(db, 'contacts'), {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      message: formData.message,
-      timestamp: serverTimestamp(),
-    })
-    return { success: true, id: docRef.id }
-  } catch (error) {
-    console.error('Error submitting contact form:', error)
-    return { success: false, error: error.message }
-  }
+  const { submitContactFormToDB } = await import('./firebaseDB')
+  return await submitContactFormToDB(formData)
 }
 
 // FAQ data fetching service (if you want to store FAQs in Firebase)

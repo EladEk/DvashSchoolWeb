@@ -18,7 +18,8 @@ export const TranslationProvider = ({ children }) => {
     return savedLanguage || 'he'
   })
 
-  const [translations, setTranslations] = useState(defaultTranslations)
+  const [translations, setTranslations] = useState(null) // Start with null instead of defaults
+  const [isLoading, setIsLoading] = useState(true) // Track loading state
 
   useEffect(() => {
     // Load translations from admin storage or Firebase
@@ -33,26 +34,75 @@ export const TranslationProvider = ({ children }) => {
     document.documentElement.lang = language
   }, [language])
 
+  // Deep merge function to properly merge nested objects
+  const deepMerge = (target, source) => {
+    if (!source || typeof source !== 'object') {
+      return target
+    }
+    
+    const result = { ...target }
+    
+    for (const key in source) {
+      if (source.hasOwnProperty(key)) {
+        if (
+          source[key] &&
+          typeof source[key] === 'object' &&
+          !Array.isArray(source[key]) &&
+          target[key] &&
+          typeof target[key] === 'object' &&
+          !Array.isArray(target[key])
+        ) {
+          // Recursively merge nested objects
+          result[key] = deepMerge(target[key], source[key])
+        } else {
+          // Overwrite with source value (or set if doesn't exist)
+          result[key] = source[key]
+        }
+      }
+    }
+    
+    return result
+  }
+
   const loadTranslations = async () => {
     try {
-      // Load translations (skip Firebase on initial load for speed)
-      const adminTranslations = await getTranslations(true)
-      // If admin translations exist, use them; otherwise use defaults
-      if (adminTranslations && Object.keys(adminTranslations.he || {}).length > 0) {
-        setTranslations(adminTranslations)
+      setIsLoading(true)
+      // Load translations - try Firebase first, then fallback to localStorage/defaults
+      // Don't skip Firebase on initial load so we get the latest from database
+      const adminTranslations = await getTranslations(false) // false = don't skip Firebase
+      
+      // Deep merge with defaults to ensure all keys exist and nested structures are preserved
+      const mergedTranslations = {
+        he: deepMerge(defaultTranslations.he, adminTranslations?.he || {}),
+        en: deepMerge(defaultTranslations.en, adminTranslations?.en || {})
       }
+      
+      setTranslations(mergedTranslations)
     } catch (error) {
       console.error('Error loading admin translations:', error)
       // Fallback to default translations
+      setTranslations(defaultTranslations)
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const t = (key) => {
+    // Return key if translations not loaded yet
+    if (!translations) {
+      return key
+    }
+    
     const keys = key.split('.')
     let value = translations[language]
     
     for (const k of keys) {
       value = value?.[k]
+    }
+    
+    // If value is not found, log for debugging
+    if (!value || value === key) {
+      console.warn(`⚠️ Translation key "${key}" not found in ${language}. Available keys:`, Object.keys(translations[language] || {}))
     }
     
     return value || key
@@ -68,7 +118,7 @@ export const TranslationProvider = ({ children }) => {
   }
 
   return (
-    <TranslationContext.Provider value={{ t, language, changeLanguage, reloadTranslations }}>
+    <TranslationContext.Provider value={{ t, language, changeLanguage, reloadTranslations, isLoading }}>
       {children}
     </TranslationContext.Provider>
   )

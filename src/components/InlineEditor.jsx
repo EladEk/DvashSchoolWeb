@@ -86,6 +86,11 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
   }
 
   const setNestedValue = (obj, keys, value) => {
+    // Ensure obj is an object
+    if (!obj || typeof obj !== 'object') {
+      throw new Error('Cannot set nested value: object is null or undefined')
+    }
+    
     const keysArray = keys.split('.')
     let current = obj
     
@@ -112,7 +117,7 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
         i++ // Skip the array index key
       } else {
         // Regular object property
-        if (!current[key]) {
+        if (!current[key] || typeof current[key] !== 'object') {
           current[key] = {}
         }
         current = current[key]
@@ -125,10 +130,18 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
   }
 
   // Auto-save to localStorage when closing
-  const saveChanges = useCallback(async () => {
+  const saveChanges = useCallback(async (skipOnSave = false) => {
     try {
       // Load translations quickly (skip Firebase)
       const current = await getTranslations(true)
+      
+      // Ensure current.he and current.en are objects
+      if (!current.he || typeof current.he !== 'object') {
+        current.he = {}
+      }
+      if (!current.en || typeof current.en !== 'object') {
+        current.en = {}
+      }
       
       // Update both Hebrew and English translations
       setNestedValue(current.he, translationKey, hebrewValue)
@@ -147,9 +160,17 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
       // Reload translations in background (don't wait)
       reloadTranslations().catch(console.error)
       
-      onSave()
+      // Only call onSave if not skipped (skip when called from handleSaveToFirebase)
+      if (!skipOnSave && onSave && typeof onSave === 'function') {
+        try {
+          onSave()
+        } catch (saveError) {
+          console.error('Error in onSave callback:', saveError)
+        }
+      }
     } catch (error) {
       console.error('Error saving:', error)
+      throw error // Re-throw to allow caller to handle
     }
   }, [translationKey, hebrewValue, englishValue, reloadTranslations, onSave])
 
@@ -164,54 +185,64 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
       setSaving(true)
       setSaveMessage('')
       
-      // First save to localStorage
-      await saveChanges()
-      
-      // Save this specific translation to Firebase - SINGLE batch call
-      const { db } = await import('../services/firebase')
-      const { doc, writeBatch } = await import('firebase/firestore')
-      
-      if (!db) {
-        throw new Error('Firebase not configured')
+      // Step 1: Save to localStorage first (fast, synchronous)
+      // Skip onSave callback to avoid re-render issues during save
+      try {
+        await saveChanges(true) // Pass true to skip onSave
+      } catch (localError) {
+        console.error('Error saving to localStorage:', localError)
+        setSaveMessage('Error saving locally: ' + (localError.message || 'Unknown error'))
+        setSaving(false)
+        return
       }
       
-      // Build nested update object efficiently (only the edited field path)
-      const keys = translationKey.split('.')
-      const buildUpdate = (value) => {
-        const update = {}
-        let current = update
-        for (let i = 0; i < keys.length - 1; i++) {
-          current[keys[i]] = {}
-          current = current[keys[i]]
+      // Step 2: Save to Firebase - SINGLE batch write operation
+      // This is the ONLY database write - updates only the changed field
+      // Uses batch.commit() which sends both Hebrew and English updates in ONE network call
+      try {
+        const { saveTranslationToDB } = await import('../services/firebaseDB')
+        console.log('Attempting to save to Firebase:', { translationKey, hebrewValue, englishValue })
+        await saveTranslationToDB(translationKey, hebrewValue, englishValue)
+        console.log('✅ Successfully saved to Firebase')
+      } catch (firebaseError) {
+        console.error('❌ Error saving to Firebase:', firebaseError)
+        // Even if Firebase fails, localStorage save succeeded, so show warning
+        const errorMessage = firebaseError.message || 'Unknown error'
+        setSaveMessage('Saved locally, but Firebase error: ' + errorMessage)
+        setTimeout(() => {
+          setSaveMessage('')
+          setSaving(false)
+          onClose()
+        }, 3000) // Show error for 3 seconds
+        return
+      }
+      
+      // Step 3: Update UI from localStorage (no Firebase read)
+      clearTranslationsCache() // Clear cache to force reload
+      reloadTranslations().catch(console.error) // Uses getTranslations(true) - skips Firebase
+      
+      // Step 4: Call onSave callback after successful save
+      if (onSave && typeof onSave === 'function') {
+        try {
+          onSave()
+        } catch (saveError) {
+          console.error('Error in onSave callback:', saveError)
         }
-        current[keys[keys.length - 1]] = value
-        return update
       }
-      
-      // Use batch write - SINGLE Firebase call for both documents
-      const batch = writeBatch(db)
-      batch.update(doc(db, 'translations', 'he'), buildUpdate(hebrewValue))
-      batch.update(doc(db, 'translations', 'en'), buildUpdate(englishValue))
-      await batch.commit() // Single network call - both updates in one request
-      
-      // Update local state (translations already in localStorage from saveChanges)
-      clearTranslationsCache()
-      // Refresh UI (uses localStorage, no Firebase call)
-      reloadTranslations().catch(console.error)
       
       setSaveMessage('Saved to Firebase!')
       setTimeout(() => {
         setSaveMessage('')
+        setSaving(false)
         onClose()
       }, 1000)
     } catch (error) {
-      console.error('Error saving to Firebase:', error)
-      setSaveMessage('Error saving to Firebase')
+      console.error('Unexpected error saving:', error)
+      setSaveMessage('Error saving: ' + (error.message || 'Unknown error'))
       setTimeout(() => setSaveMessage(''), 3000)
-    } finally {
       setSaving(false)
     }
-  }, [translationKey, hebrewValue, englishValue, saveChanges, onClose, reloadTranslations])
+  }, [translationKey, hebrewValue, englishValue, saveChanges, onClose, reloadTranslations, onSave])
 
   useEffect(() => {
     // Close on escape key (with auto-save)
@@ -294,13 +325,20 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
             Reset Both to Default
           </button>
           <div className="editor-actions">
-            <button className="close-btn" onClick={handleClose}>Close</button>
+            <button className="close-btn" onClick={handleClose} disabled={saving}>Close</button>
             <button 
               className="save-btn" 
               onClick={handleSaveToFirebase} 
               disabled={saving}
             >
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? (
+                <>
+                  <span className="save-spinner"></span>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                'Save'
+              )}
             </button>
           </div>
           {saveMessage && (
