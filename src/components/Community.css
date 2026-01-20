@@ -1,0 +1,18 @@
+.community {
+  padding: 4rem 2rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.community-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: right;
+}
+
+.community-text p {
+  font-size: 1.2rem;
+  line-height: 1.8;
+  color: var(--text-color);
+  max-width: 800px;
+  margin: 0 auto;
+}
