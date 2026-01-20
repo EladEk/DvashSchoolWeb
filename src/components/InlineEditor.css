@@ -176,6 +176,25 @@
   color: var(--text-color);
 }
 
+.save-message {
+  width: 100%;
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+  border-radius: 5px;
+  margin-top: 0.5rem;
+}
+
+.save-message.success {
+  background-color: #4caf50;
+  color: white;
+}
+
+.save-message.error {
+  background-color: #f44336;
+  color: white;
+}
+
 @media (max-width: 768px) {
   .inline-editor-overlay {
     padding: 1rem;

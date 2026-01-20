@@ -10,6 +10,8 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
   const [defaultHebrew, setDefaultHebrew] = useState('')
   const [defaultEnglish, setDefaultEnglish] = useState('')
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
   const modalRef = useRef(null)
 
   useEffect(() => {
@@ -152,10 +154,75 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
   }, [translationKey, hebrewValue, englishValue, reloadTranslations, onSave])
 
   const handleClose = useCallback(async () => {
-    // Auto-save when closing
+    // Save to localStorage only when closing (no Firebase)
     await saveChanges()
     onClose()
   }, [saveChanges, onClose])
+
+  const handleSaveToFirebase = useCallback(async () => {
+    try {
+      setSaving(true)
+      setSaveMessage('')
+      
+      // First save to localStorage
+      await saveChanges()
+      
+      // Then save this specific translation to Firebase using updateDoc
+      const { db } = await import('../services/firebase')
+      const { doc, updateDoc } = await import('firebase/firestore')
+      
+      if (!db) {
+        throw new Error('Firebase not configured')
+      }
+      
+      // Build update objects with nested structure
+      const heUpdates = {}
+      const enUpdates = {}
+      
+      // Set nested value using the translation key path
+      const keys = translationKey.split('.')
+      let heCurrent = heUpdates
+      let enCurrent = enUpdates
+      
+      // Build nested structure
+      for (let i = 0; i < keys.length - 1; i++) {
+        heCurrent[keys[i]] = {}
+        enCurrent[keys[i]] = {}
+        heCurrent = heCurrent[keys[i]]
+        enCurrent = enCurrent[keys[i]]
+      }
+      
+      // Set the final value
+      heCurrent[keys[keys.length - 1]] = hebrewValue
+      enCurrent[keys[keys.length - 1]] = englishValue
+      
+      // Update both documents in parallel
+      await Promise.all([
+        updateDoc(doc(db, 'translations', 'he'), heUpdates),
+        updateDoc(doc(db, 'translations', 'en'), enUpdates)
+      ])
+      
+      // Clear this key from changed keys since it's now saved
+      const { markKeyAsChanged, clearChangedKeys } = await import('../services/adminService')
+      // Note: We don't need to mark it as changed since we're saving it directly
+      // But we should clear it from the changed keys if it was there
+      
+      // Reload translations to reflect changes
+      reloadTranslations().catch(console.error)
+      
+      setSaveMessage('Saved to Firebase!')
+      setTimeout(() => {
+        setSaveMessage('')
+        onClose()
+      }, 1000)
+    } catch (error) {
+      console.error('Error saving to Firebase:', error)
+      setSaveMessage('Error saving to Firebase')
+      setTimeout(() => setSaveMessage(''), 3000)
+    } finally {
+      setSaving(false)
+    }
+  }, [translationKey, hebrewValue, englishValue, saveChanges, onClose, reloadTranslations])
 
   useEffect(() => {
     // Close on escape key (with auto-save)
@@ -239,7 +306,19 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
           </button>
           <div className="editor-actions">
             <button className="close-btn" onClick={handleClose}>Close</button>
+            <button 
+              className="save-btn" 
+              onClick={handleSaveToFirebase} 
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
           </div>
+          {saveMessage && (
+            <div className={`save-message ${saveMessage.includes('Error') ? 'error' : 'success'}`}>
+              {saveMessage}
+            </div>
+          )}
         </div>
       </div>
     </div>

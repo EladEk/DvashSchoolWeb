@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { useAdmin } from '../contexts/AdminContext'
 import { useTranslation } from '../contexts/TranslationContext'
-import { getTranslations, saveTranslations, exportTranslations, saveToFirebase } from '../services/adminService'
+import { getTranslations, saveTranslations, exportTranslations } from '../services/adminService'
 import './AdminIndicator.css'
 
 const AdminIndicator = () => {
   const { isAdminMode } = useAdmin()
   const { reloadTranslations } = useTranslation()
-  const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
 
   const handleExport = async () => {
@@ -69,45 +68,6 @@ const AdminIndicator = () => {
     input.click()
   }
 
-  const handleSave = async () => {
-    try {
-      setSaving(true)
-      setMessage('')
-      
-      // Get all translations from localStorage (where all edits are saved)
-      const stored = localStorage.getItem('admin_translations')
-      let translations
-      
-      if (stored) {
-        translations = JSON.parse(stored)
-      } else {
-        // If no localStorage, load from defaults
-        translations = await getTranslations(true)
-      }
-      
-      // Save only changed keys to Firebase (faster)
-      const result = await saveToFirebase(translations, true)
-      
-      // Update localStorage (saveTranslations handles this, but ensure it's updated)
-      localStorage.setItem('admin_translations', JSON.stringify(translations))
-      
-      // Reload translations to reflect changes
-      await reloadTranslations()
-      
-      if (result.skipped) {
-        setMessage('No changes to save')
-      } else {
-        setMessage(`Saved ${result.changedCount || 0} translation(s) to Firebase successfully!`)
-      }
-      setTimeout(() => setMessage(''), 3000)
-    } catch (error) {
-      console.error('Error saving:', error)
-      setMessage('Error saving to Firebase: ' + error.message)
-      setTimeout(() => setMessage(''), 3000)
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const handleExit = () => {
     if (confirm('Exit admin mode? Unsaved changes will be lost.')) {
@@ -130,14 +90,6 @@ const AdminIndicator = () => {
           </button>
           <button className="admin-btn import-btn" onClick={handleImport} title="Import translations from JSON files">
             Import
-          </button>
-          <button 
-            className="admin-btn save-btn" 
-            onClick={handleSave} 
-            disabled={saving}
-            title="Save changes to Firebase"
-          >
-            {saving ? 'Saving...' : 'Save'}
           </button>
           <button className="admin-btn exit-btn" onClick={handleExit} title="Exit admin mode">
             Exit
