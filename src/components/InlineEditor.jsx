@@ -167,7 +167,7 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
       // First save to localStorage
       await saveChanges()
       
-      // Then save this specific translation to Firebase using updateDoc
+      // Save this specific translation to Firebase - optimized: single call per document
       const { db } = await import('../services/firebase')
       const { doc, updateDoc } = await import('firebase/firestore')
       
@@ -175,37 +175,24 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
         throw new Error('Firebase not configured')
       }
       
-      // Build update objects with nested structure
-      const heUpdates = {}
-      const enUpdates = {}
-      
-      // Set nested value using the translation key path
+      // Build nested update object efficiently (only the edited field path)
       const keys = translationKey.split('.')
-      let heCurrent = heUpdates
-      let enCurrent = enUpdates
-      
-      // Build nested structure
-      for (let i = 0; i < keys.length - 1; i++) {
-        heCurrent[keys[i]] = {}
-        enCurrent[keys[i]] = {}
-        heCurrent = heCurrent[keys[i]]
-        enCurrent = enCurrent[keys[i]]
+      const buildUpdate = (value) => {
+        const update = {}
+        let current = update
+        for (let i = 0; i < keys.length - 1; i++) {
+          current[keys[i]] = {}
+          current = current[keys[i]]
+        }
+        current[keys[keys.length - 1]] = value
+        return update
       }
       
-      // Set the final value
-      heCurrent[keys[keys.length - 1]] = hebrewValue
-      enCurrent[keys[keys.length - 1]] = englishValue
-      
-      // Update both documents in parallel
+      // Single Firebase call per document - update only the edited field
       await Promise.all([
-        updateDoc(doc(db, 'translations', 'he'), heUpdates),
-        updateDoc(doc(db, 'translations', 'en'), enUpdates)
+        updateDoc(doc(db, 'translations', 'he'), buildUpdate(hebrewValue)),
+        updateDoc(doc(db, 'translations', 'en'), buildUpdate(englishValue))
       ])
-      
-      // Clear this key from changed keys since it's now saved
-      const { markKeyAsChanged, clearChangedKeys } = await import('../services/adminService')
-      // Note: We don't need to mark it as changed since we're saving it directly
-      // But we should clear it from the changed keys if it was there
       
       // Reload translations to reflect changes
       reloadTranslations().catch(console.error)
