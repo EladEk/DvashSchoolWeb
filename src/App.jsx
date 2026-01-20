@@ -28,6 +28,7 @@ function AppContent() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/parent-committee" element={<ParentCommittee />} />
         <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/admin/" element={<AdminLogin />} />
         <Route
           path="/admin/dashboard"
           element={
@@ -36,6 +37,7 @@ function AppContent() {
             </AdminRoute>
           }
         />
+        <Route path="*" element={<div style={{ padding: '2rem', textAlign: 'center' }}>Page not found</div>} />
       </Routes>
       <Footer />
     </div>
