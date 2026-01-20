@@ -167,9 +167,9 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
       // First save to localStorage
       await saveChanges()
       
-      // Save this specific translation to Firebase - optimized: single call per document
+      // Save this specific translation to Firebase - SINGLE batch call
       const { db } = await import('../services/firebase')
-      const { doc, updateDoc } = await import('firebase/firestore')
+      const { doc, writeBatch } = await import('firebase/firestore')
       
       if (!db) {
         throw new Error('Firebase not configured')
@@ -188,13 +188,15 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
         return update
       }
       
-      // Single Firebase call per document - update only the edited field
-      await Promise.all([
-        updateDoc(doc(db, 'translations', 'he'), buildUpdate(hebrewValue)),
-        updateDoc(doc(db, 'translations', 'en'), buildUpdate(englishValue))
-      ])
+      // Use batch write - SINGLE Firebase call for both documents
+      const batch = writeBatch(db)
+      batch.update(doc(db, 'translations', 'he'), buildUpdate(hebrewValue))
+      batch.update(doc(db, 'translations', 'en'), buildUpdate(englishValue))
+      await batch.commit() // Single network call - both updates in one request
       
-      // Reload translations to reflect changes
+      // Update local state (translations already in localStorage from saveChanges)
+      clearTranslationsCache()
+      // Refresh UI (uses localStorage, no Firebase call)
       reloadTranslations().catch(console.error)
       
       setSaveMessage('Saved to Firebase!')
