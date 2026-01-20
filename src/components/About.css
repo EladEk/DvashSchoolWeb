@@ -1,6 +1,7 @@
 .about {
   padding: 4rem 2rem;
   background-color: var(--white);
+  scroll-margin-top: 200px;
 }
 
 .container {

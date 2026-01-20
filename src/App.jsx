@@ -6,42 +6,48 @@ import AdminIndicator from './components/AdminIndicator'
 import Home from './pages/Home'
 import FAQ from './pages/FAQ'
 import ContactPage from './pages/ContactPage'
+import ParentCommittee from './pages/ParentCommittee'
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminRoute from './components/AdminRoute'
+import { useScrollToHash } from './hooks/useScrollToHash'
 import './App.css'
 
 function AppContent() {
   const { isAdminMode } = useAdmin()
+  useScrollToHash() // Now this is inside Router context
 
   return (
-    <Router>
-      <div className={`App ${isAdminMode ? 'admin-mode' : ''}`}>
-        <AdminIndicator />
-        <Header />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/שאלות-תשובות" element={<FAQ />} />
-          <Route path="/contact-8" element={<ContactPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/admin" element={<AdminLogin />} />
-          <Route
-            path="/admin/dashboard"
-            element={
-              <AdminRoute>
-                <AdminDashboard />
-              </AdminRoute>
-            }
-          />
-        </Routes>
-        <Footer />
-      </div>
-    </Router>
+    <div className={`App ${isAdminMode ? 'admin-mode' : ''}`}>
+      <AdminIndicator />
+      <Header />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/שאלות-תשובות" element={<FAQ />} />
+        <Route path="/contact-8" element={<ContactPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/parent-committee" element={<ParentCommittee />} />
+        <Route path="/admin" element={<AdminLogin />} />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+      </Routes>
+      <Footer />
+    </div>
   )
 }
 
 function App() {
-  return <AppContent />
+  return (
+    <Router>
+      <AppContent />
+    </Router>
+  )
 }
 
 export default App

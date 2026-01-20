@@ -91,12 +91,28 @@
     "followUs": "Follow Us",
     "contact": "Contact"
   },
+  "parentCommittee": {
+    "title": "School Parent Committee",
+    "intro1": "The Parent Committee is the bridge between parents, staff and children.",
+    "intro2": "We are here to listen, initiate, help and collaborate on everything that will contribute to a good atmosphere and a strong community at the school.",
+    "intro3": "We would love to hear from you!",
+    "contactTitle": "Contact the Parent Committee",
+    "fullName": "Full Name",
+    "childClass": "Child's Class",
+    "email": "Email Address",
+    "message": "Message Content",
+    "send": "Send",
+    "sending": "Sending...",
+    "success": "Thank you for your message!"
+  },
   "meta": {
     "homeTitle": "Dvash School - The Democratic School in Be'er Sheva",
     "homeDescription": "The Democratic School in Be'er Sheva - recognized and official democratic education under the supervision of the Ministry of Education",
     "faqTitle": "FAQ - Dvash School",
     "faqDescription": "Frequently asked questions about the Democratic School in Be'er Sheva",
     "contactTitle": "Contact Us - Dvash School",
-    "contactDescription": "Contact the Democratic School in Be'er Sheva"
+    "contactDescription": "Contact the Democratic School in Be'er Sheva",
+    "parentCommitteeTitle": "School Parent Committee - Dvash School",
+    "parentCommitteeDescription": "Contact the Parent Committee of the Democratic School in Be'er Sheva"
   }
 }

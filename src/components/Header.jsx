@@ -13,7 +13,7 @@ const Header = () => {
   const menuItems = [
     { id: 'home', labelKey: 'nav.home', href: '/', hash: '' },
     { id: 'faq', labelKey: 'nav.faq', href: '/שאלות-תשובות', hash: '' },
-    { id: 'parents', labelKey: 'nav.parents', href: '/', hash: '#parents' },
+    { id: 'parents', labelKey: 'nav.parents', href: '/parent-committee', hash: '' },
   ]
 
   const subtitleItems = [
@@ -23,15 +23,32 @@ const Header = () => {
     { id: 'community', labelKey: 'nav.community', hash: '#community' },
   ]
 
+  const scrollToSection = (hash) => {
+    const element = document.querySelector(hash)
+    if (element) {
+      // Calculate header height (main header + subtitle nav if on home page)
+      const header = document.querySelector('.header')
+      const adminToolbar = document.querySelector('.admin-toolbar')
+      const headerHeight = header ? header.offsetHeight : 0
+      const adminToolbarHeight = adminToolbar ? adminToolbar.offsetHeight : 0
+      const offset = headerHeight + adminToolbarHeight + 20 // Add 20px extra spacing
+      
+      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset
+      const offsetPosition = elementPosition - offset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      })
+    }
+  }
+
   const handleLinkClick = (href, hash) => {
     setIsMenuOpen(false)
     if (hash) {
       // If on home page, scroll to section
       if (location.pathname === '/') {
-        const element = document.querySelector(hash)
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' })
-        }
+        scrollToSection(hash)
       } else {
         // Navigate to home then scroll
         window.location.href = href + hash
@@ -40,10 +57,7 @@ const Header = () => {
   }
 
   const handleSubtitleClick = (hash) => {
-    const element = document.querySelector(hash)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' })
-    }
+    scrollToSection(hash)
   }
 
   return (
