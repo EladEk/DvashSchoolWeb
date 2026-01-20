@@ -12,7 +12,8 @@ const AdminIndicator = () => {
 
   const handleExport = async () => {
     try {
-      const translations = await getTranslations()
+      // Load translations quickly (skip Firebase)
+      const translations = await getTranslations(true)
       exportTranslations(translations)
       setMessage('Files exported successfully!')
       setTimeout(() => setMessage(''), 3000)
@@ -72,11 +73,25 @@ const AdminIndicator = () => {
     try {
       setSaving(true)
       setMessage('')
-      const translations = await getTranslations()
-      // Save to Firebase (and update localStorage)
+      
+      // Get all translations from localStorage (where all edits are saved)
+      const stored = localStorage.getItem('admin_translations')
+      let translations
+      
+      if (stored) {
+        translations = JSON.parse(stored)
+      } else {
+        // If no localStorage, load from defaults
+        translations = await getTranslations(true)
+      }
+      
+      // Save to Firebase (this will also update localStorage)
       await saveTranslations(translations, false)
+      
+      // Reload translations to reflect changes
       await reloadTranslations()
-      setMessage('Changes saved to Firebase successfully!')
+      
+      setMessage('All changes saved to Firebase successfully!')
       setTimeout(() => setMessage(''), 3000)
     } catch (error) {
       console.error('Error saving:', error)

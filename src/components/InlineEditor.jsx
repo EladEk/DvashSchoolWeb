@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from '../contexts/TranslationContext'
-import { getTranslations, saveTranslations } from '../services/adminService'
+import { getTranslations, saveTranslations, getDefaultTranslations } from '../services/adminService'
 import './InlineEditor.css'
 
 const InlineEditor = ({ translationKey, onClose, onSave }) => {
@@ -10,49 +10,52 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
   const [defaultHebrew, setDefaultHebrew] = useState('')
   const [defaultEnglish, setDefaultEnglish] = useState('')
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const modalRef = useRef(null)
 
   useEffect(() => {
     loadValues()
-    // Close on escape key
+  }, [translationKey])
+
+  useEffect(() => {
+    // Close on escape key (with auto-save)
     const handleEscape = (e) => {
       if (e.key === 'Escape') {
-        onClose()
+        handleClose()
       }
     }
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [translationKey])
+  }, [handleClose])
 
   useEffect(() => {
-    // Close on click outside
+    // Close on click outside (with auto-save)
     const handleClickOutside = (e) => {
       if (modalRef.current && !modalRef.current.contains(e.target)) {
-        onClose()
+        handleClose()
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [handleClose])
 
   const loadValues = async () => {
     try {
       setLoading(true)
-      // Load current translations
-      const current = await getTranslations()
+      // Load current translations (skip Firebase for speed)
+      const current = await getTranslations(true)
       
-      // Load default translations from JSON files
-      const heDefault = await import('../translations/he.json')
-      const enDefault = await import('../translations/en.json')
+      // Load default translations (cached)
+      const defaults = await getDefaultTranslations()
+      const heDefault = defaults.he
+      const enDefault = defaults.en
 
       // Get values using the translation key
       const keys = translationKey.split('.')
       
       let currentHe = current.he
       let currentEn = current.en
-      let defaultHe = heDefault.default
-      let defaultEn = enDefault.default
+      let defaultHe = heDefault
+      let defaultEn = enDefault
 
       for (const key of keys) {
         currentHe = currentHe?.[key]
@@ -69,8 +72,8 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
           const parentKey = keys.slice(0, -2).join('.')
           let parentHe = current.he
           let parentEn = current.en
-          let parentDefaultHe = heDefault.default
-          let parentDefaultEn = enDefault.default
+          let parentDefaultHe = heDefault
+          let parentDefaultEn = enDefault
 
           for (const k of parentKey.split('.')) {
             parentHe = parentHe?.[k]
@@ -105,37 +108,73 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
   const setNestedValue = (obj, keys, value) => {
     const keysArray = keys.split('.')
     let current = obj
+    
+    // Handle array indices (like faq.questions.0.question)
     for (let i = 0; i < keysArray.length - 1; i++) {
       const key = keysArray[i]
-      if (!current[key]) {
-        current[key] = {}
+      const nextKey = keysArray[i + 1]
+      const isArrayIndex = !isNaN(parseInt(nextKey))
+      
+      if (isArrayIndex) {
+        // We're dealing with an array
+        const arrayIndex = parseInt(nextKey)
+        if (!current[key]) {
+          current[key] = []
+        }
+        if (!Array.isArray(current[key])) {
+          current[key] = []
+        }
+        // Ensure array is large enough
+        while (current[key].length <= arrayIndex) {
+          current[key].push({})
+        }
+        current = current[key][arrayIndex]
+        i++ // Skip the array index key
+      } else {
+        // Regular object property
+        if (!current[key]) {
+          current[key] = {}
+        }
+        current = current[key]
       }
-      current = current[key]
     }
-    current[keysArray[keysArray.length - 1]] = value
+    
+    // Set the final value
+    const finalKey = keysArray[keysArray.length - 1]
+    current[finalKey] = value
   }
 
-  const handleSave = async () => {
+  // Auto-save to localStorage when closing
+  const saveChanges = useCallback(async () => {
     try {
-      setSaving(true)
-      const current = await getTranslations()
+      // Load translations quickly (skip Firebase)
+      const current = await getTranslations(true)
       
       // Update both Hebrew and English translations
       setNestedValue(current.he, translationKey, hebrewValue)
       setNestedValue(current.en, translationKey, englishValue)
 
-      // Only save to localStorage (not Firebase yet - user must click Save button)
+      // Save to localStorage immediately (fast, synchronous)
       localStorage.setItem('admin_translations', JSON.stringify(current))
-      await reloadTranslations()
+      
+      // Update cache
+      const { clearTranslationsCache } = await import('../services/adminService')
+      clearTranslationsCache()
+      
+      // Reload translations in background (don't wait)
+      reloadTranslations().catch(console.error)
+      
       onSave()
-      onClose()
     } catch (error) {
       console.error('Error saving:', error)
-      alert('Error saving translation')
-    } finally {
-      setSaving(false)
     }
-  }
+  }, [translationKey, hebrewValue, englishValue, reloadTranslations, onSave])
+
+  const handleClose = useCallback(async () => {
+    // Auto-save when closing
+    await saveChanges()
+    onClose()
+  }, [saveChanges, onClose])
 
   const handleReset = () => {
     if (confirm('Reset to default values?')) {
@@ -159,7 +198,7 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
       <div className="inline-editor-modal" ref={modalRef}>
         <div className="editor-header">
           <h3>Edit Translation: {translationKey}</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={handleClose}>×</button>
         </div>
         <div className="editor-content">
           <div className="editor-field">
@@ -196,10 +235,7 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
             Reset Both to Default
           </button>
           <div className="editor-actions">
-            <button className="cancel-btn" onClick={onClose}>Cancel</button>
-            <button className="save-btn" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save'}
-            </button>
+            <button className="close-btn" onClick={handleClose}>Close</button>
           </div>
         </div>
       </div>

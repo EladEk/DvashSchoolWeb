@@ -35,7 +35,8 @@ export const TranslationProvider = ({ children }) => {
 
   const loadTranslations = async () => {
     try {
-      const adminTranslations = await getTranslations()
+      // Load translations (skip Firebase on initial load for speed)
+      const adminTranslations = await getTranslations(true)
       // If admin translations exist, use them; otherwise use defaults
       if (adminTranslations && Object.keys(adminTranslations.he || {}).length > 0) {
         setTranslations(adminTranslations)

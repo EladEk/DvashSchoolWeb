@@ -6,53 +6,99 @@
 
 const STORAGE_KEY = 'admin_translations'
 
-// Load translations from storage or fallback to default
-export const getTranslations = async () => {
+// Cache for translations to avoid repeated loads
+let translationsCache = null
+let defaultTranslationsCache = null
+
+// Load default translations (cached)
+export const getDefaultTranslations = async () => {
+  if (defaultTranslationsCache) {
+    return defaultTranslationsCache
+  }
+  
   try {
-    // Try to load from Firebase first (if configured)
-    const firebaseTranslations = await loadFromFirebase()
-    if (firebaseTranslations) {
-      return firebaseTranslations
-    }
-
-    // Try to load from localStorage
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      return JSON.parse(stored)
-    }
-
-    // Fallback to importing JSON files
     const heTranslations = await import('../translations/he.json')
     const enTranslations = await import('../translations/en.json')
-
-    return {
+    defaultTranslationsCache = {
       he: heTranslations.default,
       en: enTranslations.default
     }
+    return defaultTranslationsCache
+  } catch (error) {
+    console.error('Error loading default translations:', error)
+    return { he: {}, en: {} }
+  }
+}
+
+// Load translations from storage or fallback to default (optimized for speed)
+export const getTranslations = async (skipFirebase = false) => {
+  // Return cached translations if available (for quick access)
+  if (translationsCache && skipFirebase) {
+    return translationsCache
+  }
+
+  try {
+    // Try to load from localStorage first (fastest)
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      translationsCache = parsed
+      return parsed
+    }
+
+    // Try Firebase only if not skipped (can be slow)
+    if (!skipFirebase) {
+      try {
+        // Add timeout for Firebase operations
+        const firebasePromise = loadFromFirebase()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Firebase timeout')), 2000)
+        )
+        
+        const firebaseTranslations = await Promise.race([firebasePromise, timeoutPromise])
+        if (firebaseTranslations) {
+          translationsCache = firebaseTranslations
+          return firebaseTranslations
+        }
+      } catch (firebaseError) {
+        // Firebase timeout or error - continue to defaults
+        console.log('Firebase not available or timeout:', firebaseError.message)
+      }
+    }
+
+    // Fallback to default translations (cached)
+    const defaults = await getDefaultTranslations()
+    translationsCache = defaults
+    return defaults
   } catch (error) {
     console.error('Error loading translations:', error)
-    // Return empty structure if all fails
-    return { he: {}, en: {} }
+    // Return cached defaults or empty structure
+    return defaultTranslationsCache || { he: {}, en: {} }
   }
 }
 
 // Save translations to storage (and Firebase if configured)
 export const saveTranslations = async (translations, firebaseOnly = false) => {
   try {
-    // Try to save to Firebase first (if configured)
+    // Update cache immediately
+    translationsCache = translations
+
+    // Save to localStorage first (fast, synchronous)
+    if (!firebaseOnly) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(translations))
+    }
+
+    // Try to save to Firebase
     try {
       await saveToFirebase(translations)
     } catch (firebaseError) {
       // Firebase not configured or error
-      console.log('Firebase not available:', firebaseError.message)
+      console.log('Firebase save failed:', firebaseError.message)
       if (firebaseOnly) {
+        // If firebaseOnly is true, we must throw the error
         throw firebaseError
       }
-    }
-
-    // Also save to localStorage as backup (unless we only want Firebase)
-    if (!firebaseOnly) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(translations))
+      // Otherwise, continue - localStorage save already succeeded
     }
 
     return { success: true }
@@ -60,6 +106,11 @@ export const saveTranslations = async (translations, firebaseOnly = false) => {
     console.error('Error saving translations:', error)
     throw error
   }
+}
+
+// Clear cache (useful when translations are updated externally)
+export const clearTranslationsCache = () => {
+  translationsCache = null
 }
 
 // Export translations as downloadable JSON files
