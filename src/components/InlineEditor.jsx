@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from '../contexts/TranslationContext'
-import { getTranslations, saveTranslations, getDefaultTranslations } from '../services/adminService'
+import { getTranslations, saveTranslations, getDefaultTranslations, clearTranslationsCache } from '../services/adminService'
 import './InlineEditor.css'
 
 const InlineEditor = ({ translationKey, onClose, onSave }) => {
@@ -15,28 +15,6 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
   useEffect(() => {
     loadValues()
   }, [translationKey])
-
-  useEffect(() => {
-    // Close on escape key (with auto-save)
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') {
-        handleClose()
-      }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [handleClose])
-
-  useEffect(() => {
-    // Close on click outside (with auto-save)
-    const handleClickOutside = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target)) {
-        handleClose()
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [handleClose])
 
   const loadValues = async () => {
     try {
@@ -157,8 +135,11 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
       // Save to localStorage immediately (fast, synchronous)
       localStorage.setItem('admin_translations', JSON.stringify(current))
       
+      // Mark this key as changed for incremental Firebase save
+      const { markKeyAsChanged } = await import('../services/adminService')
+      markKeyAsChanged(translationKey)
+      
       // Update cache
-      const { clearTranslationsCache } = await import('../services/adminService')
       clearTranslationsCache()
       
       // Reload translations in background (don't wait)
@@ -175,6 +156,28 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
     await saveChanges()
     onClose()
   }, [saveChanges, onClose])
+
+  useEffect(() => {
+    // Close on escape key (with auto-save)
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        handleClose()
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [handleClose])
+
+  useEffect(() => {
+    // Close on click outside (with auto-save)
+    const handleClickOutside = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        handleClose()
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [handleClose])
 
   const handleReset = () => {
     if (confirm('Reset to default values?')) {

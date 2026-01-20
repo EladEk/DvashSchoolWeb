@@ -88,9 +88,9 @@ export const saveTranslations = async (translations, firebaseOnly = false) => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(translations))
     }
 
-    // Try to save to Firebase
+    // Try to save to Firebase (only changed keys for speed)
     try {
-      await saveToFirebase(translations)
+      await saveToFirebase(translations, !firebaseOnly) // onlyChanged = true unless firebaseOnly
     } catch (firebaseError) {
       // Firebase not configured or error
       console.log('Firebase save failed:', firebaseError.message)
@@ -166,21 +166,133 @@ export const loadFromFirebase = async () => {
   }
 }
 
-// Save translations to Firebase (when configured)
-export const saveToFirebase = async (translations) => {
+// Track changed translation keys
+const CHANGED_KEYS_STORAGE = 'admin_changed_keys'
+let changedKeys = new Set()
+
+// Load changed keys from storage
+const loadChangedKeys = () => {
+  try {
+    const stored = localStorage.getItem(CHANGED_KEYS_STORAGE)
+    if (stored) {
+      changedKeys = new Set(JSON.parse(stored))
+    }
+  } catch (error) {
+    console.error('Error loading changed keys:', error)
+    changedKeys = new Set()
+  }
+}
+
+// Save changed keys to storage
+const saveChangedKeys = () => {
+  try {
+    localStorage.setItem(CHANGED_KEYS_STORAGE, JSON.stringify(Array.from(changedKeys)))
+  } catch (error) {
+    console.error('Error saving changed keys:', error)
+  }
+}
+
+// Mark a translation key as changed
+export const markKeyAsChanged = (translationKey) => {
+  loadChangedKeys()
+  changedKeys.add(translationKey)
+  saveChangedKeys()
+}
+
+// Clear all changed keys
+export const clearChangedKeys = () => {
+  changedKeys.clear()
+  localStorage.removeItem(CHANGED_KEYS_STORAGE)
+}
+
+// Get all changed keys
+export const getChangedKeys = () => {
+  loadChangedKeys()
+  return Array.from(changedKeys)
+}
+
+// Helper function to set nested value in an object using dot notation for Firestore updates
+// Firestore supports dot notation in field paths, so we can use it directly
+const setNestedField = (obj, path, value) => {
+  // For Firestore, we can use dot notation directly as field paths
+  obj[path] = value
+}
+
+// Helper function to get nested value from an object using dot notation
+const getNestedValue = (obj, path) => {
+  const keys = path.split('.')
+  let current = obj
+  for (const key of keys) {
+    if (current == null) return undefined
+    current = current[key]
+  }
+  return current
+}
+
+// Save only changed translations to Firebase (optimized)
+export const saveToFirebase = async (translations, onlyChanged = true) => {
   try {
     // Import Firebase services
     const { db } = await import('./firebase')
-    const { doc, setDoc } = await import('firebase/firestore')
+    const { doc, updateDoc, setDoc } = await import('firebase/firestore')
     
     if (!db) {
       throw new Error('Firebase not configured')
     }
     
-    await setDoc(doc(db, 'translations', 'he'), translations.he)
-    await setDoc(doc(db, 'translations', 'en'), translations.en)
-    
-    return { success: true }
+    if (onlyChanged) {
+      loadChangedKeys()
+      
+      if (changedKeys.size === 0) {
+        // Nothing changed, skip save
+        return { success: true, skipped: true }
+      }
+      
+      // Build update objects with only changed fields
+      const heUpdates = {}
+      const enUpdates = {}
+      
+      for (const key of changedKeys) {
+        const heValue = getNestedValue(translations.he, key)
+        const enValue = getNestedValue(translations.en, key)
+        
+        if (heValue !== undefined) {
+          setNestedField(heUpdates, key, heValue)
+        }
+        if (enValue !== undefined) {
+          setNestedField(enUpdates, key, enValue)
+        }
+      }
+      
+      // Use updateDoc with merge for partial updates (faster than setDoc)
+      const promises = []
+      
+      if (Object.keys(heUpdates).length > 0) {
+        promises.push(updateDoc(doc(db, 'translations', 'he'), heUpdates))
+      }
+      
+      if (Object.keys(enUpdates).length > 0) {
+        promises.push(updateDoc(doc(db, 'translations', 'en'), enUpdates))
+      }
+      
+      if (promises.length > 0) {
+        await Promise.all(promises)
+      }
+      
+      // Store changed count before clearing
+      const changedCount = changedKeys.size
+      
+      // Clear changed keys after successful save
+      clearChangedKeys()
+      
+      return { success: true, changedCount }
+    } else {
+      // Fallback: save everything (for import/export scenarios)
+      await setDoc(doc(db, 'translations', 'he'), translations.he, { merge: true })
+      await setDoc(doc(db, 'translations', 'en'), translations.en, { merge: true })
+      clearChangedKeys()
+      return { success: true }
+    }
   } catch (error) {
     // Firebase not configured or error
     throw error

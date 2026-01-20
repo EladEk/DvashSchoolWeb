@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAdmin } from '../contexts/AdminContext'
 import { useTranslation } from '../contexts/TranslationContext'
-import { getTranslations, saveTranslations, exportTranslations } from '../services/adminService'
+import { getTranslations, saveTranslations, exportTranslations, saveToFirebase } from '../services/adminService'
 import './AdminIndicator.css'
 
 const AdminIndicator = () => {
@@ -85,13 +85,20 @@ const AdminIndicator = () => {
         translations = await getTranslations(true)
       }
       
-      // Save to Firebase (this will also update localStorage)
-      await saveTranslations(translations, false)
+      // Save only changed keys to Firebase (faster)
+      const result = await saveToFirebase(translations, true)
+      
+      // Update localStorage (saveTranslations handles this, but ensure it's updated)
+      localStorage.setItem('admin_translations', JSON.stringify(translations))
       
       // Reload translations to reflect changes
       await reloadTranslations()
       
-      setMessage('All changes saved to Firebase successfully!')
+      if (result.skipped) {
+        setMessage('No changes to save')
+      } else {
+        setMessage(`Saved ${result.changedCount || 0} translation(s) to Firebase successfully!`)
+      }
       setTimeout(() => setMessage(''), 3000)
     } catch (error) {
       console.error('Error saving:', error)
