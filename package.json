@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "auth-server": "node server/auth-server.js",
+    "dev:all": "concurrently \"npm run auth-server\" \"npm run dev\""
   },
   "dependencies": {
     "firebase": "^10.14.1",

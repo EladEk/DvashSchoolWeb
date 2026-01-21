@@ -47,6 +47,24 @@ npm run preview
 
 This project is prepared for Firebase integration. See [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) for detailed instructions on configuring Firebase for contact form submissions.
 
+## ImageKit Setup
+
+This project uses ImageKit for image uploads. See [IMAGEKIT_SETUP.md](./IMAGEKIT_SETUP.md) for detailed instructions.
+
+### Quick Start (Local Development)
+
+1. Get your ImageKit Private Key from [ImageKit Dashboard](https://imagekit.io/dashboard) > Settings > API Keys
+2. Set environment variable:
+   ```bash
+   export IMAGEKIT_PRIVATE_KEY=your_private_key_here
+   ```
+3. Start the authentication server:
+   ```bash
+   npm run auth-server
+   ```
+4. The server will run on `http://localhost:3001/auth`
+5. The React app is already configured to use this endpoint
+
 ## Project Structure
 
 ```

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from '../contexts/TranslationContext'
 import { getTranslations, saveTranslations, getDefaultTranslations, clearTranslationsCache } from '../services/adminService'
 import './InlineEditor.css'
@@ -267,27 +268,17 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
   }, [handleClose])
 
   const handleReset = () => {
-    if (confirm('Reset to default values?')) {
+    if (confirm(t('inlineEditor.confirmReset') || 'לאפס לערכי ברירת מחדל?')) {
       setHebrewValue(defaultHebrew)
       setEnglishValue(defaultEnglish)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="inline-editor-overlay">
-        <div className="inline-editor-modal" ref={modalRef}>
-          <div className="loading">Loading...</div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="inline-editor-overlay">
-      <div className="inline-editor-modal" ref={modalRef}>
+  const modalContent = (
+    <div className="inline-editor-overlay" onClick={handleClose}>
+      <div className="inline-editor-modal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
         <div className="editor-header">
-          <h3>Edit Translation: {translationKey}</h3>
+          <h3>{t('inlineEditor.title') || 'עריכת תרגום'}: {translationKey}</h3>
           <button className="close-btn" onClick={handleClose}>×</button>
         </div>
         <div className="editor-content">
@@ -301,7 +292,7 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
             />
             {defaultHebrew && (
               <button className="reset-btn" onClick={() => setHebrewValue(defaultHebrew)}>
-                Reset to Default
+                {t('inlineEditor.resetToDefault') || 'איפוס לברירת מחדל'}
               </button>
             )}
           </div>
@@ -315,17 +306,19 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
             />
             {defaultEnglish && (
               <button className="reset-btn" onClick={() => setEnglishValue(defaultEnglish)}>
-                Reset to Default
+                {t('inlineEditor.resetToDefault') || 'איפוס לברירת מחדל'}
               </button>
             )}
           </div>
         </div>
         <div className="editor-footer">
           <button className="reset-all-btn" onClick={handleReset}>
-            Reset Both to Default
+            {t('inlineEditor.resetBoth') || 'איפוס שניהם לברירת מחדל'}
           </button>
           <div className="editor-actions">
-            <button className="close-btn" onClick={handleClose} disabled={saving}>Close</button>
+            <button className="close-btn" onClick={handleClose} disabled={saving}>
+              {t('common.close') || 'סגור'}
+            </button>
             <button 
               className="save-btn" 
               onClick={handleSaveToFirebase} 
@@ -334,10 +327,10 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
               {saving ? (
                 <>
                   <span className="save-spinner"></span>
-                  <span>Saving...</span>
+                  <span>{t('common.saving') || 'שומר...'}</span>
                 </>
               ) : (
-                'Save'
+                t('common.save') || 'שמור'
               )}
             </button>
           </div>
@@ -350,6 +343,20 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
       </div>
     </div>
   )
+
+  if (loading) {
+    const loadingContent = (
+      <div className="inline-editor-overlay" onClick={handleClose}>
+        <div className="inline-editor-modal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
+          <div className="loading">Loading...</div>
+        </div>
+      </div>
+    )
+    return createPortal(loadingContent, document.body)
+  }
+
+  // Use portal to render outside the DOM hierarchy (on top of everything)
+  return createPortal(modalContent, document.body)
 }
 
 export default InlineEditor

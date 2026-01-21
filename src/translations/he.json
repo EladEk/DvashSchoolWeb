@@ -15,7 +15,8 @@
     "import": "ייבא",
     "importing": "מייבא...",
     "show": "הצג",
-    "hide": "הסתר"
+    "hide": "הסתר",
+    "close": "סגור"
   },
   "nav": {
     "home": "ראשי",
@@ -293,5 +294,32 @@
     "parentCommitteeDescription": "צרו קשר עם וועד ההורים של בית הספר הדמוקרטי בבאר שבע",
     "parliamentTitle": "פרלמנט - בית ספר דב״ש",
     "parliamentDescription": "הציעו, סקרו ודונו בנושאי הפרלמנט"
+  },
+  "inlineEditor": {
+    "title": "עריכת תרגום",
+    "resetToDefault": "איפוס לברירת מחדל",
+    "resetBoth": "איפוס שניהם לברירת מחדל",
+    "confirmReset": "לאפס לערכי ברירת מחדל?"
+  },
+  "image": {
+    "uploadImage": "העלה תמונה",
+    "noImage": "אין תמונה",
+    "loadError": "שגיאה בטעינת התמונה",
+    "edit": "ערוך תמונה",
+    "editImage": "עריכת תמונה",
+    "selectFile": "בחר קובץ",
+    "upload": "העלה",
+    "uploading": "מעלה...",
+    "delete": "מחק",
+    "confirmDelete": "האם אתה בטוח שברצונך למחוק תמונה זו?",
+    "invalidFile": "קובץ לא חוקי. אנא בחר תמונה.",
+    "fileTooLarge": "הקובץ גדול מדי. מקסימום 10MB.",
+    "noFileSelected": "אנא בחר קובץ להעלאה",
+    "uploadError": "שגיאה בהעלאת התמונה",
+    "deleteError": "שגיאה במחיקת התמונה",
+    "checkConnection": "אנא בדוק את החיבור לאינטרנט או הגדר authentication endpoint",
+    "authError": "שגיאה באימות. אנא הגדר authentication endpoint",
+    "parseError": "שגיאה בפענוח התגובה",
+    "saveError": "שגיאה בשמירת נתיב התמונה"
   }
 }

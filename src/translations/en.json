@@ -15,7 +15,8 @@
     "import": "Import",
     "importing": "Importing...",
     "show": "Show",
-    "hide": "Hide"
+    "hide": "Hide",
+    "close": "Close"
   },
   "nav": {
     "home": "Home",
@@ -293,5 +294,32 @@
     "parentCommitteeDescription": "Contact the Parent Committee of the Democratic School in Be'er Sheva",
     "parliamentTitle": "Parliament - Dvash School",
     "parliamentDescription": "Submit, review and discuss school parliament topics"
+  },
+  "inlineEditor": {
+    "title": "Edit Translation",
+    "resetToDefault": "Reset to Default",
+    "resetBoth": "Reset Both to Default",
+    "confirmReset": "Reset to default values?"
+  },
+  "image": {
+    "uploadImage": "Upload Image",
+    "noImage": "No Image",
+    "loadError": "Error loading image",
+    "edit": "Edit Image",
+    "editImage": "Edit Image",
+    "selectFile": "Select File",
+    "upload": "Upload",
+    "uploading": "Uploading...",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this image?",
+    "invalidFile": "Invalid file. Please select an image.",
+    "fileTooLarge": "File is too large. Maximum 10MB.",
+    "noFileSelected": "Please select a file to upload",
+    "uploadError": "Error uploading image",
+    "deleteError": "Error deleting image",
+    "checkConnection": "Please check your internet connection or configure authentication endpoint",
+    "authError": "Authentication error. Please configure authentication endpoint",
+    "parseError": "Error parsing response",
+    "saveError": "Error saving image path"
   }
 }

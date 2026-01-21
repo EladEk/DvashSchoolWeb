@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAdmin } from '../contexts/AdminContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { getTranslations, saveTranslations, exportTranslations } from '../services/adminService'
 import './AdminIndicator.css'
 
 const AdminIndicator = () => {
-  const { isAdminMode } = useAdmin()
+  const { isAdminMode, toggleAdminMode } = useAdmin()
   const { reloadTranslations } = useTranslation()
+  const navigate = useNavigate()
   const [message, setMessage] = useState('')
 
   const handleExport = async () => {
@@ -71,14 +72,60 @@ const AdminIndicator = () => {
 
 
   const handleExit = () => {
-    if (confirm('Exit admin mode? Unsaved changes will be lost.')) {
-      sessionStorage.removeItem('adminAuthenticated')
-      window.location.reload()
+    // Just exit admin mode, don't logout (keep session)
+    // toggleAdminMode will handle both sessionStorage and state update
+    if (isAdminMode) {
+      toggleAdminMode()
     }
   }
 
+  const handleEnterAdminMode = () => {
+    // Check if user is already logged in
+    try {
+      const session = JSON.parse(localStorage.getItem('session') || 'null')
+      
+      if (session) {
+        const role = (session.role || '').trim().toLowerCase()
+        // Check if user has permission to enter admin mode (admin, editor, or committee)
+        if (role === 'admin' || role === 'editor' || role === 'committee' || session.mode === 'system-admin') {
+          // User is logged in and has permission - activate admin mode directly
+          sessionStorage.setItem('adminAuthenticated', 'true')
+          // Update state immediately
+          if (!isAdminMode) {
+            toggleAdminMode()
+          }
+          return
+        }
+      }
+    } catch (e) {
+      console.error('Error checking session:', e)
+    }
+    
+    // User is not logged in or doesn't have permission - navigate to login page
+    navigate('/parliament/login', { 
+      state: { from: { pathname: window.location.pathname } },
+      replace: false 
+    })
+  }
+
+  // Show "Enter Admin Mode" button when not in admin mode
   if (!isAdminMode) {
-    return null
+    return (
+      <div className="admin-toolbar admin-toolbar-inactive">
+        <div className="admin-toolbar-content">
+          <span className="admin-badge admin-badge-inactive">View Mode</span>
+          <div className="admin-buttons">
+            <button 
+              className="admin-btn enter-admin-btn" 
+              onClick={handleEnterAdminMode} 
+              title="Enter admin mode to edit the website"
+            >
+              Enter Admin Mode
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

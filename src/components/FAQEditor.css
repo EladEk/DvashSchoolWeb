@@ -1,0 +1,217 @@
+/* ============================================
+   FAQ EDITOR - LOGO COLOR SCHEME
+   ============================================ */
+
+.faq-editor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999 !important;
+  padding: 2rem;
+}
+
+.faq-editor-modal {
+  background-color: var(--white);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--primary-color);
+  position: relative;
+  z-index: 1000000 !important;
+}
+
+.faq-editor-header {
+  padding: 1.5rem;
+  border-bottom: 2px solid var(--primary-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--gradient-primary);
+  color: var(--text-on-primary);
+}
+
+.faq-editor-header h3 {
+  margin: 0;
+  color: var(--text-on-primary);
+  font-size: 1.2rem;
+}
+
+.faq-editor-header .close-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: var(--text-on-primary);
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: all 0.3s ease;
+}
+
+.faq-editor-header .close-btn:hover {
+  color: var(--accent-color);
+  transform: scale(1.1);
+}
+
+.faq-editor-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: var(--white);
+}
+
+.faq-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.faq-editor-field label {
+  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 1rem;
+}
+
+.faq-editor-field textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  color: var(--text-color);
+  background-color: var(--white);
+  transition: all 0.3s ease;
+}
+
+.faq-editor-field textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(44, 95, 124, 0.1);
+  color: var(--text-color);
+  background-color: var(--white);
+}
+
+.admin-mode .faq-editor-modal .faq-editor-field textarea,
+.admin-mode .faq-editor-modal .faq-editor-field textarea:focus {
+  color: var(--text-color) !important;
+  background-color: var(--white) !important;
+}
+
+.faq-editor-footer {
+  padding: 1.5rem;
+  border-top: 2px solid var(--primary-color);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: var(--white);
+}
+
+.faq-editor-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.faq-editor-footer .cancel-btn,
+.faq-editor-footer .save-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  min-height: 40px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.faq-editor-footer .cancel-btn {
+  background-color: var(--light-gray);
+  color: var(--text-color);
+}
+
+.faq-editor-footer .cancel-btn:hover {
+  background-color: #d0d0d0;
+}
+
+.faq-editor-footer .save-btn {
+  background-color: var(--primary-color);
+  color: var(--text-on-primary);
+}
+
+.faq-editor-footer .save-btn:hover:not(:disabled) {
+  background-color: var(--secondary-color);
+  transform: translateY(-2px);
+}
+
+.faq-editor-footer .save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-message {
+  width: 100%;
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+  border-radius: 5px;
+  font-weight: 600;
+}
+
+.save-message.success {
+  background-color: #4caf50;
+  color: var(--text-on-primary);
+}
+
+.save-message.error {
+  background-color: #f44336;
+  color: var(--text-on-primary);
+}
+
+.loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-color);
+}
+
+@media (max-width: 768px) {
+  .faq-editor-overlay {
+    padding: 1rem;
+  }
+
+  .faq-editor-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .faq-editor-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .faq-editor-footer .cancel-btn,
+  .faq-editor-footer .save-btn {
+    flex: 1;
+  }
+}

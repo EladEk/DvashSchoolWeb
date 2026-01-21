@@ -1,0 +1,119 @@
+/* ============================================
+   EDITABLE IMAGE - LOGO COLOR SCHEME
+   ============================================ */
+
+.editable-image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editable-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.image-placeholder-empty {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  background: var(--gradient-primary);
+  border: 3px dashed var(--text-on-primary);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--text-on-primary);
+}
+
+.image-placeholder-empty:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--white);
+  transform: scale(1.02);
+}
+
+.image-placeholder-empty p {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+}
+
+.edit-icon {
+  font-size: 2rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.image-edit-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--primary-color);
+  color: var(--white);
+  border: 2px solid var(--white);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+  z-index: 10;
+  box-shadow: var(--shadow-md);
+}
+
+.image-edit-btn:hover {
+  background: var(--secondary-color);
+  transform: scale(1.1);
+  box-shadow: var(--shadow-lg);
+}
+
+.image-error {
+  color: var(--error-color, #f44336);
+  text-align: center;
+  padding: 1rem;
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: 5px;
+}
+
+.image-error.show {
+  display: block !important;
+}
+
+.image-loading {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--light-gray);
+  border-radius: 10px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border-color);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

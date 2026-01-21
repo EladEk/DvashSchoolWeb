@@ -17,11 +17,26 @@ export const AdminProvider = ({ children }) => {
     // Check periodically
     const interval = setInterval(checkAuth, 1000)
     
-    return () => clearInterval(interval)
+    // Also listen to storage events (for cross-tab updates)
+    const handleStorageChange = () => {
+      checkAuth()
+    }
+    window.addEventListener('storage', handleStorageChange)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('storage', handleStorageChange)
+    }
   }, [])
 
   const toggleAdminMode = () => {
-    setIsAdminMode(!isAdminMode)
+    const newValue = !isAdminMode
+    if (newValue) {
+      sessionStorage.setItem('adminAuthenticated', 'true')
+    } else {
+      sessionStorage.removeItem('adminAuthenticated')
+    }
+    setIsAdminMode(newValue)
   }
 
   return (

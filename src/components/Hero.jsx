@@ -1,5 +1,6 @@
 import { useTranslation } from '../contexts/TranslationContext'
 import EditableText from './EditableText'
+import EditableImage from './EditableImage'
 import './Hero.css'
 
 const Hero = () => {
@@ -21,13 +22,7 @@ const Hero = () => {
           </p>
         </div>
         <div className="hero-image">
-          <div className="image-placeholder">
-            <p>
-              <EditableText translationKey="hero.image">
-                {t('hero.image')}
-              </EditableText>
-            </p>
-          </div>
+          <EditableImage imageKey="hero.image" alt={t('hero.image')} />
         </div>
       </div>
     </section>

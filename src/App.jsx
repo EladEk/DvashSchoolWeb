@@ -16,6 +16,7 @@ import AdminRoute from './components/AdminRoute'
 import { RequireRole } from './utils/requireRole'
 import { useScrollToHash } from './hooks/useScrollToHash'
 import './App.css'
+import './components/Loader.css'
 
 function AppContent() {
   const { isAdminMode } = useAdmin()

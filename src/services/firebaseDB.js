@@ -169,6 +169,71 @@ export const submitContactFormToDB = async (formData) => {
 }
 
 // ============================================
+// IMAGE OPERATIONS
+// ============================================
+
+/**
+ * Save image path to Firebase
+ * @param {string} imageKey - Image key (e.g., 'hero.image', 'about.image1')
+ * @param {string|null} imagePath - ImageKit path or null to delete
+ * @returns {Promise<{success: boolean}>}
+ */
+export const saveImagePathToDB = async (imageKey, imagePath) => {
+  try {
+    if (!db) {
+      throw new Error('Firebase not configured')
+    }
+    
+    const imageDocRef = doc(db, 'images', imageKey)
+    
+    if (imagePath === null) {
+      // Delete the image
+      await updateDoc(imageDocRef, {
+        path: null,
+        updatedAt: serverTimestamp(),
+      })
+    } else {
+      // Save or update the image path
+      await setDoc(imageDocRef, {
+        path: imagePath,
+        updatedAt: serverTimestamp(),
+      }, { merge: true })
+    }
+    
+    console.log(`✅ Saved image path for "${imageKey}" to Firebase`)
+    return { success: true }
+  } catch (error) {
+    console.error('Error saving image path to Firebase:', error)
+    throw error
+  }
+}
+
+/**
+ * Load image path from Firebase
+ * @param {string} imageKey - Image key
+ * @returns {Promise<string|null>}
+ */
+export const loadImagePathFromDB = async (imageKey) => {
+  try {
+    if (!db) {
+      return null
+    }
+    
+    const imageDoc = await getDoc(doc(db, 'images', imageKey))
+    
+    if (imageDoc.exists()) {
+      const data = imageDoc.data()
+      return data.path || null
+    }
+    
+    return null
+  } catch (error) {
+    console.log('Firebase image path not available:', error.message)
+    return null
+  }
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -179,4 +244,7 @@ export default {
   saveAllTranslationsToDB,
   // Contact
   submitContactFormToDB,
+  // Images
+  saveImagePathToDB,
+  loadImagePathFromDB,
 }
