@@ -14,6 +14,24 @@
   margin-bottom: 3rem;
   text-align: center;
   font-weight: 700;
+  position: relative;
+}
+
+.page-title:not(:has(.faq-add-btn)) {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.page-title:has(.faq-add-btn) {
+  background: none;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: unset;
+  background-clip: unset;
+}
+
+.page-title:has(.faq-add-btn) > *:not(.faq-add-btn) {
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -44,7 +62,6 @@
   width: 100%;
   padding: 1.5rem;
   background-color: var(--white);
-  text-align: right;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -54,6 +71,14 @@
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--text-color);
+}
+
+html[dir="rtl"] .faq-question {
+  text-align: right;
+}
+
+html[dir="ltr"] .faq-question {
+  text-align: left;
 }
 
 .faq-question:hover {
@@ -67,7 +92,14 @@
 
 .faq-question span:first-child {
   flex: 1;
+}
+
+html[dir="rtl"] .faq-question span:first-child {
   text-align: right;
+}
+
+html[dir="ltr"] .faq-question span:first-child {
+  text-align: left;
 }
 
 .faq-icon {
@@ -153,6 +185,11 @@
   align-items: center;
   gap: 0.5rem;
   box-shadow: var(--shadow-sm);
+  position: relative;
+  z-index: 10;
+  -webkit-text-fill-color: var(--primary-color) !important;
+  background-clip: unset !important;
+  -webkit-background-clip: unset !important;
 }
 
 .faq-add-btn:hover {
@@ -167,6 +204,23 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
+  position: relative;
+}
+
+html[dir="rtl"] .page-title {
+  flex-direction: row;
+}
+
+html[dir="ltr"] .page-title {
+  flex-direction: row;
+}
+
+.faq-add-btn {
+  position: relative;
+  z-index: 10;
+  background-color: var(--white) !important;
+  color: var(--primary-color) !important;
+  border: 2px solid var(--primary-color) !important;
 }
 
 @keyframes slideDown {

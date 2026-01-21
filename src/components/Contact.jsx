@@ -78,8 +78,16 @@ const Contact = () => {
                 </EditableText>
               </h3>
               <div className="social-links">
-                <a href="#" target="_blank" rel="noopener noreferrer">Instagram</a>
-                <a href="#" target="_blank" rel="noopener noreferrer">Facebook</a>
+                <a href={t('contact.instagramUrl') || '#'} target="_blank" rel="noopener noreferrer">
+                  <EditableText translationKey="contact.instagram">
+                    {t('contact.instagram')}
+                  </EditableText>
+                </a>
+                <a href={t('contact.facebookUrl') || '#'} target="_blank" rel="noopener noreferrer">
+                  <EditableText translationKey="contact.facebook">
+                    {t('contact.facebook')}
+                  </EditableText>
+                </a>
               </div>
             </div>
           </div>

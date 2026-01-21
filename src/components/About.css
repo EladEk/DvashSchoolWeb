@@ -98,13 +98,22 @@
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
 }
 
-.about-item-reverse {
+html[dir="rtl"] .about-item-reverse {
   direction: rtl;
 }
 
-.about-item-reverse .about-text {
+html[dir="ltr"] .about-item-reverse {
+  direction: ltr;
+}
+
+html[dir="rtl"] .about-item-reverse .about-text {
   direction: rtl;
   text-align: right;
+}
+
+html[dir="ltr"] .about-item-reverse .about-text {
+  direction: ltr;
+  text-align: left;
 }
 
 .about-item-reverse .about-image {
@@ -132,8 +141,16 @@
   color: var(--text-color);
   line-height: 1.8;
   font-size: 1.1rem;
+}
+
+html[dir="rtl"] .about-text p {
   text-align: right;
   direction: rtl;
+}
+
+html[dir="ltr"] .about-text p {
+  text-align: left;
+  direction: ltr;
 }
 
 .section-actions {

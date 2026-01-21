@@ -16,7 +16,23 @@
     "importing": "Importing...",
     "show": "Show",
     "hide": "Hide",
-    "close": "Close"
+    "close": "Close",
+    "logout": "Logout",
+    "exit": "Exit",
+    "dashboard": "Dashboard"
+  },
+  "admin": {
+    "dashboard": "Admin Dashboard",
+    "translationEditor": "Translation Editor",
+    "usersManagement": "Users Management",
+    "parliamentAdmin": "Parliament Admin",
+    "exportJsonFiles": "Export JSON Files",
+    "saveToFirebase": "Save to Firebase",
+    "unsavedChanges": "You have unsaved changes",
+    "goToAdminDashboard": "Go to Admin Dashboard",
+    "exportTranslations": "Export translations to JSON files",
+    "importTranslations": "Import translations from JSON files",
+    "exitAdminMode": "Exit admin mode"
   },
   "nav": {
     "home": "Home",
@@ -61,6 +77,10 @@
     "phone": "Phone",
     "email": "Email",
     "media": "Media",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "instagramUrl": "#",
+    "facebookUrl": "#",
     "lastName": "Last Name",
     "firstName": "First Name",
     "message": "Message",

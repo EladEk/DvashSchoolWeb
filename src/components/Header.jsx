@@ -1,14 +1,90 @@
-import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from '../contexts/TranslationContext'
+import { useAdmin } from '../contexts/AdminContext'
 import LanguageSwitcher from './LanguageSwitcher'
 import './Header.css'
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [hasAdminAccess, setHasAdminAccess] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
   const { t } = useTranslation()
+  const { isAdminMode, toggleAdminMode } = useAdmin()
   const isHomePage = location.pathname === '/'
+
+  // Check if user is logged in and has admin/editor/committee role
+  useEffect(() => {
+    const checkAdminAccess = () => {
+      try {
+        const session = JSON.parse(localStorage.getItem('session') || 'null')
+        if (session) {
+          const role = (session.role || '').trim().toLowerCase()
+          const hasAccess = role === 'admin' || role === 'editor' || role === 'committee' || session.mode === 'system-admin'
+          setHasAdminAccess(hasAccess)
+        } else {
+          setHasAdminAccess(false)
+        }
+      } catch (e) {
+        setHasAdminAccess(false)
+      }
+    }
+
+    checkAdminAccess()
+    // Check periodically for session changes
+    const interval = setInterval(checkAdminAccess, 1000)
+    
+    // Listen to storage events (for cross-tab updates and logout)
+    const handleStorageChange = (e) => {
+      if (e.key === 'session') {
+        checkAdminAccess()
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
+
+  const handleAdminClick = () => {
+    if (isAdminMode) {
+      // If already in admin mode, go to dashboard
+      navigate('/admin/dashboard')
+    } else {
+      // Enter admin mode
+      try {
+        const session = JSON.parse(localStorage.getItem('session') || 'null')
+        if (session) {
+          const role = (session.role || '').trim().toLowerCase()
+          if (role === 'admin' || role === 'editor' || role === 'committee' || session.mode === 'system-admin') {
+            sessionStorage.setItem('adminAuthenticated', 'true')
+            sessionStorage.removeItem('justExitedAdminMode')
+            if (!isAdminMode) {
+              toggleAdminMode()
+            }
+          } else {
+            navigate('/parliament/login', { 
+              state: { from: { pathname: window.location.pathname } },
+              replace: false 
+            })
+          }
+        } else {
+          navigate('/parliament/login', { 
+            state: { from: { pathname: window.location.pathname } },
+            replace: false 
+          })
+        }
+      } catch (e) {
+        navigate('/parliament/login', { 
+          state: { from: { pathname: window.location.pathname } },
+          replace: false 
+        })
+      }
+    }
+  }
 
   const menuItems = [
     { id: 'home', labelKey: 'nav.home', href: '/', hash: '' },
@@ -171,6 +247,17 @@ const Header = () => {
                   )}
                 </li>
               ))}
+              {hasAdminAccess && (
+                <li>
+                  <button
+                    className="nav-admin-btn"
+                    onClick={handleAdminClick}
+                    title={isAdminMode ? 'Admin Dashboard' : 'Enter Admin Mode'}
+                  >
+                    {isAdminMode ? 'Admin' : 'Admin'}
+                  </button>
+                </li>
+              )}
             </ul>
             <LanguageSwitcher />
           </nav>

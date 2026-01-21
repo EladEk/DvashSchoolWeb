@@ -24,8 +24,15 @@
 .parent-committee-intro {
   max-width: 900px;
   margin: 0 auto 3rem auto;
-  text-align: right;
   padding: 2rem;
+}
+
+html[dir="rtl"] .parent-committee-intro {
+  text-align: right;
+}
+
+html[dir="ltr"] .parent-committee-intro {
+  text-align: left;
   background: var(--white);
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
@@ -57,8 +64,12 @@
   font-weight: 600;
 }
 
-.parent-committee-form {
+html[dir="rtl"] .parent-committee-form {
   text-align: right;
+}
+
+html[dir="ltr"] .parent-committee-form {
+  text-align: left;
 }
 
 .parent-committee-form .form-group {
@@ -80,7 +91,16 @@
   border-radius: 5px;
   font-size: 1rem;
   font-family: inherit;
+}
+
+html[dir="rtl"] .parent-committee-form input,
+html[dir="rtl"] .parent-committee-form textarea {
   direction: rtl;
+}
+
+html[dir="ltr"] .parent-committee-form input,
+html[dir="ltr"] .parent-committee-form textarea {
+  direction: ltr;
   color: var(--text-color);
   background-color: var(--white);
   transition: all 0.3s ease;

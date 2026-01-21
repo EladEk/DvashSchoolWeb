@@ -65,6 +65,7 @@ export default function ParliamentLogin() {
         }
         localStorage.setItem('session', JSON.stringify(adminSession))
         sessionStorage.setItem('adminAuthenticated', 'true')
+        sessionStorage.removeItem('justExitedAdminMode') // Remove flag when entering admin mode
         navigate('/admin/dashboard', { replace: true })
         return
       }
@@ -108,6 +109,7 @@ export default function ParliamentLogin() {
       // If admin/editor/committee login, also set adminAuthenticated and redirect to admin dashboard
       if (userData.role === 'admin' || userData.role === 'editor' || userData.role === 'committee') {
         sessionStorage.setItem('adminAuthenticated', 'true')
+        sessionStorage.removeItem('justExitedAdminMode') // Remove flag when entering admin mode
         // Auto-redirect admin/editor/committee to admin dashboard
         navigate('/admin/dashboard', { replace: true })
         return
@@ -187,6 +189,7 @@ export default function ParliamentLogin() {
       // If admin/editor/committee registration, also set adminAuthenticated and redirect to admin dashboard
       if (registerForm.role === 'admin' || registerForm.role === 'editor' || registerForm.role === 'committee') {
         sessionStorage.setItem('adminAuthenticated', 'true')
+        sessionStorage.removeItem('justExitedAdminMode') // Remove flag when entering admin mode
         // Auto-redirect admin/editor/committee to admin dashboard
         navigate('/admin/dashboard', { replace: true })
         return

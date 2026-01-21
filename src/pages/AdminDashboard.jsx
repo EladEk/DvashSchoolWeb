@@ -172,24 +172,21 @@ const AdminDashboard = () => {
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
-        <h1>Admin Dashboard</h1>
+        <h1>{t('admin.dashboard')}</h1>
         <div className="admin-actions">
-          {(effectiveRole === 'admin' || effectiveRole === 'committee') && (
-            <Link to="/admin/parliament" className="admin-link">Parliament Admin</Link>
-          )}
-          <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <button onClick={handleLogout} className="logout-btn">{t('common.logout')}</button>
         </div>
       </div>
 
       {!canEditTranslations && !canManageUsers && effectiveRole && (
         <div className="admin-message error">
-          אין לך הרשאה לגשת לדף זה. נדרשת הרשאת עורך או מנהל. (תפקיד נוכחי: {effectiveRole})
+          {t('users.noPermission')} ({t('users.role')}: {effectiveRole})
         </div>
       )}
       
       {!canEditTranslations && !canManageUsers && !effectiveRole && phase !== 'checking' && (
         <div className="admin-message error">
-          אין לך הרשאה לגשת לדף זה. נדרשת הרשאת עורך או מנהל.
+          {t('users.noPermission')}
         </div>
       )}
 
@@ -199,14 +196,14 @@ const AdminDashboard = () => {
             className={`admin-tab ${activeTab === 'translations' ? 'active' : ''}`}
             onClick={() => setActiveTab('translations')}
           >
-            Translation Editor
+            {t('admin.translationEditor')}
           </button>
           {canManageUsers && (
             <button
               className={`admin-tab ${activeTab === 'users' ? 'active' : ''}`}
               onClick={() => setActiveTab('users')}
             >
-              Users Management
+              {t('admin.usersManagement')}
             </button>
           )}
         </div>
@@ -232,17 +229,17 @@ const AdminDashboard = () => {
 
         <div className="save-controls">
           {hasChanges && (
-            <span className="unsaved-indicator">You have unsaved changes</span>
+            <span className="unsaved-indicator">{t('admin.unsavedChanges')}</span>
           )}
           <button
             onClick={handleSave}
             disabled={!hasChanges || saving}
             className="save-btn"
           >
-            {saving ? 'Saving...' : 'Save to Firebase'}
+            {saving ? t('common.saving') : t('admin.saveToFirebase')}
           </button>
           <button onClick={handleExport} className="export-btn">
-            Export JSON Files
+            {t('admin.exportJsonFiles')}
           </button>
         </div>
       </div>

@@ -47,6 +47,29 @@ html[dir="ltr"] {
   direction: ltr;
 }
 
+/* Dynamic text alignment based on language */
+html[dir="rtl"] * {
+  text-align: inherit;
+}
+
+html[dir="ltr"] * {
+  text-align: inherit;
+}
+
+/* Override hardcoded right alignment for RTL */
+html[dir="ltr"] [style*="text-align: right"],
+html[dir="ltr"] .text-right,
+html[dir="ltr"] [class*="text-right"] {
+  text-align: left !important;
+}
+
+/* Override hardcoded left alignment for RTL */
+html[dir="rtl"] [style*="text-align: left"],
+html[dir="rtl"] .text-left,
+html[dir="rtl"] [class*="text-left"] {
+  text-align: right !important;
+}
+
 body {
   font-family: 'Segoe UI', 'Heebo', 'Assistant', Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.7;

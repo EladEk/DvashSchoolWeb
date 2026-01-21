@@ -16,7 +16,23 @@
     "importing": "מייבא...",
     "show": "הצג",
     "hide": "הסתר",
-    "close": "סגור"
+    "close": "סגור",
+    "logout": "התנתק",
+    "exit": "יציאה",
+    "dashboard": "לוח בקרה"
+  },
+  "admin": {
+    "dashboard": "לוח בקרה מנהל",
+    "translationEditor": "עורך תרגומים",
+    "usersManagement": "ניהול משתמשים",
+    "parliamentAdmin": "ניהול פרלמנט",
+    "exportJsonFiles": "ייצא קבצי JSON",
+    "saveToFirebase": "שמור ל-Firebase",
+    "unsavedChanges": "יש לך שינויים שלא נשמרו",
+    "goToAdminDashboard": "עבור ללוח בקרה מנהל",
+    "exportTranslations": "ייצא תרגומים לקבצי JSON",
+    "importTranslations": "ייבא תרגומים מקבצי JSON",
+    "exitAdminMode": "יציאה ממצב מנהל"
   },
   "nav": {
     "home": "ראשי",
@@ -61,6 +77,10 @@
     "phone": "טלפון",
     "email": "אימייל",
     "media": "מדיה",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "instagramUrl": "#",
+    "facebookUrl": "#",
     "lastName": "שם משפחה",
     "firstName": "שם",
     "message": "הודעה",

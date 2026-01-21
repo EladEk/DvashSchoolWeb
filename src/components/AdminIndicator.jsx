@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAdmin } from '../contexts/AdminContext'
 import { useTranslation } from '../contexts/TranslationContext'
@@ -7,9 +7,52 @@ import './AdminIndicator.css'
 
 const AdminIndicator = () => {
   const { isAdminMode, toggleAdminMode } = useAdmin()
-  const { reloadTranslations } = useTranslation()
+  const { t, reloadTranslations } = useTranslation()
   const navigate = useNavigate()
   const [message, setMessage] = useState('')
+  const [showEnterButton, setShowEnterButton] = useState(false)
+  const [hasParliamentAccess, setHasParliamentAccess] = useState(false)
+
+  // Check if user has admin or committee role for Parliament Admin access
+  useEffect(() => {
+    const checkParliamentAccess = () => {
+      try {
+        const session = JSON.parse(localStorage.getItem('session') || 'null')
+        if (session) {
+          const role = (session.role || '').trim().toLowerCase()
+          const hasAccess = role === 'admin' || role === 'committee' || session.mode === 'system-admin'
+          setHasParliamentAccess(hasAccess)
+        } else {
+          setHasParliamentAccess(false)
+        }
+      } catch (e) {
+        setHasParliamentAccess(false)
+      }
+    }
+
+    checkParliamentAccess()
+    // Check periodically for session changes
+    const interval = setInterval(checkParliamentAccess, 1000)
+    
+    // Listen to storage events (for cross-tab updates and logout)
+    const handleStorageChange = (e) => {
+      if (e.key === 'session') {
+        checkParliamentAccess()
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
+
+  // Check if user just exited admin mode
+  useEffect(() => {
+    const justExited = sessionStorage.getItem('justExitedAdminMode') === 'true'
+    setShowEnterButton(justExited)
+  }, [isAdminMode])
 
   const handleExport = async () => {
     try {
@@ -75,11 +118,18 @@ const AdminIndicator = () => {
     // Just exit admin mode, don't logout (keep session)
     // toggleAdminMode will handle both sessionStorage and state update
     if (isAdminMode) {
+      // Mark that user just exited admin mode
+      sessionStorage.setItem('justExitedAdminMode', 'true')
       toggleAdminMode()
+      setShowEnterButton(true)
     }
   }
 
   const handleEnterAdminMode = () => {
+    // Remove the flag when entering admin mode
+    sessionStorage.removeItem('justExitedAdminMode')
+    setShowEnterButton(false)
+    
     // Check if user is already logged in
     try {
       const session = JSON.parse(localStorage.getItem('session') || 'null')
@@ -108,42 +158,32 @@ const AdminIndicator = () => {
     })
   }
 
-  // Show "Enter Admin Mode" button when not in admin mode
+  // Don't show anything if not in admin mode
   if (!isAdminMode) {
-    return (
-      <div className="admin-toolbar admin-toolbar-inactive">
-        <div className="admin-toolbar-content">
-          <span className="admin-badge admin-badge-inactive">View Mode</span>
-          <div className="admin-buttons">
-            <button 
-              className="admin-btn enter-admin-btn" 
-              onClick={handleEnterAdminMode} 
-              title="Enter admin mode to edit the website"
-            >
-              Enter Admin Mode
-            </button>
-          </div>
-        </div>
-      </div>
-    )
+    return null
   }
 
   return (
     <div className="admin-toolbar">
       <div className="admin-toolbar-content">
-        <span className="admin-badge">Admin Mode</span>
+        <span className="admin-badge">{t('admin.dashboard')}</span>
         <div className="admin-buttons">
-          <Link to="/admin/dashboard" className="admin-btn dashboard-btn" title="Go to Admin Dashboard">
-            Dashboard
+          <Link to="/admin/dashboard" className="admin-btn dashboard-btn" title={t('admin.goToAdminDashboard')}>
+            {t('common.dashboard')}
           </Link>
-          <button className="admin-btn export-btn" onClick={handleExport} title="Export translations to JSON files">
-            Export
+          {hasParliamentAccess && (
+            <Link to="/admin/parliament" className="admin-btn parliament-btn" title={t('admin.parliamentAdmin')}>
+              {t('admin.parliamentAdmin')}
+            </Link>
+          )}
+          <button className="admin-btn export-btn" onClick={handleExport} title={t('admin.exportTranslations')}>
+            {t('common.export')}
           </button>
-          <button className="admin-btn import-btn" onClick={handleImport} title="Import translations from JSON files">
-            Import
+          <button className="admin-btn import-btn" onClick={handleImport} title={t('admin.importTranslations')}>
+            {t('common.import')}
           </button>
-          <button className="admin-btn exit-btn" onClick={handleExit} title="Exit admin mode">
-            Exit
+          <button className="admin-btn exit-btn" onClick={handleExit} title={t('admin.exitAdminMode')}>
+            {t('common.exit')}
           </button>
         </div>
       </div>

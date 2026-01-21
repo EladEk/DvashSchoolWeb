@@ -96,9 +96,16 @@
 
 .users-table th {
   padding: 1rem;
-  text-align: right;
   font-weight: 600;
   font-size: 1rem;
+}
+
+html[dir="rtl"] .users-table th {
+  text-align: right;
+}
+
+html[dir="ltr"] .users-table th {
+  text-align: left;
 }
 
 .users-table td {
