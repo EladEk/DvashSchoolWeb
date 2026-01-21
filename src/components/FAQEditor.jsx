@@ -57,14 +57,30 @@ const FAQEditor = ({ questionIndex, onClose, onSave }) => {
       const faqQuestions = translations.he?.faq?.questions || []
       const faqQuestionsEn = translations.en?.faq?.questions || []
 
+      // Get max index for new questions
+      const maxIndex = faqQuestions.reduce((max, q) => {
+        return Math.max(max, q.index !== undefined ? q.index : -1)
+      }, -1)
+
       const newQuestion = {
         question: hebrewQuestion.trim(),
-        answer: hebrewAnswer.trim()
+        answer: hebrewAnswer.trim(),
+        index: questionIndex === null ? maxIndex + 1 : undefined // Add index only for new questions
       }
 
       const newQuestionEn = {
         question: englishQuestion.trim(),
-        answer: englishAnswer.trim()
+        answer: englishAnswer.trim(),
+        index: questionIndex === null ? maxIndex + 1 : undefined
+      }
+      
+      // If editing, preserve existing index
+      if (questionIndex !== null && questionIndex >= 0 && questionIndex < faqQuestions.length) {
+        const existingIndex = faqQuestions[questionIndex]?.index
+        if (existingIndex !== undefined) {
+          newQuestion.index = existingIndex
+          newQuestionEn.index = existingIndex
+        }
       }
 
       // Validate
