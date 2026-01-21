@@ -1,0 +1,39 @@
+.section-title-wrapper {
+  position: relative;
+  margin-bottom: 3rem;
+}
+
+.section-title-wrapper .section-title {
+  margin-bottom: 5px;
+  font-size: 3rem;
+  color: var(--text-on-primary);
+}
+
+/* Ensure editable text in section titles remains white in all modes */
+.about .section-title-wrapper .section-title .editable-text {
+  color: var(--text-on-primary) !important;
+  -webkit-text-fill-color: var(--text-on-primary) !important;
+  background: transparent !important;
+  background-clip: unset !important;
+  -webkit-background-clip: unset !important;
+}
+
+.section-title-divider {
+  border: none;
+  height: 3px;
+  background: linear-gradient(to right, 
+    transparent 0%, 
+    var(--secondary-color) 25%, 
+    var(--accent-color) 50%, 
+    var(--warm-orange) 75%, 
+    transparent 100%);
+  margin: 0 auto;
+  width: 80%;
+  max-width: 300px;
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(44, 95, 124, 0.3);
+}
+
+.about .section-title {
+  margin-bottom: 0;
+}

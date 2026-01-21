@@ -1,10 +1,7 @@
 import { useTranslation } from '../contexts/TranslationContext'
 import DocumentHead from '../components/DocumentHead'
 import Hero from '../components/Hero'
-import About from '../components/About'
-import Community from '../components/Community'
-import Learning from '../components/Learning'
-import Authorities from '../components/Authorities'
+import GenericSections from '../components/GenericSections'
 
 function Home() {
   const { t } = useTranslation()
@@ -16,10 +13,7 @@ function Home() {
         description={t('meta.homeDescription')}
       />
       <Hero />
-      <About />
-      <Community />
-      <Learning />
-      <Authorities />
+      <GenericSections />
     </>
   )
 }

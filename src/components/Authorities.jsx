@@ -16,8 +16,10 @@ const Authorities = () => {
 
   // Get sections from translations, fallback to old structure
   const sections = t('authorities.sections')
-  const hasOldStructure = (!sections || !Array.isArray(sections) || sections.length === 0) && t('authorities.text')
-  const displaySections = (Array.isArray(sections) && sections.length > 0) ? sections : (hasOldStructure ? [{ text: t('authorities.text') }] : [])
+  const oldText = t('authorities.text')
+  // Only show old structure if sections is empty AND old text exists and is not empty
+  const hasOldStructure = (!sections || !Array.isArray(sections) || sections.length === 0) && oldText && oldText.trim() !== ''
+  const displaySections = (Array.isArray(sections) && sections.length > 0) ? sections : (hasOldStructure ? [{ text: oldText }] : [])
 
   const handleDelete = async (index) => {
     if (!confirm('האם אתה בטוח שברצונך למחוק סעיף זה?')) {
@@ -31,23 +33,54 @@ const Authorities = () => {
       if (!translations.he.authorities) translations.he.authorities = {}
       if (!translations.en.authorities) translations.en.authorities = {}
       
-      const sections = Array.isArray(translations.he.authorities.sections) ? [...translations.he.authorities.sections] : []
-      const sectionsEn = Array.isArray(translations.en.authorities.sections) ? [...translations.en.authorities.sections] : []
+      let sections = Array.isArray(translations.he.authorities.sections) ? [...translations.he.authorities.sections] : []
+      let sectionsEn = Array.isArray(translations.en.authorities.sections) ? [...translations.en.authorities.sections] : []
 
-      // Validate index
-      if (index < 0 || index >= sections.length) {
-        console.error('Invalid index for deletion:', index, 'sections length:', sections.length)
-        alert('שגיאה: אינדקס לא תקין')
+      // Determine what we're actually displaying vs what's in stored translations
+      // If displaySections has 1 item but sections array is empty, we're showing old structure
+      const isShowingOldStructure = displaySections.length === 1 && sections.length === 0 && index === 0
+
+      console.log('Delete attempt:', {
+        index,
+        sectionsLength: sections.length,
+        displaySectionsLength: displaySections.length,
+        hasOldStructure,
+        isShowingOldStructure,
+        heText: translations.he.authorities?.text,
+        enText: translations.en.authorities?.text
+      })
+
+      // Handle deletion
+      if (isShowingOldStructure) {
+        // We're displaying old structure (1 item from old text) and user clicked delete on index 0
+        // Explicitly set text to null/undefined and delete the property to override defaults
+        // This ensures the old text won't show after save/reload and displaySections will be empty
+        delete translations.he.authorities.text
+        delete translations.en.authorities.text
+        translations.he.authorities.sections = []
+        translations.en.authorities.sections = []
+        // Also explicitly set to null to ensure it's cleared
+        translations.he.authorities.text = null
+        translations.en.authorities.text = null
+        console.log('Deleted old structure text - section will be hidden')
+      } else if (index >= 0 && index < sections.length) {
+        // Normal case: remove section from array
+        sections.splice(index, 1)
+        sectionsEn.splice(index, 1)
+        translations.he.authorities.sections = sections
+        translations.en.authorities.sections = sectionsEn
+        console.log('Deleted section from array, new length:', sections.length)
+      } else {
+        // Invalid index - provide helpful error message
+        console.error('Invalid index for deletion:', {
+          index,
+          sectionsLength: sections.length,
+          displaySectionsLength: displaySections.length,
+          hasOldStructure
+        })
+        alert(`שגיאה: אינדקס לא תקין. אינדקס: ${index}, מספר סעיפים בשמירה: ${sections.length}, מספר סעיפים בתצוגה: ${displaySections.length}`)
         return
       }
-
-      // Remove the section at the specified index
-      sections.splice(index, 1)
-      sectionsEn.splice(index, 1)
-
-      // Update translations
-      translations.he.authorities.sections = sections
-      translations.en.authorities.sections = sectionsEn
 
       // Save to localStorage and Firebase
       await saveTranslations(translations, false)
