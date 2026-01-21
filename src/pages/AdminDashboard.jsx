@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../contexts/TranslationContext'
 import { getTranslations, saveTranslations, exportTranslations } from '../services/adminService'
+import UsersAdmin from '../components/admin/UsersAdmin'
 import './AdminDashboard.css'
 
 const AdminDashboard = () => {
@@ -13,6 +14,7 @@ const AdminDashboard = () => {
   const [hasChanges, setHasChanges] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [activeTab, setActiveTab] = useState('translations')
 
   useEffect(() => {
     loadTranslations()
@@ -132,11 +134,29 @@ const AdminDashboard = () => {
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
-        <h1>Admin Dashboard - Translation Editor</h1>
+        <h1>Admin Dashboard</h1>
         <div className="admin-actions">
+          <Link to="/admin/parliament" className="admin-link">Parliament Admin</Link>
           <button onClick={handleLogout} className="logout-btn">Logout</button>
         </div>
       </div>
+
+      <div className="admin-nav">
+        <button
+          className={`admin-tab ${activeTab === 'translations' ? 'active' : ''}`}
+          onClick={() => setActiveTab('translations')}
+        >
+          Translation Editor
+        </button>
+        <button
+          className={`admin-tab ${activeTab === 'users' ? 'active' : ''}`}
+          onClick={() => setActiveTab('users')}
+        >
+          Users Management
+        </button>
+      </div>
+
+      {activeTab === 'users' && <UsersAdmin />}
 
       <div className="admin-controls">
         <div className="lang-selector">
@@ -171,15 +191,19 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {message && (
-        <div className={`admin-message ${message.includes('Error') ? 'error' : 'success'}`}>
-          {message}
-        </div>
-      )}
+      {activeTab === 'translations' && (
+        <>
+          {message && (
+            <div className={`admin-message ${message.includes('Error') ? 'error' : 'success'}`}>
+              {message}
+            </div>
+          )}
 
-      <div className="translation-editor">
-        {editedTranslations[currentLang] && renderEditor(editedTranslations[currentLang])}
-      </div>
+          <div className="translation-editor">
+            {editedTranslations[currentLang] && renderEditor(editedTranslations[currentLang])}
+          </div>
+        </>
+      )}
     </div>
   )
 }

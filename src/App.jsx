@@ -10,7 +10,11 @@ import ContactPage from './pages/ContactPage'
 import ParentCommittee from './pages/ParentCommittee'
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
+import Parliament from './pages/Parliament'
+import ParliamentAdmin from './pages/ParliamentAdmin'
+import ParliamentLogin from './pages/ParliamentLogin'
 import AdminRoute from './components/AdminRoute'
+import { RequireRole } from './utils/requireRole'
 import { useScrollToHash } from './hooks/useScrollToHash'
 import './App.css'
 
@@ -23,6 +27,14 @@ function AppContent() {
   if (isLoading) {
     return (
       <div className="app-loader">
+        <img 
+          src="/assets/LOGO.avif" 
+          alt="בית ספר דב״ש"
+          className="loader-logo"
+          onError={(e) => {
+            e.target.style.display = 'none'
+          }}
+        />
         <div className="loader-spinner"></div>
         <p>טוען...</p>
       </div>
@@ -39,6 +51,8 @@ function AppContent() {
         <Route path="/contact-8" element={<ContactPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/parent-committee" element={<ParentCommittee />} />
+        <Route path="/parliament" element={<Parliament />} />
+        <Route path="/parliament/login" element={<ParliamentLogin />} />
         <Route path="/admin" element={<AdminLogin />} />
         <Route path="/admin/" element={<AdminLogin />} />
         <Route
@@ -47,6 +61,14 @@ function AppContent() {
             <AdminRoute>
               <AdminDashboard />
             </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/parliament"
+          element={
+            <RequireRole allowed={['admin']}>
+              <ParliamentAdmin />
+            </RequireRole>
           }
         />
         <Route path="*" element={<div style={{ padding: '2rem', textAlign: 'center' }}>Page not found</div>} />

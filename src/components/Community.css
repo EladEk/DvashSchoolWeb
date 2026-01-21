@@ -1,7 +1,8 @@
 .community {
-  padding: 4rem 2rem;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 5rem 2rem;
+  background: linear-gradient(135deg, var(--soft-yellow) 0%, var(--white) 100%);
   scroll-margin-top: 200px;
+  position: relative;
 }
 
 .community-content {

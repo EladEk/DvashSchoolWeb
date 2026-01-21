@@ -29,10 +29,51 @@
 
 .admin-mode .editable-text {
   position: relative;
+  color: inherit !important;
+  background: transparent !important;
 }
 
 .admin-mode .editable-text:hover .edit-button {
   opacity: 1;
+}
+
+/* Ensure editable text is visible in admin mode */
+.admin-mode .editable-text {
+  color: inherit !important;
+  background: transparent !important;
+  -webkit-text-fill-color: inherit !important;
+}
+
+/* For gradient text sections (section-title), override to use primary color */
+.admin-mode .section-title .editable-text,
+.admin-mode .section-title h2 .editable-text,
+.admin-mode .section-title h3 .editable-text {
+  color: var(--primary-color) !important;
+  background: transparent !important;
+  -webkit-text-fill-color: var(--primary-color) !important;
+  background-clip: unset !important;
+  -webkit-background-clip: unset !important;
+}
+
+/* For regular headings */
+.admin-mode h1 .editable-text,
+.admin-mode h2 .editable-text,
+.admin-mode h3 .editable-text,
+.admin-mode h4 .editable-text,
+.admin-mode h5 .editable-text,
+.admin-mode h6 .editable-text {
+  color: var(--text-color) !important;
+  background: transparent !important;
+  -webkit-text-fill-color: var(--text-color) !important;
+}
+
+/* For paragraphs and regular text */
+.admin-mode p .editable-text,
+.admin-mode span .editable-text,
+.admin-mode div .editable-text {
+  color: var(--text-color) !important;
+  background: transparent !important;
+  -webkit-text-fill-color: var(--text-color) !important;
 }
 
 @media (max-width: 768px) {

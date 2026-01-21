@@ -1,0 +1,46 @@
+/* Parliament page styles */
+.parliament-page {
+  min-height: 100vh;
+  background: var(--background-color, #f9f9f9);
+  padding: 2rem 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.parliament-header-row {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.parliament-auth-buttons {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.parliament-user-name {
+  color: var(--primary-color, #2c5f7c);
+  font-weight: 600;
+}
+
+.parliament-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-color, #2c5f7c);
+  margin-bottom: 0.5rem;
+}
+
+.parliament-section {
+  margin-bottom: 2rem;
+}
+
+.parliament-section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--primary-color, #2c5f7c);
+}

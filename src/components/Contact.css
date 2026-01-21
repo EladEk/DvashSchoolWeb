@@ -1,6 +1,8 @@
 .contact {
-  padding: 4rem 2rem;
-  background-color: var(--white);
+  padding: 5rem 2rem;
+  background: linear-gradient(to bottom, var(--bg-color) 0%, var(--white) 100%);
+  scroll-margin-top: 200px;
+  position: relative;
 }
 
 .contact-content {
@@ -48,10 +50,12 @@
 }
 
 .contact-form {
-  background-color: var(--bg-color);
-  padding: 2rem;
-  border-radius: 10px;
+  background-color: var(--white);
+  padding: 2.5rem;
+  border-radius: 12px;
   text-align: right;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
 }
 
 .form-row {
@@ -89,17 +93,20 @@
 }
 
 .submit-btn {
-  background-color: var(--primary-color);
+  background: var(--gradient-primary);
   color: var(--white);
-  padding: 0.75rem 2rem;
+  padding: 0.875rem 2rem;
   font-size: 1.1rem;
-  border-radius: 5px;
-  transition: background-color 0.3s ease;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.3s ease;
   width: 100%;
+  box-shadow: var(--shadow-md);
 }
 
 .submit-btn:hover:not(:disabled) {
-  background-color: var(--secondary-color);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
 .submit-btn:disabled {

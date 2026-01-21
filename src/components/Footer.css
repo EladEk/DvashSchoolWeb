@@ -1,14 +1,29 @@
 .footer {
-  background-color: var(--primary-color);
+  background: var(--gradient-primary);
   color: var(--white);
-  padding: 2rem;
+  padding: 3rem 2rem;
   margin-top: auto;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('/assets/LOGO.avif') center/20% no-repeat;
+  opacity: 0.05;
 }
 
 .footer-content {
   max-width: 1200px;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 .footer-content p {

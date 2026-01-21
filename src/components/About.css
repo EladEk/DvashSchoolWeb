@@ -1,7 +1,8 @@
 .about {
-  padding: 4rem 2rem;
-  background-color: var(--white);
+  padding: 5rem 2rem;
+  background: linear-gradient(to bottom, var(--white) 0%, var(--bg-color) 100%);
   scroll-margin-top: 200px;
+  position: relative;
 }
 
 .container {
@@ -11,10 +12,26 @@
 
 .section-title {
   font-size: 2.5rem;
-  color: var(--primary-color);
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 3rem;
   text-align: center;
   font-weight: 700;
+  position: relative;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 4px;
+  background: var(--gradient-warm);
+  border-radius: 2px;
 }
 
 .about-content {

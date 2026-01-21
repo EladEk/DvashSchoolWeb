@@ -14,6 +14,7 @@ const Header = () => {
     { id: 'home', labelKey: 'nav.home', href: '/', hash: '' },
     { id: 'faq', labelKey: 'nav.faq', href: '/שאלות-תשובות', hash: '' },
     { id: 'parents', labelKey: 'nav.parents', href: '/parent-committee', hash: '' },
+    { id: 'parliament', labelKey: 'nav.parliament', href: '/parliament', hash: '' },
   ]
 
   const subtitleItems = [
@@ -65,8 +66,20 @@ const Header = () => {
       <div className="header-main">
         <div className="header-container">
           <div className="logo">
-            <Link to="/">
-              <h1>{t('common.schoolName')}</h1>
+            <Link to="/" className="logo-link">
+              <img 
+                src="/assets/LOGO.avif" 
+                alt={t('common.schoolName') || 'בית ספר דב״ש'}
+                className="logo-image"
+                onError={(e) => {
+                  e.target.style.display = 'none'
+                  const textEl = e.target.nextSibling
+                  if (textEl) textEl.style.display = 'block'
+                }}
+              />
+              <h1 className="logo-text" style={{ display: 'none' }}>
+                {t('common.schoolName')}
+              </h1>
             </Link>
           </div>
           <nav className={`nav ${isMenuOpen ? 'nav-open' : ''}`}>
