@@ -64,12 +64,20 @@ export const TranslationProvider = ({ children }) => {
     return result
   }
 
+  // Track if we've loaded from Firebase in this session
+  const [hasLoadedFromFirebase, setHasLoadedFromFirebase] = useState(false)
+
   const loadTranslations = async () => {
     try {
       setIsLoading(true)
-      // Load translations - try Firebase first, then fallback to localStorage/defaults
-      // Don't skip Firebase on initial load so we get the latest from database
-      const adminTranslations = await getTranslations(false) // false = don't skip Firebase
+      
+      // On first load, try Firebase. After that, use localStorage cache to reduce calls
+      const shouldTryFirebase = !hasLoadedFromFirebase
+      const adminTranslations = await getTranslations(!shouldTryFirebase) // skip Firebase if already loaded
+      
+      if (shouldTryFirebase) {
+        setHasLoadedFromFirebase(true)
+      }
       
       // Deep merge with defaults to ensure all keys exist and nested structures are preserved
       const mergedTranslations = {
@@ -113,7 +121,11 @@ export const TranslationProvider = ({ children }) => {
   }
 
   // Expose reload function for admin dashboard
-  const reloadTranslations = async () => {
+  // forceFirebase: if true, will reload from Firebase even if already loaded
+  const reloadTranslations = async (forceFirebase = false) => {
+    if (forceFirebase) {
+      setHasLoadedFromFirebase(false)
+    }
     await loadTranslations()
   }
 

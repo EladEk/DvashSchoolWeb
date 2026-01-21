@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, onSnapshot, query, where, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, addDoc, deleteDoc, doc, serverTimestamp, updateDoc, getDocs } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useEffectiveRole, UserRole } from '../utils/requireRole'
@@ -58,11 +58,15 @@ export default function Parliament() {
     window.location.reload()
   }
 
-  // Dates
+  // Dates - use getDocs instead of onSnapshot to reduce real-time connections
+  // Only reload when component mounts or when explicitly needed
+  const datesLoadedRef = useRef(false)
   useEffect(() => {
-    const unsub = onSnapshot(
-      query(collection(db, 'parliamentDates')),
-      snap => {
+    if (datesLoadedRef.current) return // Only load once unless explicitly reloaded
+    
+    const loadDates = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'parliamentDates')))
         const list = snap.docs.map(d => {
           const data = d.data()
           // Ensure isOpen is a boolean
@@ -75,24 +79,42 @@ export default function Parliament() {
         })
         list.sort((a, b) => tsMillis(a.date) - tsMillis(b.date))
         console.log('Parliament - loaded dates:', list)
-        console.log('Parliament - dates with isOpen:', list.map(d => ({ id: d.id, title: d.title, isOpen: d.isOpen })))
         setDates(list)
+        datesLoadedRef.current = true
+      } catch (error) {
+        console.error('Error loading dates:', error)
       }
-    )
-    return () => unsub()
+    }
+    
+    loadDates()
+    
+    // Set up a refresh interval (every 30 seconds) instead of real-time
+    const interval = setInterval(loadDates, 30000)
+    return () => clearInterval(interval)
   }, [])
 
-  // Approved subjects (public)
+  // Approved subjects (public) - use getDocs with refresh interval instead of real-time
+  const subjectsLoadedRef = useRef(false)
   useEffect(() => {
-    const unsub = onSnapshot(
-      query(collection(db, 'parliamentSubjects'), where('status', '==', 'approved')),
-      snap => {
+    if (subjectsLoadedRef.current) return
+    
+    const loadSubjects = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'parliamentSubjects'), where('status', '==', 'approved')))
         const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         list.sort((a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt))
         setSubjects(list)
+        subjectsLoadedRef.current = true
+      } catch (error) {
+        console.error('Error loading subjects:', error)
       }
-    )
-    return () => unsub()
+    }
+    
+    loadSubjects()
+    
+    // Refresh every 30 seconds instead of real-time
+    const interval = setInterval(loadSubjects, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // My submissions (pending + rejected)
@@ -120,22 +142,33 @@ export default function Parliament() {
     return () => unsub()
   }, [userUid])
 
-  // Fetch notes for current subject
+  // Fetch notes for current subject - use polling instead of real-time to reduce DB connections
+  const notesLoadedRef = useRef(false)
   useEffect(() => {
     if (!current?.id) {
       setNotes([])
+      notesLoadedRef.current = false
       return
     }
 
-    const unsub = onSnapshot(
-      query(collection(db, 'parliamentNotes'), where('subjectId', '==', current.id)),
-      snap => {
+    const loadNotes = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'parliamentNotes'), where('subjectId', '==', current.id)))
         const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         list.sort((a, b) => tsMillis(a.createdAt) - tsMillis(b.createdAt))
         setNotes(list)
+        notesLoadedRef.current = true
+      } catch (error) {
+        console.error('Error loading notes:', error)
       }
-    )
-    return () => unsub()
+    }
+    
+    // Load immediately
+    loadNotes()
+    
+    // Refresh every 10 seconds instead of real-time (notes don't need instant updates)
+    const interval = setInterval(loadNotes, 10000)
+    return () => clearInterval(interval)
   }, [current?.id])
 
   // Group approved subjects by date

@@ -32,25 +32,55 @@ const About = () => {
 
     try {
       const translations = await getTranslations(true)
-      const sections = translations.he?.about?.sections || []
-      const sectionsEn = translations.en?.about?.sections || []
+      
+      // Ensure sections exist and are arrays
+      if (!translations.he.about) translations.he.about = {}
+      if (!translations.en.about) translations.en.about = {}
+      
+      let sections = Array.isArray(translations.he.about.sections) ? [...translations.he.about.sections] : []
+      let sectionsEn = Array.isArray(translations.en.about.sections) ? [...translations.en.about.sections] : []
 
+      // If we're using old structure, convert it to new structure first
+      if (hasOldStructure && sections.length === 0) {
+        // Convert old structure to new structure
+        sections = [
+          { title: t('about.background'), text: t('about.text1'), imageKey: 'about.image1' },
+          { text: t('about.text2'), imageKey: 'about.image2' },
+          { text: t('about.text3') || '', imageKey: 'about.image3' }
+        ].filter(s => s && s.text)
+        
+        sectionsEn = [
+          { title: translations.en?.about?.background || '', text: translations.en?.about?.text1 || '', imageKey: 'about.image1' },
+          { text: translations.en?.about?.text2 || '', imageKey: 'about.image2' },
+          { text: translations.en?.about?.text3 || '', imageKey: 'about.image3' }
+        ].filter(s => s && s.text)
+      }
+
+      // Validate index
+      if (index < 0 || index >= sections.length) {
+        console.error('Invalid index for deletion:', index, 'sections length:', sections.length)
+        alert('שגיאה: אינדקס לא תקין')
+        return
+      }
+
+      // Remove the section at the specified index
       sections.splice(index, 1)
       sectionsEn.splice(index, 1)
 
-      translations.he.about = translations.he.about || {}
-      translations.en.about = translations.en.about || {}
+      // Update translations
       translations.he.about.sections = sections
       translations.en.about.sections = sectionsEn
 
+      // Save to localStorage and Firebase
       await saveTranslations(translations, false)
       await saveAllTranslationsToDB(translations)
 
+      // Clear cache and reload (force Firebase reload to get latest data)
       clearTranslationsCache()
-      await reloadTranslations()
+      await reloadTranslations(true) // force Firebase reload
     } catch (error) {
       console.error('Error deleting section:', error)
-      alert('שגיאה במחיקת הסעיף')
+      alert('שגיאה במחיקת הסעיף: ' + error.message)
     }
   }
 
@@ -59,8 +89,34 @@ const About = () => {
 
     try {
       const translations = await getTranslations(true)
-      const sections = translations.he?.about?.sections || []
-      const sectionsEn = translations.en?.about?.sections || []
+      
+      if (!translations.he.about) translations.he.about = {}
+      if (!translations.en.about) translations.en.about = {}
+      
+      let sections = Array.isArray(translations.he.about.sections) ? [...translations.he.about.sections] : []
+      let sectionsEn = Array.isArray(translations.en.about.sections) ? [...translations.en.about.sections] : []
+
+      // If we're using old structure, convert it to new structure first
+      if (hasOldStructure && sections.length === 0) {
+        sections = [
+          { title: t('about.background'), text: t('about.text1'), imageKey: 'about.image1' },
+          { text: t('about.text2'), imageKey: 'about.image2' },
+          { text: t('about.text3') || '', imageKey: 'about.image3' }
+        ].filter(s => s && s.text)
+        
+        sectionsEn = [
+          { title: translations.en?.about?.background || '', text: translations.en?.about?.text1 || '', imageKey: 'about.image1' },
+          { text: translations.en?.about?.text2 || '', imageKey: 'about.image2' },
+          { text: translations.en?.about?.text3 || '', imageKey: 'about.image3' }
+        ].filter(s => s && s.text)
+      }
+
+      // Validate index
+      if (index < 0 || index >= sections.length) {
+        console.error('Invalid index for move up:', index, 'sections length:', sections.length)
+        alert('שגיאה: אינדקס לא תקין')
+        return
+      }
 
       // Swap with previous item
       const temp = sections[index]
@@ -71,6 +127,7 @@ const About = () => {
       sectionsEn[index] = sectionsEn[index - 1]
       sectionsEn[index - 1] = tempEn
 
+      // Update translations
       translations.he.about = translations.he.about || {}
       translations.en.about = translations.en.about || {}
       translations.he.about.sections = sections
@@ -80,7 +137,7 @@ const About = () => {
       await saveAllTranslationsToDB(translations)
 
       clearTranslationsCache()
-      await reloadTranslations()
+      await reloadTranslations(true) // force Firebase reload
     } catch (error) {
       console.error('Error moving section up:', error)
       alert('שגיאה בשינוי סדר הסעיף')
@@ -92,8 +149,34 @@ const About = () => {
 
     try {
       const translations = await getTranslations(true)
-      const sections = translations.he?.about?.sections || []
-      const sectionsEn = translations.en?.about?.sections || []
+      
+      if (!translations.he.about) translations.he.about = {}
+      if (!translations.en.about) translations.en.about = {}
+      
+      let sections = Array.isArray(translations.he.about.sections) ? [...translations.he.about.sections] : []
+      let sectionsEn = Array.isArray(translations.en.about.sections) ? [...translations.en.about.sections] : []
+
+      // If we're using old structure, convert it to new structure first
+      if (hasOldStructure && sections.length === 0) {
+        sections = [
+          { title: t('about.background'), text: t('about.text1'), imageKey: 'about.image1' },
+          { text: t('about.text2'), imageKey: 'about.image2' },
+          { text: t('about.text3') || '', imageKey: 'about.image3' }
+        ].filter(s => s && s.text)
+        
+        sectionsEn = [
+          { title: translations.en?.about?.background || '', text: translations.en?.about?.text1 || '', imageKey: 'about.image1' },
+          { text: translations.en?.about?.text2 || '', imageKey: 'about.image2' },
+          { text: translations.en?.about?.text3 || '', imageKey: 'about.image3' }
+        ].filter(s => s && s.text)
+      }
+
+      // Validate index
+      if (index < 0 || index >= sections.length - 1) {
+        console.error('Invalid index for move down:', index, 'sections length:', sections.length)
+        alert('שגיאה: אינדקס לא תקין')
+        return
+      }
 
       // Swap with next item
       const temp = sections[index]
@@ -113,7 +196,7 @@ const About = () => {
       await saveAllTranslationsToDB(translations)
 
       clearTranslationsCache()
-      await reloadTranslations()
+      await reloadTranslations(true) // force Firebase reload
     } catch (error) {
       console.error('Error moving section down:', error)
       alert('שגיאה בשינוי סדר הסעיף')
@@ -152,6 +235,9 @@ const About = () => {
             const hasImage = !!section.imageKey
             const sectionId = `about-section-${index}`
             
+            // Always show admin controls - we'll convert old structure to new when needed
+            const canEdit = true
+            
             return (
               <div key={index} id={sectionId} className={`about-item ${isReverse ? 'about-item-reverse' : ''}`}>
                 <div className="about-text">
@@ -167,7 +253,7 @@ const About = () => {
                       {section.text}
                     </EditableText>
                   </p>
-                  {isAdminMode && (
+                  {isAdminMode && canEdit && (
                     <div className="section-actions">
                       <button 
                         className="section-move-up-btn" 
@@ -181,7 +267,7 @@ const About = () => {
                         className="section-move-down-btn" 
                         onClick={() => handleMoveDown(index)}
                         title="הזז למטה"
-                        disabled={index === displaySections.length - 1}
+                        disabled={index >= displaySections.length - 1}
                       >
                         ⬇️ למטה
                       </button>

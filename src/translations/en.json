@@ -142,7 +142,9 @@
     "message": "Message Content",
     "send": "Send",
     "sending": "Sending...",
-    "success": "Thank you for your message!"
+    "success": "Thank you for your message!",
+    "error": "An error occurred. Please try again later.",
+    "recipientEmail": "Dvashschool@gmail.com"
   },
   "parliament": {
     "title": "Parliament",

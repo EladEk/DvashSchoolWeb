@@ -142,7 +142,9 @@
     "message": "תוכן הפנייה",
     "send": "שלח",
     "sending": "שולח...",
-    "success": "תודה על הפנייה!"
+    "success": "תודה על הפנייה!",
+    "error": "אירעה שגיאה. אנא נסה שוב מאוחר יותר.",
+    "recipientEmail": "Dvashschool@gmail.com"
   },
   "parliament": {
     "title": "פרלמנט",

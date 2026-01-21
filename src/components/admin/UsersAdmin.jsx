@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import {
   addDoc,
   collection,
@@ -64,17 +64,25 @@ export default function UsersAdmin() {
   const [edit, setEdit] = useState({ open: false, row: null, birthdayRaw: '', passwordRaw: '' })
   const [saving, setSaving] = useState(false)
 
+  // Use polling instead of real-time to reduce DB connections
+  // Users list doesn't need instant updates
+  const usersLoadedRef = useRef(false)
   useEffect(() => {
-    const q = query(collection(db, 'appUsers'), orderBy('usernameLower'))
-    const unsub = onSnapshot(
-      q,
-      snap => {
+    const loadUsers = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'appUsers'), orderBy('usernameLower')))
         const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         setItems(list)
-      },
-      err => showToast('error', t('users.toasts.loadFail', { msg: err.message }) || 'Error loading users')
-    )
-    return () => unsub()
+        usersLoadedRef.current = true
+      } catch (err) {
+        showToast('error', t('users.toasts.loadFail', { msg: err.message }) || 'Error loading users')
+      }
+    }
+    
+    loadUsers()
+    // Refresh every 30 seconds instead of real-time
+    const interval = setInterval(loadUsers, 30000)
+    return () => clearInterval(interval)
   }, [t])
 
   function showToast(kind, message) {

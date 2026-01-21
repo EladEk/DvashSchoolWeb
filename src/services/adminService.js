@@ -39,7 +39,22 @@ export const getTranslations = async (skipFirebase = false) => {
   }
 
   try {
-    // Try Firebase first if not skipped (most up-to-date source)
+    // Try localStorage first (faster, reduces Firebase calls)
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored && skipFirebase) {
+      try {
+        const parsed = JSON.parse(stored)
+        if (parsed && (parsed.he || parsed.en)) {
+          translationsCache = parsed
+          console.log('✅ Loaded translations from localStorage (cached)')
+          return parsed
+        }
+      } catch (parseError) {
+        console.error('Error parsing localStorage translations:', parseError)
+      }
+    }
+
+    // Try Firebase only if not skipped (most up-to-date source)
     if (!skipFirebase) {
       try {
         // Add timeout for Firebase operations
@@ -63,7 +78,6 @@ export const getTranslations = async (skipFirebase = false) => {
     }
 
     // Try to load from localStorage (fallback if Firebase failed or skipped)
-    const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       try {
         const parsed = JSON.parse(stored)

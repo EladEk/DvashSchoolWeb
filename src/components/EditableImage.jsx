@@ -5,6 +5,11 @@ import { loadImagePathFromDB } from '../services/firebaseDB'
 import ImageEditor from './ImageEditor'
 import './EditableImage.css'
 
+// Cache for image paths to avoid repeated DB calls
+const imagePathCache = new Map()
+const imagePathCacheTime = new Map()
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
 const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = '' }) => {
   const { isAdminMode } = useAdmin()
   const { t } = useTranslation()
@@ -17,13 +22,33 @@ const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = ''
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Load from Firebase on mount
+    // Load from Firebase on mount with caching to reduce DB calls
     const loadImage = async () => {
       try {
+        // Check cache first
+        const cached = imagePathCache.get(imageKey)
+        const cacheTime = imagePathCacheTime.get(imageKey)
+        const now = Date.now()
+        
+        if (cached && cacheTime && (now - cacheTime) < CACHE_DURATION) {
+          // Use cached value
+          setImagePath(cached)
+          setLoading(false)
+          return
+        }
+        
+        // Load from DB
         const dbPath = await loadImagePathFromDB(imageKey)
         if (dbPath) {
           setImagePath(dbPath)
           localStorage.setItem(`image_${imageKey}`, dbPath)
+          // Update cache
+          imagePathCache.set(imageKey, dbPath)
+          imagePathCacheTime.set(imageKey, now)
+        } else {
+          // Cache null result too to avoid repeated queries
+          imagePathCache.set(imageKey, null)
+          imagePathCacheTime.set(imageKey, now)
         }
       } catch (error) {
         console.error('Error loading image from DB:', error)
@@ -44,8 +69,9 @@ const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = ''
     } else {
       localStorage.removeItem(`image_${imageKey}`)
     }
-    // Force a re-render by updating a dummy state if needed
-    // The setImagePath should be enough, but we'll ensure it happens
+    // Update cache
+    imagePathCache.set(imageKey, newPath)
+    imagePathCacheTime.set(imageKey, Date.now())
   }
 
   if (loading) {

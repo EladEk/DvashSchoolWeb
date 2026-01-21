@@ -1,7 +1,10 @@
 import { useFormState, useFormStatus } from 'react-dom'
 import { useTranslation } from '../contexts/TranslationContext'
+import { useAdmin } from '../contexts/AdminContext'
 import EditableText from '../components/EditableText'
+import EditButton from '../components/EditButton'
 import DocumentHead from '../components/DocumentHead'
+import { sendEmail } from '../services/emailService'
 import './ParentCommittee.css'
 
 // Submit button component using useFormStatus (React 19)
@@ -18,8 +21,12 @@ function SubmitButton() {
 
 const ParentCommittee = () => {
   const { t } = useTranslation()
+  const { isAdminMode } = useAdmin()
   
-  // Form action function (React 19 pattern) - not saving to database yet
+  // Get recipient email from translations (editable in admin mode)
+  const recipientEmail = t('parentCommittee.recipientEmail') || 'Dvashschool@gmail.com'
+  
+  // Form action function (React 19 pattern) - sends email
   const submitParentCommitteeForm = async (prevState, formData) => {
     const data = {
       fullName: formData.get('fullName'),
@@ -28,10 +35,31 @@ const ParentCommittee = () => {
       message: formData.get('message')
     }
     
-    // Simulate API call (not saving to database for now)
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    return { success: true, message: t('parentCommittee.success') }
+    try {
+      // Prepare data for email (using fullName as firstName and lastName)
+      const nameParts = data.fullName.split(' ')
+      const firstName = nameParts[0] || data.fullName
+      const lastName = nameParts.slice(1).join(' ') || ''
+      
+      const emailData = {
+        firstName: firstName,
+        lastName: lastName,
+        email: data.email,
+        message: `Child's Class: ${data.childClass}\n\n${data.message}`
+      }
+      
+      // Send email
+      const emailResult = await sendEmail(emailData, recipientEmail)
+      
+      if (emailResult.success) {
+        return { success: true, message: t('parentCommittee.success') }
+      } else {
+        return { success: false, message: emailResult.error || t('parentCommittee.error') }
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error)
+      return { success: false, message: t('parentCommittee.error') || 'An error occurred' }
+    }
   }
   
   const [state, formAction] = useFormState(submitParentCommitteeForm, null)
@@ -138,43 +166,17 @@ const ParentCommittee = () => {
                 </>
               )}
             </form>
-          </div>
-
-          <div className="contact-section">
-            <h2 className="section-subtitle">
-              <EditableText translationKey="contact.title">
-                {t('contact.title')}
-              </EditableText>
-            </h2>
-            <div className="contact-info">
-              <div className="contact-item">
-                <h3>
-                  <EditableText translationKey="contact.phone">
-                    {t('contact.phone')}
-                  </EditableText>
-                </h3>
-                <p>08-6493193</p>
+            {isAdminMode && (
+              <div className="parent-committee-email-config" style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(44, 95, 124, 0.1)', borderRadius: '5px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: 'var(--primary-color)' }}>
+                  <span>Email Recipient:</span>
+                  <span className="editable-text">
+                    {recipientEmail}
+                    <EditButton translationKey="parentCommittee.recipientEmail" />
+                  </span>
+                </label>
               </div>
-              <div className="contact-item">
-                <h3>
-                  <EditableText translationKey="contact.email">
-                    {t('contact.email')}
-                  </EditableText>
-                </h3>
-                <p>Dvashschool@gmail.com</p>
-              </div>
-              <div className="contact-item">
-                <h3>
-                  <EditableText translationKey="contact.media">
-                    {t('contact.media')}
-                  </EditableText>
-                </h3>
-                <div className="social-links">
-                  <a href="#" target="_blank" rel="noopener noreferrer">Instagram</a>
-                  <a href="#" target="_blank" rel="noopener noreferrer">Facebook</a>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </section>

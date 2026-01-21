@@ -5,6 +5,7 @@ import { db } from './firebase'
 import { 
   doc, 
   getDoc, 
+  getDocs,
   updateDoc, 
   setDoc, 
   writeBatch,
@@ -19,6 +20,7 @@ import {
 
 /**
  * Load translations from Firebase
+ * Uses a single query to fetch both documents, reducing DB calls
  * @returns {Promise<{he: object, en: object} | null>}
  */
 export const loadTranslationsFromDB = async () => {
@@ -27,14 +29,22 @@ export const loadTranslationsFromDB = async () => {
       return null
     }
     
-    const heDoc = await getDoc(doc(db, 'translations', 'he'))
-    const enDoc = await getDoc(doc(db, 'translations', 'en'))
+    // Batch fetch both translation documents in a single query
+    // This reduces from 2 separate getDoc calls to 1 query
+    const translationsRef = collection(db, 'translations')
+    const snapshot = await getDocs(translationsRef)
     
-    if (heDoc.exists() || enDoc.exists()) {
-      return {
-        he: heDoc.exists() ? heDoc.data() : {},
-        en: enDoc.exists() ? enDoc.data() : {}
+    const translations = { he: {}, en: {} }
+    snapshot.forEach((docSnap) => {
+      const lang = docSnap.id
+      if (lang === 'he' || lang === 'en') {
+        translations[lang] = docSnap.data()
       }
+    })
+    
+    if (translations.he && Object.keys(translations.he).length > 0 || 
+        translations.en && Object.keys(translations.en).length > 0) {
+      return translations
     }
     
     return null
@@ -115,6 +125,37 @@ export const saveTranslationToDB = async (translationKey, hebrewValue, englishVa
 }
 
 /**
+ * Remove undefined values from an object recursively
+ * Firebase doesn't accept undefined values
+ */
+const removeUndefined = (obj) => {
+  if (obj === null || obj === undefined) {
+    return null
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefined(item)).filter(item => item !== null && item !== undefined)
+  }
+  
+  if (typeof obj !== 'object') {
+    return obj
+  }
+  
+  const cleaned = {}
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      const value = removeUndefined(obj[key])
+      // Only include the key if the value is not undefined
+      if (value !== undefined) {
+        cleaned[key] = value
+      }
+    }
+  }
+  
+  return cleaned
+}
+
+/**
  * Save all translations to Firebase (for import/export)
  * @param {object} translations - {he: object, en: object}
  * @returns {Promise<{success: boolean}>}
@@ -125,10 +166,14 @@ export const saveAllTranslationsToDB = async (translations) => {
       throw new Error('Firebase not configured')
     }
     
+    // Remove undefined values before saving (Firebase doesn't accept undefined)
+    const cleanedHe = removeUndefined(translations.he || {})
+    const cleanedEn = removeUndefined(translations.en || {})
+    
     // Use merge to update without overwriting
     await Promise.all([
-      setDoc(doc(db, 'translations', 'he'), translations.he, { merge: true }),
-      setDoc(doc(db, 'translations', 'en'), translations.en, { merge: true })
+      setDoc(doc(db, 'translations', 'he'), cleanedHe, { merge: true }),
+      setDoc(doc(db, 'translations', 'en'), cleanedEn, { merge: true })
     ])
     
     return { success: true }

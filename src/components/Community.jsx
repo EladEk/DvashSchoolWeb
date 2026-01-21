@@ -26,25 +26,39 @@ const Community = () => {
 
     try {
       const translations = await getTranslations(true)
-      const sections = translations.he?.community?.sections || []
-      const sectionsEn = translations.en?.community?.sections || []
+      
+      // Ensure sections exist and are arrays
+      if (!translations.he.community) translations.he.community = {}
+      if (!translations.en.community) translations.en.community = {}
+      
+      const sections = Array.isArray(translations.he.community.sections) ? [...translations.he.community.sections] : []
+      const sectionsEn = Array.isArray(translations.en.community.sections) ? [...translations.en.community.sections] : []
 
+      // Validate index
+      if (index < 0 || index >= sections.length) {
+        console.error('Invalid index for deletion:', index, 'sections length:', sections.length)
+        alert('שגיאה: אינדקס לא תקין')
+        return
+      }
+
+      // Remove the section at the specified index
       sections.splice(index, 1)
       sectionsEn.splice(index, 1)
 
-      translations.he.community = translations.he.community || {}
-      translations.en.community = translations.en.community || {}
+      // Update translations
       translations.he.community.sections = sections
       translations.en.community.sections = sectionsEn
 
+      // Save to localStorage and Firebase
       await saveTranslations(translations, false)
       await saveAllTranslationsToDB(translations)
 
+      // Clear cache and reload (force Firebase reload to get latest data)
       clearTranslationsCache()
-      await reloadTranslations()
+      await reloadTranslations(true) // force Firebase reload
     } catch (error) {
       console.error('Error deleting section:', error)
-      alert('שגיאה במחיקת הסעיף')
+      alert('שגיאה במחיקת הסעיף: ' + error.message)
     }
   }
 
@@ -73,7 +87,7 @@ const Community = () => {
       await saveAllTranslationsToDB(translations)
 
       clearTranslationsCache()
-      await reloadTranslations()
+      await reloadTranslations(true) // force Firebase reload
     } catch (error) {
       console.error('Error moving section up:', error)
       alert('שגיאה בשינוי סדר הסעיף')
@@ -105,7 +119,7 @@ const Community = () => {
       await saveAllTranslationsToDB(translations)
 
       clearTranslationsCache()
-      await reloadTranslations()
+      await reloadTranslations(true) // force Firebase reload
     } catch (error) {
       console.error('Error moving section down:', error)
       alert('שגיאה בשינוי סדר הסעיף')

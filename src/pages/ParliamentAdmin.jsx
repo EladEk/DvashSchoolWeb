@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import {
   addDoc,
   collection,
@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  getDocs,
 } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import { useTranslation } from '../contexts/TranslationContext'
@@ -40,11 +41,23 @@ export default function ParliamentAdmin() {
   }, [])
   const user = session?.user || session
 
+  // Use polling instead of real-time for dates to reduce DB connections
+  const datesLoadedRef = useRef(false)
   useEffect(() => {
-    const dq = query(collection(db, 'parliamentDates'), orderBy('date', 'asc'))
-    return onSnapshot(dq, snap =>
-      setDates(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    )
+    const loadDates = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'parliamentDates'), orderBy('date', 'asc')))
+        setDates(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        datesLoadedRef.current = true
+      } catch (error) {
+        console.error('Error loading dates:', error)
+      }
+    }
+    
+    loadDates()
+    // Refresh every 30 seconds instead of real-time
+    const interval = setInterval(loadDates, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // Helper function to convert timestamp to milliseconds
@@ -56,41 +69,40 @@ export default function ParliamentAdmin() {
     return Number.isFinite(t) ? t : 0
   }
 
+  // Use polling instead of 3 separate real-time listeners to reduce DB connections
+  // Load all subjects once and filter client-side, or use a single query with refresh
+  const subjectsLoadedRef = useRef(false)
   useEffect(() => {
-    // Remove orderBy to avoid needing composite index - we'll sort client-side
-    const pq = query(
-      collection(db, 'parliamentSubjects'),
-      where('status', '==', 'pending')
-    )
-    const aq = query(
-      collection(db, 'parliamentSubjects'),
-      where('status', '==', 'approved')
-    )
-    const rq = query(
-      collection(db, 'parliamentSubjects'),
-      where('status', '==', 'rejected')
-    )
-
-    const u1 = onSnapshot(pq, s => {
-      const list = s.docs.map(d => ({ id: d.id, ...d.data() }))
-      list.sort((a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt))
-      setPending(list)
-    })
-    const u2 = onSnapshot(aq, s => {
-      const list = s.docs.map(d => ({ id: d.id, ...d.data() }))
-      list.sort((a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt))
-      setApproved(list)
-    })
-    const u3 = onSnapshot(rq, s => {
-      const list = s.docs.map(d => ({ id: d.id, ...d.data() }))
-      list.sort((a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt))
-      setRejected(list)
-    })
-    return () => {
-      u1()
-      u2()
-      u3()
+    const loadSubjects = async () => {
+      try {
+        // Load all subjects in one query, then filter client-side
+        // This reduces from 3 separate queries to 1 query
+        const snap = await getDocs(query(collection(db, 'parliamentSubjects')))
+        const allSubjects = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        
+        // Filter and sort client-side
+        const pendingList = allSubjects.filter(s => s.status === 'pending')
+        const approvedList = allSubjects.filter(s => s.status === 'approved')
+        const rejectedList = allSubjects.filter(s => s.status === 'rejected')
+        
+        const sortFn = (a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt)
+        pendingList.sort(sortFn)
+        approvedList.sort(sortFn)
+        rejectedList.sort(sortFn)
+        
+        setPending(pendingList)
+        setApproved(approvedList)
+        setRejected(rejectedList)
+        subjectsLoadedRef.current = true
+      } catch (error) {
+        console.error('Error loading subjects:', error)
+      }
     }
+    
+    loadSubjects()
+    // Refresh every 15 seconds instead of real-time (admin page can tolerate slight delay)
+    const interval = setInterval(loadSubjects, 15000)
+    return () => clearInterval(interval)
   }, [])
 
   function openCreateDateModal() {
