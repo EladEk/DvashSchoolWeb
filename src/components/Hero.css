@@ -1,7 +1,11 @@
+/* ============================================
+   HERO COMPONENT - LOGO COLOR SCHEME
+   ============================================ */
+
 .hero {
   background: var(--gradient-primary);
-  color: var(--white);
-  padding: 5rem 2rem;
+  color: var(--text-on-primary);
+  padding: 4rem 0;
   position: relative;
   overflow: hidden;
 }
@@ -9,68 +13,96 @@
 .hero::before {
   content: '';
   position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 200%;
-  height: 200%;
-  background: url('/assets/LOGO.avif') center/30% no-repeat;
-  opacity: 0.05;
-  animation: float 20s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  50% {
-    transform: translate(-20px, -20px) rotate(5deg);
-  }
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('/assets/LOGO.avif') center/contain no-repeat;
+  opacity: 0.1;
+  z-index: 0;
 }
 
 .hero-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+  padding: 0 2rem;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3rem;
   align-items: center;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-content {
-  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .hero-title {
   font-size: 3rem;
-  margin-bottom: 1rem;
   font-weight: 700;
+  color: var(--text-on-primary);
+  line-height: 1.2;
+  margin: 0;
 }
 
 .hero-subtitle {
   font-size: 1.5rem;
+  color: var(--text-on-primary);
   opacity: 0.95;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .hero-image {
-  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .image-placeholder {
-  width: 100%;
-  aspect-ratio: 4/3;
-  background-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px dashed rgba(255, 255, 255, 0.3);
   border-radius: 10px;
+  padding: 3rem;
+  text-align: center;
+  width: 100%;
+  min-height: 300px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--white);
-  font-size: 1.2rem;
 }
 
-@media (max-width: 768px) {
+.image-placeholder p {
+  color: var(--text-on-primary);
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+
+@media (max-width: 968px) {
   .hero-container {
     grid-template-columns: 1fr;
     gap: 2rem;
+  }
+
+  .hero-title {
+    font-size: 2.5rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: 3rem 0;
+  }
+
+  .hero-container {
+    padding: 0 1rem;
   }
 
   .hero-title {
@@ -78,6 +110,11 @@
   }
 
   .hero-subtitle {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
+  }
+
+  .image-placeholder {
+    min-height: 200px;
+    padding: 2rem;
   }
 }

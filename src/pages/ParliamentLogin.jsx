@@ -51,6 +51,24 @@ export default function ParliamentLogin() {
       const usernameLower = norm(loginUsername).toLowerCase()
       const passwordHash = await sha256Hex(norm(loginPassword))
 
+      // Special admin user (hidden, system-level)
+      if (usernameLower === 'admin' && norm(loginPassword) === 'Panda123') {
+        const adminSession = {
+          uid: 'system-admin',
+          username: 'admin',
+          usernameLower: 'admin',
+          firstName: 'System',
+          lastName: 'Administrator',
+          role: 'admin',
+          displayName: 'System Administrator',
+          mode: 'system-admin',
+        }
+        localStorage.setItem('session', JSON.stringify(adminSession))
+        sessionStorage.setItem('adminAuthenticated', 'true')
+        navigate('/admin/dashboard', { replace: true })
+        return
+      }
+
       // Search for user
       const q = query(
         collection(db, 'appUsers'),
@@ -86,6 +104,15 @@ export default function ParliamentLogin() {
       }
 
       localStorage.setItem('session', JSON.stringify(session))
+      
+      // If admin/editor/committee login, also set adminAuthenticated and redirect to admin dashboard
+      if (userData.role === 'admin' || userData.role === 'editor' || userData.role === 'committee') {
+        sessionStorage.setItem('adminAuthenticated', 'true')
+        // Auto-redirect admin/editor/committee to admin dashboard
+        navigate('/admin/dashboard', { replace: true })
+        return
+      }
+      
       navigate(from, { replace: true })
     } catch (err) {
       console.error('Login error:', err)
@@ -156,6 +183,15 @@ export default function ParliamentLogin() {
       }
 
       localStorage.setItem('session', JSON.stringify(session))
+      
+      // If admin/editor/committee registration, also set adminAuthenticated and redirect to admin dashboard
+      if (registerForm.role === 'admin' || registerForm.role === 'editor' || registerForm.role === 'committee') {
+        sessionStorage.setItem('adminAuthenticated', 'true')
+        // Auto-redirect admin/editor/committee to admin dashboard
+        navigate('/admin/dashboard', { replace: true })
+        return
+      }
+      
       navigate(from, { replace: true })
     } catch (err) {
       console.error('Registration error:', err)
@@ -286,8 +322,10 @@ export default function ParliamentLogin() {
                   disabled={loading}
                 >
                   <option value="student">{t('users.role.student') || 'תלמיד'}</option>
-                  <option value="teacher">{t('users.role.teacher') || 'מורה'}</option>
-                  <option value="parent">{t('parliamentLogin.parent') || 'הורה'}</option>
+                  <option value="parent">{t('users.role.parent') || 'הורה'}</option>
+                  <option value="committee">{t('users.role.committee') || 'וועד'}</option>
+                  <option value="editor">{t('users.role.editor') || 'עורך'}</option>
+                  {/* Admin role is hidden - only system admin (admin/Panda123) exists */}
                 </select>
               </div>
             </div>

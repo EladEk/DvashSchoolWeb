@@ -5,17 +5,17 @@ import { db } from '../services/firebase'
 import { doc, getDoc, collection, query, where, limit, getDocs } from 'firebase/firestore'
 
 export const UserRole = {
-  ADMIN: 'admin',
-  TEACHER: 'teacher',
-  STUDENT: 'student',
-  KIOSK: 'kiosk',
-  PARENT: 'parent',
+  ADMIN: 'admin',        // מנהל - כל מה שוועד יכול + עריכת משתמשים + עריכת האתר
+  EDITOR: 'editor',      // עורך - מה שהורה יכול + עריכת האתר (תרגומים בלבד)
+  COMMITTEE: 'committee', // וועד - מה שהורה יכול + פתיחת/סגירת תאריכים + אישור/דחיית נושאים
+  PARENT: 'parent',      // הורה - יכול להציע נושאים לפרלמנט
+  STUDENT: 'student',    // תלמיד - יכול להציע נושאים לפרלמנט
 }
 
 function normalizeRole(v) {
   if (typeof v !== 'string') return ''
   const r = v.trim().toLowerCase()
-  const validRoles = ['admin', 'teacher', 'student', 'kiosk', 'parent']
+  const validRoles = ['admin', 'editor', 'committee', 'parent', 'student']
   return validRoles.includes(r) ? r : ''
 }
 
@@ -100,6 +100,26 @@ export function useEffectiveRole() {
     const checkRole = async () => {
       try {
         const sess = getSession()
+        
+        // System admin (hidden user)
+        if (sess?.mode === 'system-admin' || sess?.uid === 'system-admin') {
+          if (!alive) return
+          setRole('admin')
+          setPhase('allowed')
+          return
+        }
+        
+        // First, check if role is in session (faster, no DB call needed)
+        if (sess?.role) {
+          const sessionRole = normalizeRole(sess.role)
+          if (sessionRole) {
+            if (!alive) return
+            setRole(sessionRole)
+            setPhase('allowed')
+            // Still verify with DB in background, but use session role immediately
+          }
+        }
+        
         const ident = {
           uid: sess?.uid || undefined,
           email: sess?.email || undefined,
@@ -120,14 +140,30 @@ export function useEffectiveRole() {
           setRole(r)
           setPhase('allowed')
         } else {
-          setRole('')
-          setPhase('denied')
+          // If no role from DB but we have session role, keep it
+          if (!sess?.role) {
+            setRole('')
+            setPhase('denied')
+          }
         }
       } catch (e) {
         console.error('[useEffectiveRole] error:', e)
         if (!alive) return
-        setRole('')
-        setPhase('denied')
+        // If we have session role, keep it even on error
+        const sess = getSession()
+        if (sess?.role) {
+          const sessionRole = normalizeRole(sess.role)
+          if (sessionRole) {
+            setRole(sessionRole)
+            setPhase('allowed')
+          } else {
+            setRole('')
+            setPhase('denied')
+          }
+        } else {
+          setRole('')
+          setPhase('denied')
+        }
       }
     }
 

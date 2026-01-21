@@ -1,33 +1,55 @@
+/* ============================================
+   PARLIAMENT LOGIN - LOGO COLOR SCHEME
+   ============================================ */
+
 .parliament-login-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--background-color, #f9f9f9);
+  background: var(--gradient-primary);
   padding: 2rem 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.parliament-login-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('/assets/LOGO.avif') center/contain no-repeat;
+  opacity: 0.05;
+  z-index: 0;
 }
 
 .parliament-login-container {
-  background: var(--white, #fff);
+  background: var(--white);
   border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
   padding: 2.5rem;
   max-width: 600px;
   width: 100%;
+  border: 2px solid var(--primary-color);
+  position: relative;
+  z-index: 1;
 }
 
 .parliament-login-title {
   text-align: center;
-  color: var(--primary-color, #2c5f7c);
+  color: var(--primary-color);
   margin-bottom: 2rem;
   font-size: 2rem;
+  font-weight: 700;
 }
 
 .parliament-login-tabs {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 2rem;
-  border-bottom: 2px solid var(--light-gray, #ddd);
+  border-bottom: 2px solid var(--border-color);
 }
 
 .parliament-tab {
@@ -38,28 +60,29 @@
   border-bottom: 3px solid transparent;
   cursor: pointer;
   font-size: 1rem;
-  color: var(--text-color, #666);
+  color: var(--text-light);
   transition: all 0.3s ease;
   font-weight: 500;
 }
 
 .parliament-tab:hover {
-  color: var(--primary-color, #2c5f7c);
+  color: var(--primary-color);
 }
 
 .parliament-tab.active {
-  color: var(--primary-color, #2c5f7c);
-  border-bottom-color: var(--primary-color, #2c5f7c);
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
   font-weight: 600;
 }
 
 .parliament-error {
-  background: #fee;
-  color: #c33;
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
   padding: 1rem;
   border-radius: 5px;
   margin-bottom: 1.5rem;
-  border: 1px solid #fcc;
+  border: 2px solid #f44336;
+  font-weight: 600;
 }
 
 .parliament-login-form {
@@ -82,31 +105,34 @@
 
 .parliament-form-group label {
   font-weight: 600;
-  color: var(--text-color, #333);
+  color: var(--primary-color);
   font-size: 0.9rem;
 }
 
 .parliament-form-group input,
 .parliament-form-group select {
   padding: 0.75rem;
-  border: 1px solid var(--light-gray, #ddd);
+  border: 2px solid var(--border-color);
   border-radius: 5px;
   font-size: 1rem;
   font-family: inherit;
-  transition: border-color 0.3s ease;
+  color: var(--text-color);
+  background-color: var(--white);
+  transition: all 0.3s ease;
 }
 
 .parliament-form-group input:focus,
 .parliament-form-group select:focus {
   outline: none;
-  border-color: var(--primary-color, #2c5f7c);
-  box-shadow: 0 0 0 2px rgba(44, 95, 124, 0.1);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(44, 95, 124, 0.1);
 }
 
 .parliament-form-group input:disabled,
 .parliament-form-group select:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  background-color: var(--light-gray);
 }
 
 .parliament-submit-btn {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAdmin } from '../contexts/AdminContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { getTranslations, saveTranslations, exportTranslations } from '../services/adminService'
@@ -85,6 +86,9 @@ const AdminIndicator = () => {
       <div className="admin-toolbar-content">
         <span className="admin-badge">Admin Mode</span>
         <div className="admin-buttons">
+          <Link to="/admin/dashboard" className="admin-btn dashboard-btn" title="Go to Admin Dashboard">
+            Dashboard
+          </Link>
           <button className="admin-btn export-btn" onClick={handleExport} title="Export translations to JSON files">
             Export
           </button>

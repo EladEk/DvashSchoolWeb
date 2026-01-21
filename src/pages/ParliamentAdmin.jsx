@@ -22,6 +22,14 @@ export default function ParliamentAdmin() {
   const [approved, setApproved] = useState([])
   const [rejected, setRejected] = useState([])
   const [tab, setTab] = useState('queue')
+  
+  // Modal states
+  const [showCreateDateModal, setShowCreateDateModal] = useState(false)
+  const [newDateTitle, setNewDateTitle] = useState('')
+  const [newDateWhen, setNewDateWhen] = useState('')
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
+  const [subjectToReject, setSubjectToReject] = useState(null)
 
   const session = useMemo(() => {
     try {
@@ -39,32 +47,45 @@ export default function ParliamentAdmin() {
     )
   }, [])
 
+  // Helper function to convert timestamp to milliseconds
+  function tsMillis(x) {
+    if (!x) return 0
+    if (typeof x?.toMillis === 'function') return x.toMillis()
+    const d = x instanceof Date ? x : new Date(x)
+    const t = d.getTime()
+    return Number.isFinite(t) ? t : 0
+  }
+
   useEffect(() => {
+    // Remove orderBy to avoid needing composite index - we'll sort client-side
     const pq = query(
       collection(db, 'parliamentSubjects'),
-      where('status', '==', 'pending'),
-      orderBy('createdAt', 'desc')
+      where('status', '==', 'pending')
     )
     const aq = query(
       collection(db, 'parliamentSubjects'),
-      where('status', '==', 'approved'),
-      orderBy('createdAt', 'desc')
+      where('status', '==', 'approved')
     )
     const rq = query(
       collection(db, 'parliamentSubjects'),
-      where('status', '==', 'rejected'),
-      orderBy('createdAt', 'desc')
+      where('status', '==', 'rejected')
     )
 
-    const u1 = onSnapshot(pq, s =>
-      setPending(s.docs.map(d => ({ id: d.id, ...d.data() })))
-    )
-    const u2 = onSnapshot(aq, s =>
-      setApproved(s.docs.map(d => ({ id: d.id, ...d.data() })))
-    )
-    const u3 = onSnapshot(rq, s =>
-      setRejected(s.docs.map(d => ({ id: d.id, ...d.data() })))
-    )
+    const u1 = onSnapshot(pq, s => {
+      const list = s.docs.map(d => ({ id: d.id, ...d.data() }))
+      list.sort((a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt))
+      setPending(list)
+    })
+    const u2 = onSnapshot(aq, s => {
+      const list = s.docs.map(d => ({ id: d.id, ...d.data() }))
+      list.sort((a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt))
+      setApproved(list)
+    })
+    const u3 = onSnapshot(rq, s => {
+      const list = s.docs.map(d => ({ id: d.id, ...d.data() }))
+      list.sort((a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt))
+      setRejected(list)
+    })
     return () => {
       u1()
       u2()
@@ -72,22 +93,31 @@ export default function ParliamentAdmin() {
     }
   }, [])
 
+  function openCreateDateModal() {
+    setNewDateTitle('')
+    setNewDateWhen('')
+    setShowCreateDateModal(true)
+  }
+
   async function createDate() {
-    const title = prompt(
-      t('parliament.newDateTitle') ||
-        'כותרת לתאריך הפרלמנט החדש (למשל: "פרלמנט – 15 ספטמבר")'
-    )
-    if (!title) return
-    const when = prompt(t('parliament.newDateWhen') || 'הכנס תאריך ISO (YYYY-MM-DD)')
-    if (!when) return
-    await addDoc(collection(db, 'parliamentDates'), {
-      title,
-      date: new Date(when),
-      isOpen: true,
-      createdAt: serverTimestamp(),
-      createdByUid: user?.uid || '',
-      createdByName: user?.displayName || user?.username || 'Admin',
-    })
+    if (!newDateTitle.trim() || !newDateWhen.trim()) return
+    
+    try {
+      await addDoc(collection(db, 'parliamentDates'), {
+        title: newDateTitle.trim(),
+        date: new Date(newDateWhen),
+        isOpen: true,
+        createdAt: serverTimestamp(),
+        createdByUid: user?.uid || '',
+        createdByName: user?.displayName || user?.username || 'Admin',
+      })
+      setShowCreateDateModal(false)
+      setNewDateTitle('')
+      setNewDateWhen('')
+    } catch (error) {
+      console.error('Error creating date:', error)
+      alert(t('parliament.createDateError') || 'שגיאה ביצירת תאריך')
+    }
   }
 
   async function toggleDate(d) {
@@ -112,14 +142,27 @@ export default function ParliamentAdmin() {
     })
   }
 
-  async function reject(s) {
-    const reason =
-      prompt(t('parliament.rejectReason') || 'סיבת הדחייה:') || ''
-    if (!reason.trim()) return
-    await updateDoc(doc(db, 'parliamentSubjects', s.id), {
-      status: 'rejected',
-      statusReason: reason.trim(),
-    })
+  function openRejectModal(s) {
+    setSubjectToReject(s)
+    setRejectReason('')
+    setShowRejectModal(true)
+  }
+
+  async function reject() {
+    if (!subjectToReject || !rejectReason.trim()) return
+    
+    try {
+      await updateDoc(doc(db, 'parliamentSubjects', subjectToReject.id), {
+        status: 'rejected',
+        statusReason: rejectReason.trim(),
+      })
+      setShowRejectModal(false)
+      setRejectReason('')
+      setSubjectToReject(null)
+    } catch (error) {
+      console.error('Error rejecting subject:', error)
+      alert(t('parliament.rejectError') || 'שגיאה בדחיית נושא')
+    }
   }
 
   function renderList(list) {
@@ -158,7 +201,7 @@ export default function ParliamentAdmin() {
                   </button>
                   <button
                     className="btn btn-warn"
-                    onClick={() => reject(s)}
+                    onClick={() => openRejectModal(s)}
                   >
                     {t('parliament.reject') || 'דחה'}
                   </button>
@@ -174,7 +217,7 @@ export default function ParliamentAdmin() {
                   </button>
                   <button
                     className="btn btn-ghost"
-                    onClick={() => reject(s)}
+                    onClick={() => openRejectModal(s)}
                   >
                     {t('parliament.markRejected') || 'סמן כדחוי'}
                   </button>
@@ -244,7 +287,7 @@ export default function ParliamentAdmin() {
       {tab === 'dates' && (
         <section className="parliament-section">
           <div className="parliament-actions" style={{ marginBottom: 12 }}>
-            <button className="btn btn-primary" onClick={createDate}>
+            <button className="btn btn-primary" onClick={openCreateDateModal}>
               {t('parliament.createDate') || 'צור תאריך'}
             </button>
           </div>
@@ -285,6 +328,68 @@ export default function ParliamentAdmin() {
             ))}
           </div>
         </section>
+      )}
+
+      {/* Create Date Modal */}
+      {showCreateDateModal && (
+        <div className="parliament-modal-backdrop" onClick={() => setShowCreateDateModal(false)}>
+          <div className="parliament-modal-panel" onClick={(e) => e.stopPropagation()}>
+            <h3>{t('parliament.createDate') || 'צור תאריך'}</h3>
+            <div className="parliament-form-group" style={{ marginTop: '1rem' }}>
+              <label>{t('parliament.newDateTitle') || 'כותרת לתאריך הפרלמנט החדש'}</label>
+              <input
+                type="text"
+                value={newDateTitle}
+                onChange={(e) => setNewDateTitle(e.target.value)}
+                placeholder={t('parliament.newDateTitlePlaceholder') || 'למשל: "פרלמנט – 15 ספטמבר"'}
+                style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
+              />
+            </div>
+            <div className="parliament-form-group" style={{ marginTop: '1rem' }}>
+              <label>{t('parliament.newDateWhen') || 'תאריך'}</label>
+              <input
+                type="date"
+                value={newDateWhen}
+                onChange={(e) => setNewDateWhen(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
+              />
+            </div>
+            <div className="parliament-actions" style={{ marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setShowCreateDateModal(false)}>
+                {t('common.cancel') || 'ביטול'}
+              </button>
+              <button className="btn btn-primary" onClick={createDate} disabled={!newDateTitle.trim() || !newDateWhen.trim()}>
+                {t('common.create') || 'צור'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className="parliament-modal-backdrop" onClick={() => setShowRejectModal(false)}>
+          <div className="parliament-modal-panel" onClick={(e) => e.stopPropagation()}>
+            <h3>{t('parliament.reject') || 'דחה נושא'}</h3>
+            <div className="parliament-form-group" style={{ marginTop: '1rem' }}>
+              <label>{t('parliament.rejectReason') || 'סיבת הדחייה'}</label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder={t('parliament.rejectReasonPlaceholder') || 'הכנס סיבה לדחייה...'}
+                style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem', minHeight: '100px' }}
+              />
+            </div>
+            <div className="parliament-actions" style={{ marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setShowRejectModal(false)}>
+                {t('common.cancel') || 'ביטול'}
+              </button>
+              <button className="btn btn-warn" onClick={reject} disabled={!rejectReason.trim()}>
+                {t('parliament.reject') || 'דחה'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -1,3 +1,7 @@
+/* ============================================
+   LANGUAGE SWITCHER - LOGO COLOR SCHEME
+   ============================================ */
+
 .language-switcher {
   display: flex;
   gap: 0.5rem;
@@ -6,24 +10,26 @@
 
 .lang-btn {
   padding: 0.5rem 1rem;
-  border: 1px solid var(--primary-color);
+  border: 2px solid var(--text-on-primary);
   background-color: transparent;
-  color: var(--primary-color);
+  color: var(--text-on-primary);
   border-radius: 5px;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .lang-btn:hover {
-  background-color: var(--primary-color);
-  color: var(--white);
+  background-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-on-primary);
+  transform: translateY(-2px);
 }
 
 .lang-btn.active {
-  background-color: var(--primary-color);
-  color: var(--white);
+  background-color: var(--text-on-primary);
+  color: var(--primary-color);
+  font-weight: 700;
 }
 
 @media (max-width: 768px) {

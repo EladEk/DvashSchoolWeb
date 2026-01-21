@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, onSnapshot, query, where } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import { useTranslation } from '../contexts/TranslationContext'
+import { useEffectiveRole, UserRole } from '../utils/requireRole'
+import EditableText from '../components/EditableText'
 import SubjectSubmitForm from '../components/parliament/SubjectSubmitForm'
 import './Parliament.css'
 
@@ -17,12 +19,21 @@ function tsMillis(x) {
 export default function Parliament() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { role: userRole } = useEffectiveRole()
   const [dates, setDates] = useState([])
   const [subjects, setSubjects] = useState([])
   const [myPending, setMyPending] = useState([])
   const [myRejected, setMyRejected] = useState([])
   const [editing, setEditing] = useState(null)
   const [current, setCurrent] = useState(null)
+  const [notes, setNotes] = useState([])
+  const [newNoteText, setNewNoteText] = useState('')
+  const [submittingNote, setSubmittingNote] = useState(false)
+  const [editingNoteId, setEditingNoteId] = useState(null)
+  const [editingNoteText, setEditingNoteText] = useState('')
+  const [replyingToNoteId, setReplyingToNoteId] = useState(null)
+  const [replyText, setReplyText] = useState('')
+  const [submittingReply, setSubmittingReply] = useState(false)
 
   const session = useMemo(() => {
     try {
@@ -52,8 +63,19 @@ export default function Parliament() {
     const unsub = onSnapshot(
       query(collection(db, 'parliamentDates')),
       snap => {
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        const list = snap.docs.map(d => {
+          const data = d.data()
+          // Ensure isOpen is a boolean
+          const dateObj = { 
+            id: d.id, 
+            ...data,
+            isOpen: data.isOpen !== false && data.isOpen !== 'false' // Default to true if not explicitly false
+          }
+          return dateObj
+        })
         list.sort((a, b) => tsMillis(a.date) - tsMillis(b.date))
+        console.log('Parliament - loaded dates:', list)
+        console.log('Parliament - dates with isOpen:', list.map(d => ({ id: d.id, title: d.title, isOpen: d.isOpen })))
         setDates(list)
       }
     )
@@ -98,6 +120,24 @@ export default function Parliament() {
     return () => unsub()
   }, [userUid])
 
+  // Fetch notes for current subject
+  useEffect(() => {
+    if (!current?.id) {
+      setNotes([])
+      return
+    }
+
+    const unsub = onSnapshot(
+      query(collection(db, 'parliamentNotes'), where('subjectId', '==', current.id)),
+      snap => {
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        list.sort((a, b) => tsMillis(a.createdAt) - tsMillis(b.createdAt))
+        setNotes(list)
+      }
+    )
+    return () => unsub()
+  }, [current?.id])
+
   // Group approved subjects by date
   const { openGroups, closedGroups } = useMemo(() => {
     const map = new Map()
@@ -116,6 +156,151 @@ export default function Parliament() {
       .sort((a, b) => tsMillis(a.date?.date) - tsMillis(b.date?.date))
     return { openGroups, closedGroups }
   }, [subjects, dates])
+
+  // Check permissions
+  const sessionRole = session?.role || ''
+  const effectiveRole = userRole || sessionRole
+  const canDeleteNotes = effectiveRole === UserRole.ADMIN || effectiveRole === UserRole.COMMITTEE
+  const canEditAnyNote = effectiveRole === UserRole.ADMIN || effectiveRole === UserRole.COMMITTEE
+  
+  // Check if user can edit/delete a specific note
+  const canEditNote = (note) => {
+    if (!note || !isLoggedIn) return false
+    if (canEditAnyNote) return true
+    return note.createdByUid === userUid
+  }
+  
+  const canDeleteNote = (note) => {
+    if (!note || !isLoggedIn) return false
+    if (canDeleteNotes) return true
+    return note.createdByUid === userUid
+  }
+  
+  // Organize notes into threaded structure (parent notes and replies)
+  const organizedNotes = useMemo(() => {
+    const parentNotes = notes.filter(n => !n.parentNoteId)
+    const replies = notes.filter(n => n.parentNoteId)
+    
+    const noteMap = new Map()
+    parentNotes.forEach(note => {
+      noteMap.set(note.id, { ...note, replies: [] })
+    })
+    
+    replies.forEach(reply => {
+      const parent = noteMap.get(reply.parentNoteId)
+      if (parent) {
+        parent.replies.push(reply)
+      }
+    })
+    
+    // Sort replies by creation time
+    noteMap.forEach(note => {
+      note.replies.sort((a, b) => tsMillis(a.createdAt) - tsMillis(b.createdAt))
+    })
+    
+    return Array.from(noteMap.values()).sort((a, b) => tsMillis(a.createdAt) - tsMillis(b.createdAt))
+  }, [notes])
+
+  // Add a new note (or reply)
+  async function handleAddNote(e) {
+    e.preventDefault()
+    if (!isLoggedIn || !current?.id || !newNoteText.trim() || submittingNote) return
+
+    setSubmittingNote(true)
+    try {
+      const displayName = session?.displayName || session?.username || session?.firstName || 'משתמש'
+      await addDoc(collection(db, 'parliamentNotes'), {
+        subjectId: current.id,
+        text: newNoteText.trim(),
+        createdByUid: userUid,
+        createdByName: displayName,
+        createdAt: serverTimestamp(),
+        parentNoteId: null, // Top-level note
+      })
+      setNewNoteText('')
+    } catch (error) {
+      console.error('Error adding note:', error)
+      alert(t('parliament.noteAddError') || 'שגיאה בהוספת הערה')
+    } finally {
+      setSubmittingNote(false)
+    }
+  }
+
+  // Add a reply to a note
+  async function handleAddReply(e, parentNoteId) {
+    e.preventDefault()
+    if (!isLoggedIn || !current?.id || !replyText.trim() || submittingReply || !parentNoteId) return
+
+    setSubmittingReply(true)
+    try {
+      const displayName = session?.displayName || session?.username || session?.firstName || 'משתמש'
+      await addDoc(collection(db, 'parliamentNotes'), {
+        subjectId: current.id,
+        text: replyText.trim(),
+        createdByUid: userUid,
+        createdByName: displayName,
+        createdAt: serverTimestamp(),
+        parentNoteId: parentNoteId,
+      })
+      setReplyText('')
+      setReplyingToNoteId(null)
+    } catch (error) {
+      console.error('Error adding reply:', error)
+      alert(t('parliament.noteAddError') || 'שגיאה בהוספת תגובה')
+    } finally {
+      setSubmittingReply(false)
+    }
+  }
+
+  // Start editing a note
+  function startEditNote(note) {
+    setEditingNoteId(note.id)
+    setEditingNoteText(note.text)
+  }
+
+  // Cancel editing
+  function cancelEditNote() {
+    setEditingNoteId(null)
+    setEditingNoteText('')
+  }
+
+  // Save edited note
+  async function handleSaveEdit(noteId) {
+    if (!editingNoteText.trim() || !noteId) return
+
+    try {
+      await updateDoc(doc(db, 'parliamentNotes', noteId), {
+        text: editingNoteText.trim(),
+        updatedAt: serverTimestamp(),
+      })
+      setEditingNoteId(null)
+      setEditingNoteText('')
+    } catch (error) {
+      console.error('Error updating note:', error)
+      alert(t('parliament.noteUpdateError') || 'שגיאה בעדכון הערה')
+    }
+  }
+
+  // Delete a note
+  async function handleDeleteNote(noteId) {
+    if (!noteId) return
+    const note = notes.find(n => n.id === noteId)
+    if (!note) return
+    
+    if (!canDeleteNote(note)) {
+      alert(t('parliament.noPermission') || 'אין לך הרשאה למחוק הערה זו')
+      return
+    }
+    
+    if (!confirm(t('parliament.deleteConfirmNote') || 'האם אתה בטוח שברצונך למחוק הערה זו?')) return
+
+    try {
+      await deleteDoc(doc(db, 'parliamentNotes', noteId))
+    } catch (error) {
+      console.error('Error deleting note:', error)
+      alert(t('parliament.noteDeleteError') || 'שגיאה במחיקת הערה')
+    }
+  }
 
   return (
     <div className="parliament-page">
@@ -147,11 +332,15 @@ export default function Parliament() {
       {/* OPEN dates: Approved subjects */}
       <section className="parliament-section">
         <h3 className="parliament-section-title">
-          {t('parliament.approvedSubjects') || 'נושאים מאושרים'}
+          <EditableText translationKey="parliament.approvedSubjects">
+            {t('parliament.approvedSubjects') || 'נושאים מאושרים'}
+          </EditableText>
         </h3>
         {openGroups.length === 0 ? (
           <div className="parliament-empty">
-            {t('parliament.noApproved') || 'אין נושאים מאושרים עדיין.'}
+            <EditableText translationKey="parliament.noApproved">
+              {t('parliament.noApproved') || 'אין נושאים מאושרים עדיין.'}
+            </EditableText>
           </div>
         ) : (
           openGroups.map(group => (
@@ -187,8 +376,8 @@ export default function Parliament() {
         )}
       </section>
 
-      {/* Submit new subject */}
-      {isLoggedIn ? (
+      {/* Submit new subject - students, parents, admins, and managers can submit */}
+      {isLoggedIn && (session?.role === 'student' || session?.role === 'parent' || session?.role === 'admin' || session?.role === 'editor' || session?.role === 'committee') ? (
         <section className="parliament-section">
           <SubjectSubmitForm dates={dates} currentUser={user || session} />
         </section>
@@ -196,16 +385,16 @@ export default function Parliament() {
         <section className="parliament-section">
           <div className="parliament-card">
             <p style={{ textAlign: 'center', marginBottom: '1rem' }}>
-              {t('parliamentLogin.loginToSubmit') || 'עליך להתחבר כדי לשלוח נושאים לפרלמנט'}
+              {isLoggedIn ? (
+                <EditableText translationKey="parliamentLogin.noPermissionToSubmit">
+                  {t('parliamentLogin.noPermissionToSubmit') || 'רק תלמידים, הורים, מנהלים ועורכים יכולים להציע נושאים לפרלמנט'}
+                </EditableText>
+              ) : (
+                <EditableText translationKey="parliamentLogin.loginToSubmit">
+                  {t('parliamentLogin.loginToSubmit') || 'עליך להתחבר כדי לשלוח נושאים לפרלמנט'}
+                </EditableText>
+              )}
             </p>
-            <div style={{ textAlign: 'center' }}>
-              <button
-                className="btn btn-primary"
-                onClick={() => navigate('/parliament/login', { state: { from: { pathname: '/parliament' } } })}
-              >
-                {t('parliamentLogin.loginOrRegister') || 'התחבר / הירשם'}
-              </button>
-            </div>
           </div>
         </section>
       )}
@@ -214,11 +403,15 @@ export default function Parliament() {
       {userUid && (
         <section className="parliament-section">
           <h3 className="parliament-section-title">
-            {t('parliament.myPending') || 'ההצעות שלי הממתינות לאישור'}
+            <EditableText translationKey="parliament.myPending">
+              {t('parliament.myPending') || 'ההצעות שלי הממתינות לאישור'}
+            </EditableText>
           </h3>
           {myPending.length === 0 ? (
             <div className="parliament-empty">
-              {t('parliament.noMyPending') || 'אין לך נושאים ממתינים.'}
+              <EditableText translationKey="parliament.noMyPending">
+                {t('parliament.noMyPending') || 'אין לך נושאים ממתינים.'}
+              </EditableText>
             </div>
           ) : (
             <div className="parliament-grid">
@@ -241,11 +434,15 @@ export default function Parliament() {
       {userUid && (
         <section className="parliament-section">
           <h3 className="parliament-section-title">
-            {t('parliament.myRejected') || 'ההצעות שלי שנדחו'}
+            <EditableText translationKey="parliament.myRejected">
+              {t('parliament.myRejected') || 'ההצעות שלי שנדחו'}
+            </EditableText>
           </h3>
           {myRejected.length === 0 ? (
             <div className="parliament-empty">
-              {t('parliament.noMyRejected') || 'אין לך נושאים שנדחו.'}
+              <EditableText translationKey="parliament.noMyRejected">
+                {t('parliament.noMyRejected') || 'אין לך נושאים שנדחו.'}
+              </EditableText>
             </div>
           ) : (
             <div className="parliament-grid">
@@ -272,11 +469,15 @@ export default function Parliament() {
       {/* CLOSED dates */}
       <section className="parliament-section">
         <h3 className="parliament-section-title">
-          {t('parliament.closedSectionTitle') || 'תאריכים סגורים'}
+          <EditableText translationKey="parliament.closedSectionTitle">
+            {t('parliament.closedSectionTitle') || 'תאריכים סגורים'}
+          </EditableText>
         </h3>
         {closedGroups.length === 0 ? (
           <div className="parliament-empty">
-            {t('parliament.noClosed') || 'אין תאריכים סגורים עדיין.'}
+            <EditableText translationKey="parliament.noClosed">
+              {t('parliament.noClosed') || 'אין תאריכים סגורים עדיין.'}
+            </EditableText>
           </div>
         ) : (
           closedGroups.map(group => (
@@ -336,9 +537,270 @@ export default function Parliament() {
                     {t('parliament.notes') || 'הערות'}
                   </div>
                 </div>
-                <div className="parliament-empty">
-                  {t('parliament.noNotes') || 'אין הערות עדיין. היה הראשון להגיב.'}
-                </div>
+
+                {/* Notes list */}
+                {organizedNotes.length === 0 ? (
+                  <div className="parliament-empty">
+                    {t('parliament.noNotes') || 'אין הערות עדיין. היה הראשון להגיב.'}
+                  </div>
+                ) : (
+                  <div className="parliament-notes-list" style={{ marginTop: '1rem' }}>
+                    {organizedNotes.map(note => (
+                      <div key={note.id} className="parliament-note-item">
+                        <div className="parliament-row" style={{ justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                          <div className="parliament-meta" style={{ fontWeight: 600 }}>
+                            {note.createdByName || 'משתמש'}
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <div className="parliament-meta" style={{ fontSize: '0.85rem' }}>
+                              {note.createdAt?.toDate ? 
+                                new Date(note.createdAt.toDate()).toLocaleString('he-IL') :
+                                note.createdAt ? 
+                                  new Date(note.createdAt).toLocaleString('he-IL') :
+                                  ''
+                              }
+                            </div>
+                            {canEditNote(note) && editingNoteId !== note.id && (
+                              <button
+                                className="btn btn-ghost"
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
+                                onClick={() => startEditNote(note)}
+                                title={t('parliament.editNote') || 'ערוך הערה'}
+                              >
+                                ✏️
+                              </button>
+                            )}
+                            {canDeleteNote(note) && (
+                              <button
+                                className="btn btn-warn"
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
+                                onClick={() => handleDeleteNote(note.id)}
+                                title={t('parliament.deleteNote') || 'מחק הערה'}
+                              >
+                                🗑️
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {editingNoteId === note.id ? (
+                          <div style={{ marginTop: '0.5rem' }}>
+                            <textarea
+                              value={editingNoteText}
+                              onChange={e => setEditingNoteText(e.target.value)}
+                              rows={3}
+                              style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                border: '2px solid var(--primary-color)',
+                                borderRadius: '5px',
+                                fontFamily: 'inherit',
+                                fontSize: '1rem',
+                                resize: 'vertical'
+                              }}
+                            />
+                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', justifyContent: 'flex-end' }}>
+                              <button
+                                className="btn btn-ghost"
+                                onClick={cancelEditNote}
+                                style={{ fontSize: '0.9rem' }}
+                              >
+                                {t('common.cancel') || 'ביטול'}
+                              </button>
+                              <button
+                                className="btn btn-primary"
+                                onClick={() => handleSaveEdit(note.id)}
+                                disabled={!editingNoteText.trim()}
+                                style={{ fontSize: '0.9rem' }}
+                              >
+                                {t('common.save') || 'שמור'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.5', marginBottom: '0.5rem' }}>
+                            {note.text}
+                          </div>
+                        )}
+                        
+                        {/* Reply button */}
+                        {isLoggedIn && editingNoteId !== note.id && (
+                          <div style={{ marginTop: '0.5rem' }}>
+                            {replyingToNoteId === note.id ? (
+                              <form onSubmit={(e) => handleAddReply(e, note.id)} style={{ marginTop: '0.5rem' }}>
+                                <textarea
+                                  value={replyText}
+                                  onChange={e => setReplyText(e.target.value)}
+                                  placeholder={t('parliament.replyPlaceholder') || 'כתוב תגובה...'}
+                                  rows={2}
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.5rem',
+                                    border: '2px solid var(--border-color)',
+                                    borderRadius: '5px',
+                                    fontFamily: 'inherit',
+                                    fontSize: '0.9rem',
+                                    resize: 'vertical'
+                                  }}
+                                  disabled={submittingReply}
+                                />
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', justifyContent: 'flex-end' }}>
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost"
+                                    onClick={() => {
+                                      setReplyingToNoteId(null)
+                                      setReplyText('')
+                                    }}
+                                    style={{ fontSize: '0.85rem' }}
+                                  >
+                                    {t('common.cancel') || 'ביטול'}
+                                  </button>
+                                  <button
+                                    type="submit"
+                                    className="btn btn-primary"
+                                    disabled={!replyText.trim() || submittingReply}
+                                    style={{ fontSize: '0.85rem' }}
+                                  >
+                                    {submittingReply ? (t('parliament.submitting') || 'שולח...') : (t('parliament.reply') || 'השב')}
+                                  </button>
+                                </div>
+                              </form>
+                            ) : (
+                              <button
+                                className="btn btn-ghost"
+                                onClick={() => setReplyingToNoteId(note.id)}
+                                style={{ fontSize: '0.85rem', padding: '0.25rem 0.5rem' }}
+                              >
+                                💬 {t('parliament.reply') || 'השב'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Replies */}
+                        {note.replies && note.replies.length > 0 && (
+                          <div className="parliament-replies" style={{ marginTop: '1rem', marginRight: '1.5rem', borderRight: '2px solid var(--border-color)', paddingRight: '1rem' }}>
+                            {note.replies.map(reply => (
+                              <div key={reply.id} className="parliament-note-item" style={{ marginBottom: '0.75rem', marginTop: '0.75rem' }}>
+                                <div className="parliament-row" style={{ justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                  <div className="parliament-meta" style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                                    {reply.createdByName || 'משתמש'}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <div className="parliament-meta" style={{ fontSize: '0.75rem' }}>
+                                      {reply.createdAt?.toDate ? 
+                                        new Date(reply.createdAt.toDate()).toLocaleString('he-IL') :
+                                        reply.createdAt ? 
+                                          new Date(reply.createdAt).toLocaleString('he-IL') :
+                                          ''
+                                      }
+                                    </div>
+                                    {canEditNote(reply) && editingNoteId !== reply.id && (
+                                      <button
+                                        className="btn btn-ghost"
+                                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
+                                        onClick={() => startEditNote(reply)}
+                                        title={t('parliament.editNote') || 'ערוך הערה'}
+                                      >
+                                        ✏️
+                                      </button>
+                                    )}
+                                    {canDeleteNote(reply) && (
+                                      <button
+                                        className="btn btn-warn"
+                                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
+                                        onClick={() => handleDeleteNote(reply.id)}
+                                        title={t('parliament.deleteNote') || 'מחק הערה'}
+                                      >
+                                        🗑️
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {editingNoteId === reply.id ? (
+                                  <div style={{ marginTop: '0.5rem' }}>
+                                    <textarea
+                                      value={editingNoteText}
+                                      onChange={e => setEditingNoteText(e.target.value)}
+                                      rows={2}
+                                      style={{
+                                        width: '100%',
+                                        padding: '0.5rem',
+                                        border: '2px solid var(--primary-color)',
+                                        borderRadius: '5px',
+                                        fontFamily: 'inherit',
+                                        fontSize: '0.9rem',
+                                        resize: 'vertical'
+                                      }}
+                                    />
+                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', justifyContent: 'flex-end' }}>
+                                      <button
+                                        className="btn btn-ghost"
+                                        onClick={cancelEditNote}
+                                        style={{ fontSize: '0.85rem' }}
+                                      >
+                                        {t('common.cancel') || 'ביטול'}
+                                      </button>
+                                      <button
+                                        className="btn btn-primary"
+                                        onClick={() => handleSaveEdit(reply.id)}
+                                        disabled={!editingNoteText.trim()}
+                                        style={{ fontSize: '0.85rem' }}
+                                      >
+                                        {t('common.save') || 'שמור'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.5', fontSize: '0.9rem' }}>
+                                    {reply.text}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add note form - only for logged-in users */}
+                {isLoggedIn ? (
+                  <form onSubmit={handleAddNote} style={{ marginTop: '1rem' }}>
+                    <textarea
+                      value={newNoteText}
+                      onChange={e => setNewNoteText(e.target.value)}
+                      placeholder={t('parliament.addNotePlaceholder') || 'הוסף הערה...'}
+                      rows={3}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #ddd',
+                        borderRadius: '5px',
+                        fontFamily: 'inherit',
+                        fontSize: '1rem',
+                        resize: 'vertical'
+                      }}
+                      disabled={submittingNote}
+                    />
+                    <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={!newNoteText.trim() || submittingNote}
+                      >
+                        {submittingNote ? (t('parliament.submitting') || 'שולח...') : (t('parliament.addNote') || 'הוסף הערה')}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div style={{ marginTop: '1rem', textAlign: 'center', padding: '1rem', color: '#666' }}>
+                    {t('parliament.loginToAddNote') || 'עליך להתחבר כדי להוסיף הערות'}
+                  </div>
+                )}
               </div>
             </div>
           </div>

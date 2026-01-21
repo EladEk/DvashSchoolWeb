@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useAdmin } from './contexts/AdminContext'
 import { useTranslation } from './contexts/TranslationContext'
 import Header from './components/Header'
@@ -8,7 +8,6 @@ import Home from './pages/Home'
 import FAQ from './pages/FAQ'
 import ContactPage from './pages/ContactPage'
 import ParentCommittee from './pages/ParentCommittee'
-import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
 import Parliament from './pages/Parliament'
 import ParliamentAdmin from './pages/ParliamentAdmin'
@@ -53,12 +52,12 @@ function AppContent() {
         <Route path="/parent-committee" element={<ParentCommittee />} />
         <Route path="/parliament" element={<Parliament />} />
         <Route path="/parliament/login" element={<ParliamentLogin />} />
-        <Route path="/admin" element={<AdminLogin />} />
-        <Route path="/admin/" element={<AdminLogin />} />
+        <Route path="/admin" element={<Navigate to="/parliament/login" replace />} />
+        <Route path="/admin/" element={<Navigate to="/parliament/login" replace />} />
         <Route
           path="/admin/dashboard"
           element={
-            <AdminRoute>
+            <AdminRoute requireRole={['admin', 'editor']}>
               <AdminDashboard />
             </AdminRoute>
           }
@@ -66,7 +65,7 @@ function AppContent() {
         <Route
           path="/admin/parliament"
           element={
-            <RequireRole allowed={['admin']}>
+            <RequireRole allowed={['admin', 'committee']}>
               <ParliamentAdmin />
             </RequireRole>
           }

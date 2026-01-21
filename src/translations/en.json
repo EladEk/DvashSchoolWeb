@@ -173,9 +173,13 @@
     "rejected": "Rejected",
     "dates": "Dates",
     "createDate": "Create date",
-    "newDateTitle": "Title for the new parliament date (e.g., \"Parliament – Sep 15\")",
-    "newDateWhen": "Enter ISO date (YYYY-MM-DD)",
+    "newDateTitle": "Title for the new parliament date",
+    "newDateTitlePlaceholder": "e.g., \"Parliament – Sep 15\"",
+    "newDateWhen": "Date",
     "confirmDeleteDate": "Delete this date? This does not delete subjects.",
+    "createDateError": "Error creating date",
+    "rejectReasonPlaceholder": "Enter reason for rejection...",
+    "rejectError": "Error rejecting subject",
     "open": "Open",
     "close": "Close",
     "reopen": "Reopen",
@@ -184,7 +188,16 @@
     "markApproved": "Mark Approved",
     "markRejected": "Mark Rejected",
     "rejectReason": "Reason for rejection:",
-    "empty": "Empty"
+    "empty": "Empty",
+    "addNotePlaceholder": "Add a note...",
+    "loginToAddNote": "You must log in to add notes",
+    "noteAddError": "Error adding note",
+    "noteDeleteError": "Error deleting note",
+    "noteUpdateError": "Error updating note",
+    "confirmDeleteNote": "Are you sure you want to delete this note?",
+    "deleteNote": "Delete note",
+    "editNote": "Edit note",
+    "noPermission": "You don't have permission to perform this action"
   },
   "parliamentLogin": {
     "loginTitle": "Login to Parliament",
@@ -212,7 +225,10 @@
     "passwordTooShort": "Password must be at least 4 characters",
     "usernameExists": "Username already exists",
     "registerError": "Registration error",
-    "loginToSubmit": "You must login to submit subjects to parliament"
+    "loginToSubmit": "You must login to submit subjects to parliament",
+    "noPermissionToSubmit": "Only students and parents can submit subjects to parliament",
+    "adminLoginTitle": "Login as Admin",
+    "adminRegisterTitle": "Register as Admin"
   },
   "users": {
     "new": "Create User",
@@ -228,17 +244,18 @@
     "editTitle": "Edit User",
     "role": {
       "student": "Student",
-      "teacher": "Teacher",
-      "admin": "Admin",
-      "kiosk": "Kiosk"
+      "parent": "Parent",
+      "committee": "Committee",
+      "editor": "Editor",
+      "admin": "Admin"
     },
     "filter": {
       "all": "All",
       "student": "Students",
-      "teacher": "Teachers",
-      "admin": "Admins",
-      "kiosk": "Kiosk",
-      "parent": "Parents"
+      "parent": "Parents",
+      "committee": "Committee",
+      "editor": "Editors",
+      "admin": "Admins"
     },
     "table": {
       "username": "Username",
@@ -247,6 +264,8 @@
       "birthday": "Birthday",
       "classId": "Class"
     },
+    "noPermission": "You don't have permission to manage users. Only admins can.",
+    "adminNote": "Only admins can assign new admins",
     "toasts": {
       "created": "Created user: {username}",
       "updated": "Updated user: {username}",

@@ -173,9 +173,13 @@
     "rejected": "נדחו",
     "dates": "תאריכים",
     "createDate": "צור תאריך",
-    "newDateTitle": "כותרת לתאריך הפרלמנט החדש (למשל: \"פרלמנט – 15 ספטמבר\")",
-    "newDateWhen": "הכנס תאריך ISO (YYYY-MM-DD)",
+    "newDateTitle": "כותרת לתאריך הפרלמנט החדש",
+    "newDateTitlePlaceholder": "למשל: \"פרלמנט – 15 ספטמבר\"",
+    "newDateWhen": "תאריך",
     "confirmDeleteDate": "למחוק תאריך זה? זה לא ימחק נושאים.",
+    "createDateError": "שגיאה ביצירת תאריך",
+    "rejectReasonPlaceholder": "הכנס סיבה לדחייה...",
+    "rejectError": "שגיאה בדחיית נושא",
     "open": "פתוח",
     "close": "סגור",
     "reopen": "פתח מחדש",
@@ -184,7 +188,16 @@
     "markApproved": "סמן כמאושר",
     "markRejected": "סמן כדחוי",
     "rejectReason": "סיבת הדחייה:",
-    "empty": "ריק"
+    "empty": "ריק",
+    "addNotePlaceholder": "הוסף הערה...",
+    "loginToAddNote": "עליך להתחבר כדי להוסיף הערות",
+    "noteAddError": "שגיאה בהוספת הערה",
+    "noteDeleteError": "שגיאה במחיקת הערה",
+    "noteUpdateError": "שגיאה בעדכון הערה",
+    "confirmDeleteNote": "האם אתה בטוח שברצונך למחוק הערה זו?",
+    "deleteNote": "מחק הערה",
+    "editNote": "ערוך הערה",
+    "noPermission": "אין לך הרשאה לבצע פעולה זו"
   },
   "parliamentLogin": {
     "loginTitle": "התחבר לפרלמנט",
@@ -212,7 +225,10 @@
     "passwordTooShort": "הסיסמה חייבת להכיל לפחות 4 תווים",
     "usernameExists": "שם משתמש כבר קיים",
     "registerError": "שגיאה ברישום",
-    "loginToSubmit": "עליך להתחבר כדי לשלוח נושאים לפרלמנט"
+    "loginToSubmit": "עליך להתחבר כדי לשלוח נושאים לפרלמנט",
+    "noPermissionToSubmit": "רק תלמידים והורים יכולים להציע נושאים לפרלמנט",
+    "adminLoginTitle": "התחבר כמנהל",
+    "adminRegisterTitle": "הירשם כמנהל"
   },
   "users": {
     "new": "צור משתמש",
@@ -228,17 +244,18 @@
     "editTitle": "ערוך משתמש",
     "role": {
       "student": "תלמיד",
-      "teacher": "מורה",
-      "admin": "מנהל",
-      "kiosk": "קיוסק"
+      "parent": "הורה",
+      "committee": "וועד",
+      "editor": "עורך",
+      "admin": "מנהל"
     },
     "filter": {
       "all": "הכל",
       "student": "תלמידים",
-      "teacher": "מורים",
-      "admin": "מנהלים",
-      "kiosk": "קיוסק",
-      "parent": "הורים"
+      "parent": "הורים",
+      "committee": "וועד",
+      "editor": "עורכים",
+      "admin": "מנהלים"
     },
     "table": {
       "username": "שם משתמש",
@@ -247,6 +264,8 @@
       "birthday": "תאריך לידה",
       "classId": "כיתה"
     },
+    "noPermission": "אין לך הרשאה לנהל משתמשים. רק מנהלים יכולים.",
+    "adminNote": "רק מנהלים יכולים למנות מנהלים חדשים",
     "toasts": {
       "created": "נוצר משתמש: {username}",
       "updated": "עודכן משתמש: {username}",

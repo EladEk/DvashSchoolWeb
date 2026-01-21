@@ -1,3 +1,7 @@
+/* ============================================
+   INLINE EDITOR - LOGO COLOR SCHEME
+   ============================================ */
+
 .inline-editor-overlay {
   position: fixed;
   top: 0;
@@ -15,34 +19,37 @@
 .inline-editor-modal {
   background-color: var(--white);
   border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg);
   max-width: 800px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  border: 2px solid var(--primary-color);
 }
 
 .editor-header {
   padding: 1.5rem;
-  border-bottom: 1px solid var(--light-gray);
+  border-bottom: 2px solid var(--primary-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: var(--gradient-primary);
+  color: var(--text-on-primary);
 }
 
 .editor-header h3 {
   margin: 0;
-  color: var(--primary-color);
+  color: var(--text-on-primary);
   font-size: 1.2rem;
 }
 
-.close-btn {
+.editor-header .close-btn {
   background: none;
   border: none;
   font-size: 2rem;
-  color: var(--text-color);
+  color: var(--text-on-primary);
   cursor: pointer;
   padding: 0;
   width: 30px;
@@ -51,10 +58,12 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
+  transition: all 0.3s ease;
 }
 
-.close-btn:hover {
-  color: var(--primary-color);
+.editor-header .close-btn:hover {
+  color: var(--accent-color);
+  transform: scale(1.1);
 }
 
 .editor-content {
@@ -62,6 +71,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  background: var(--white);
 }
 
 .editor-field {
@@ -72,49 +82,64 @@
 
 .editor-field label {
   font-weight: 600;
-  color: var(--text-color);
+  color: var(--primary-color);
+  font-size: 1rem;
 }
 
 .editor-field textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid var(--light-gray);
+  border: 2px solid var(--border-color);
   border-radius: 5px;
   font-size: 1rem;
   font-family: inherit;
   resize: vertical;
+  color: var(--text-color);
+  background-color: var(--white);
+  transition: all 0.3s ease;
 }
 
 .editor-field textarea:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(44, 95, 124, 0.1);
+  box-shadow: 0 0 0 3px rgba(44, 95, 124, 0.1);
+  color: var(--text-color);
+  background-color: var(--white);
+}
+
+.admin-mode .inline-editor-modal .editor-field textarea,
+.admin-mode .inline-editor-modal .editor-field textarea:focus {
+  color: var(--text-color) !important;
+  background-color: var(--white) !important;
 }
 
 .reset-btn {
   align-self: flex-start;
   padding: 0.4rem 0.8rem;
-  background-color: #ff9800;
-  color: var(--white);
+  background-color: var(--accent-color);
+  color: var(--text-on-primary);
   border: none;
   border-radius: 5px;
   cursor: pointer;
   font-size: 0.9rem;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
+  font-weight: 600;
 }
 
 .reset-btn:hover {
-  background-color: #f57c00;
+  background-color: var(--warm-orange);
+  transform: translateY(-2px);
 }
 
 .editor-footer {
   padding: 1.5rem;
-  border-top: 1px solid var(--light-gray);
+  border-top: 2px solid var(--primary-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
+  background: var(--white);
 }
 
 .editor-actions {
@@ -122,43 +147,74 @@
   gap: 1rem;
 }
 
-.cancel-btn,
-.save-btn,
-.close-btn {
+.editor-footer .cancel-btn,
+.editor-footer .save-btn,
+.editor-footer .close-btn {
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.3s ease;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  min-height: 40px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.cancel-btn {
+.editor-footer .cancel-btn {
   background-color: var(--light-gray);
   color: var(--text-color);
 }
 
-.cancel-btn:hover {
+.editor-footer .cancel-btn:hover {
   background-color: #d0d0d0;
 }
 
-.save-btn,
-.close-btn {
-  background-color: var(--primary-color);
-  color: var(--white);
+/* Save button - GREEN text */
+.inline-editor-modal .editor-footer button.save-btn,
+.inline-editor-modal .editor-footer .save-btn,
+div.inline-editor-modal div.editor-footer div.editor-actions button.save-btn,
+.editor-footer button.save-btn {
+  background-color: var(--primary-color) !important;
+  color: #00ff00 !important;
 }
 
-.save-btn:hover:not(:disabled),
-.close-btn:hover {
-  background-color: var(--secondary-color);
+/* Close button - RED text */
+.inline-editor-modal .editor-footer button.close-btn,
+.inline-editor-modal .editor-footer .close-btn,
+div.inline-editor-modal div.editor-footer div.editor-actions button.close-btn,
+.editor-footer button.close-btn {
+  background-color: var(--primary-color) !important;
+  color: #ff0000 !important;
 }
 
-.save-btn:disabled {
+/* Save button hover - GREEN text */
+.inline-editor-modal .editor-footer button.save-btn:hover:not(:disabled),
+.inline-editor-modal .editor-footer .save-btn:hover:not(:disabled),
+div.inline-editor-modal div.editor-footer div.editor-actions button.save-btn:hover:not(:disabled),
+.editor-footer button.save-btn:hover:not(:disabled) {
+  background-color: var(--secondary-color) !important;
+  color: #00ff00 !important;
+}
+
+/* Close button hover - RED text */
+.inline-editor-modal .editor-footer button.close-btn:hover,
+.inline-editor-modal .editor-footer .close-btn:hover,
+div.inline-editor-modal div.editor-footer div.editor-actions button.close-btn:hover,
+.editor-footer button.close-btn:hover {
+  background-color: var(--secondary-color) !important;
+  color: #ff0000 !important;
+}
+
+.editor-footer .save-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.save-btn {
+.editor-footer .save-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -183,17 +239,18 @@
 
 .reset-all-btn {
   padding: 0.75rem 1.5rem;
-  background-color: #ff9800;
-  color: var(--white);
+  background-color: var(--accent-color);
+  color: var(--text-on-primary);
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.3s ease;
+  font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .reset-all-btn:hover {
-  background-color: #f57c00;
+  background-color: var(--warm-orange);
+  transform: translateY(-2px);
 }
 
 .loading {
@@ -209,16 +266,46 @@
   font-size: 0.9rem;
   border-radius: 5px;
   margin-top: 0.5rem;
+  font-weight: 600;
 }
 
 .save-message.success {
   background-color: #4caf50;
-  color: white;
+  color: var(--text-on-primary);
 }
 
 .save-message.error {
   background-color: #f44336;
-  color: white;
+  color: var(--text-on-primary);
+}
+
+/* Admin mode overrides */
+.admin-mode .inline-editor-modal .editor-footer button.save-btn,
+.admin-mode .inline-editor-modal .editor-footer .save-btn,
+.admin-mode div.inline-editor-modal div.editor-footer div.editor-actions button.save-btn {
+  color: #00ff00 !important;
+  background-color: var(--primary-color) !important;
+}
+
+.admin-mode .inline-editor-modal .editor-footer button.close-btn,
+.admin-mode .inline-editor-modal .editor-footer .close-btn,
+.admin-mode div.inline-editor-modal div.editor-footer div.editor-actions button.close-btn {
+  color: #ff0000 !important;
+  background-color: var(--primary-color) !important;
+}
+
+.admin-mode .inline-editor-modal .editor-footer button.save-btn:hover:not(:disabled),
+.admin-mode .inline-editor-modal .editor-footer .save-btn:hover:not(:disabled),
+.admin-mode div.inline-editor-modal div.editor-footer div.editor-actions button.save-btn:hover:not(:disabled) {
+  background-color: var(--secondary-color) !important;
+  color: #00ff00 !important;
+}
+
+.admin-mode .inline-editor-modal .editor-footer button.close-btn:hover,
+.admin-mode .inline-editor-modal .editor-footer .close-btn:hover,
+.admin-mode div.inline-editor-modal div.editor-footer div.editor-actions button.close-btn:hover {
+  background-color: var(--secondary-color) !important;
+  color: #ff0000 !important;
 }
 
 @media (max-width: 768px) {
@@ -236,8 +323,8 @@
     justify-content: stretch;
   }
 
-  .cancel-btn,
-  .save-btn {
+  .editor-footer .cancel-btn,
+  .editor-footer .save-btn {
     flex: 1;
   }
 }

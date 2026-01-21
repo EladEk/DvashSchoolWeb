@@ -1,20 +1,84 @@
+/* ============================================
+   LEARNING COMPONENT - LOGO COLOR SCHEME
+   ============================================ */
+
 .learning {
-  padding: 5rem 2rem;
-  background: linear-gradient(to bottom, var(--white) 0%, var(--bg-color) 100%);
-  scroll-margin-top: 200px;
+  padding: 4rem 0;
+  background: var(--gradient-primary);
   position: relative;
+  overflow: hidden;
+}
+
+.learning::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('/assets/LOGO.avif') center/contain no-repeat;
+  opacity: 0.05;
+  z-index: 0;
+}
+
+.learning .container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  position: relative;
+  z-index: 1;
 }
 
 .learning-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  text-align: right;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 3rem;
+  border-radius: 15px;
+  box-shadow: var(--shadow-lg);
+  border: 2px solid var(--text-on-primary);
+}
+
+.learning-text .section-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 2rem;
+  text-align: center;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .learning-text p {
-  font-size: 1.2rem;
-  line-height: 1.8;
   color: var(--text-color);
-  max-width: 800px;
+  line-height: 1.8;
+  font-size: 1.2rem;
+  text-align: center;
+  max-width: 900px;
   margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .learning {
+    padding: 3rem 0;
+  }
+
+  .learning .container {
+    padding: 0 1rem;
+  }
+
+  .learning-content {
+    padding: 2rem 1.5rem;
+  }
+
+  .learning-text .section-title {
+    font-size: 2rem;
+  }
+
+  .learning-text p {
+    font-size: 1rem;
+  }
 }

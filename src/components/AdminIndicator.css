@@ -1,12 +1,17 @@
+/* ============================================
+   ADMIN INDICATOR - LOGO COLOR SCHEME
+   ============================================ */
+
 .admin-toolbar {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  background-color: #28a745;
-  color: var(--white);
+  background: var(--gradient-primary);
+  color: var(--text-on-primary);
   z-index: 10001;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg);
+  border-bottom: 2px solid var(--primary-color);
 }
 
 .admin-toolbar-content {
@@ -23,6 +28,7 @@
   font-weight: 600;
   font-size: 1rem;
   white-space: nowrap;
+  color: var(--text-on-primary);
 }
 
 .admin-buttons {
@@ -38,16 +44,19 @@
   border-radius: 5px;
   cursor: pointer;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.3s ease;
   background-color: rgba(255, 255, 255, 0.1);
-  color: var(--white);
+  color: var(--text-on-primary);
   white-space: nowrap;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .admin-btn:hover:not(:disabled) {
   background-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
 }
 
 .admin-btn:disabled {
@@ -56,35 +65,41 @@
 }
 
 .export-btn:hover:not(:disabled) {
-  background-color: #17a2b8;
+  background-color: var(--secondary-color);
 }
 
 .import-btn:hover:not(:disabled) {
-  background-color: #ffc107;
-  color: #000;
+  background-color: var(--accent-color);
+  color: var(--text-color);
 }
 
 .save-btn:hover:not(:disabled) {
-  background-color: #007bff;
+  background-color: var(--primary-color);
 }
 
 .exit-btn:hover:not(:disabled) {
-  background-color: #dc3545;
+  background-color: var(--warm-orange);
+}
+
+.dashboard-btn:hover:not(:disabled) {
+  background-color: var(--secondary-color);
 }
 
 .admin-message {
   padding: 0.5rem 2rem;
   text-align: center;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .admin-message.success {
-  background-color: rgba(40, 167, 69, 0.2);
+  background-color: rgba(76, 175, 80, 0.2);
+  color: var(--text-on-primary);
 }
 
 .admin-message.error {
-  background-color: rgba(220, 53, 69, 0.2);
+  background-color: rgba(244, 67, 54, 0.2);
+  color: var(--text-on-primary);
 }
 
 @media (max-width: 768px) {

@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../services/firebase'
 import { useTranslation } from '../../contexts/TranslationContext'
+import { useEffectiveRole } from '../../utils/requireRole'
 import './UsersAdmin.css'
 
 const CLASS_HE = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'יא', 'יב']
@@ -40,10 +41,14 @@ async function sha256Hex(text) {
 
 export default function UsersAdmin() {
   const { t } = useTranslation()
+  const { role } = useEffectiveRole()
   const [items, setItems] = useState([])
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [toast, setToast] = useState({ show: false, kind: '', message: '' })
+  
+  // Only admins can manage users
+  const canManageUsers = role === 'admin'
 
   const [form, setForm] = useState({
     username: '',
@@ -80,6 +85,8 @@ export default function UsersAdmin() {
   const filtered = useMemo(() => {
     const s = normLower(search)
     return items.filter(u => {
+      // Hide system admin user (uid === 'system-admin')
+      if (u.uid === 'system-admin' || u.id === 'system-admin') return false
       if (roleFilter !== 'all' && u.role !== roleFilter) return false
       if (!s) return true
       const hay = `${u.username} ${u.firstName} ${u.lastName} ${u.birthday || ''}`.toLowerCase()
@@ -205,9 +212,19 @@ export default function UsersAdmin() {
     }
   }
 
+  if (!canManageUsers) {
+    return (
+      <div className="users-admin">
+        <div className="users-error">
+          {t('users.noPermission') || 'אין לך הרשאה לנהל משתמשים. רק מנהלים יכולים.'}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="users-admin">
-      <h2>{t('users.list') || 'All Users'}</h2>
+      <h2>{t('users.list') || 'כל המשתמשים'}</h2>
 
       {/* Create form */}
       <section className="users-section">
@@ -232,17 +249,22 @@ export default function UsersAdmin() {
               value={form.lastName}
               onChange={e => setForm(v => ({ ...v, lastName: e.target.value }))}
             />
-              <select
-                className="users-select"
-                value={form.role}
-                onChange={e => setForm(v => ({ ...v, role: e.target.value }))}
-              >
-                <option value="student">{t('users.role.student') || 'Student'}</option>
-                <option value="teacher">{t('users.role.teacher') || 'Teacher'}</option>
-                <option value="admin">{t('users.role.admin') || 'Admin'}</option>
-                <option value="kiosk">{t('users.role.kiosk') || 'Kiosk'}</option>
-                <option value="parent">{t('parliamentLogin.parent') || 'Parent'}</option>
-              </select>
+            <select
+              className="users-select"
+              value={form.role}
+              onChange={e => setForm(v => ({ ...v, role: e.target.value }))}
+            >
+              <option value="student">{t('users.role.student') || 'תלמיד'}</option>
+              <option value="parent">{t('users.role.parent') || 'הורה'}</option>
+              <option value="committee">{t('users.role.committee') || 'וועד'}</option>
+              <option value="editor">{t('users.role.editor') || 'עורך'}</option>
+              <option value="admin">{t('users.role.admin') || 'מנהל'}</option>
+            </select>
+            {form.role === 'admin' && (
+              <div className="users-note" style={{ gridColumn: '1 / -1', fontSize: '0.9rem', color: '#666', marginTop: '-0.5rem' }}>
+                {t('users.adminNote') || 'רק מנהלים יכולים למנות מנהלים חדשים'}
+              </div>
+            )}
             <input
               type="date"
               className="users-input"
@@ -287,12 +309,12 @@ export default function UsersAdmin() {
           value={roleFilter}
           onChange={e => setRoleFilter(e.target.value)}
         >
-          <option value="all">{t('users.filter.all') || 'All'}</option>
-          <option value="student">{t('users.filter.student') || 'Students'}</option>
-          <option value="teacher">{t('users.filter.teacher') || 'Teachers'}</option>
-          <option value="admin">{t('users.filter.admin') || 'Admins'}</option>
-          <option value="kiosk">{t('users.filter.kiosk') || 'Kiosk'}</option>
-          <option value="parent">{t('users.filter.parent') || 'Parents'}</option>
+          <option value="all">{t('users.filter.all') || 'הכל'}</option>
+          <option value="student">{t('users.filter.student') || 'תלמידים'}</option>
+          <option value="parent">{t('users.filter.parent') || 'הורים'}</option>
+          <option value="committee">{t('users.filter.committee') || 'וועד'}</option>
+          <option value="editor">{t('users.filter.editor') || 'עורכים'}</option>
+          <option value="admin">{t('users.filter.admin') || 'מנהלים'}</option>
         </select>
       </div>
 
@@ -362,11 +384,11 @@ export default function UsersAdmin() {
                 value={edit.row.role}
                 onChange={e => setEdit(prev => ({ ...prev, row: { ...prev.row, role: e.target.value } }))}
               >
-                <option value="student">{t('users.role.student') || 'Student'}</option>
-                <option value="teacher">{t('users.role.teacher') || 'Teacher'}</option>
-                <option value="admin">{t('users.role.admin') || 'Admin'}</option>
-                <option value="kiosk">{t('users.role.kiosk') || 'Kiosk'}</option>
-                <option value="parent">{t('parliamentLogin.parent') || 'Parent'}</option>
+                <option value="student">{t('users.role.student') || 'תלמיד'}</option>
+                <option value="parent">{t('users.role.parent') || 'הורה'}</option>
+                <option value="committee">{t('users.role.committee') || 'וועד'}</option>
+                <option value="editor">{t('users.role.editor') || 'עורך'}</option>
+                <option value="admin">{t('users.role.admin') || 'מנהל'}</option>
               </select>
               <input
                 type="date"

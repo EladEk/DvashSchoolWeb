@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../contexts/TranslationContext'
+import { useEffectiveRole } from '../utils/requireRole'
 import { getTranslations, saveTranslations, exportTranslations } from '../services/adminService'
 import UsersAdmin from '../components/admin/UsersAdmin'
 import './AdminDashboard.css'
@@ -8,6 +9,26 @@ import './AdminDashboard.css'
 const AdminDashboard = () => {
   const navigate = useNavigate()
   const { reloadTranslations } = useTranslation()
+  const { role, phase } = useEffectiveRole()
+  
+  // Also check session directly as fallback - use useMemo to ensure it's calculated correctly
+  const session = (() => {
+    try {
+      const sess = JSON.parse(localStorage.getItem('session') || '{}') || {}
+      console.log('AdminDashboard - session from localStorage:', sess)
+      return sess
+    } catch (e) {
+      console.error('AdminDashboard - error parsing session:', e)
+      return {}
+    }
+  })()
+  const sessionRole = (session?.role || '').trim()
+  
+  // Use role from hook if available, otherwise use session role
+  const effectiveRole = (role || sessionRole).trim()
+  
+  console.log('AdminDashboard - effectiveRole calculation:', { role, sessionRole, effectiveRole })
+  
   const [translations, setTranslations] = useState({ he: {}, en: {} })
   const [currentLang, setCurrentLang] = useState('he')
   const [editedTranslations, setEditedTranslations] = useState({})
@@ -15,10 +36,18 @@ const AdminDashboard = () => {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [activeTab, setActiveTab] = useState('translations')
-
+  
+  // Check if user has permission (editor or admin can edit translations, only admin can manage users)
+  // Use sessionRole immediately if effectiveRole is not yet loaded
+  const currentRole = effectiveRole || sessionRole
+  const canEditTranslations = currentRole === 'admin' || currentRole === 'editor'
+  const canManageUsers = currentRole === 'admin'
+  
+  // Debug logging
   useEffect(() => {
-    loadTranslations()
-  }, [])
+    console.log('AdminDashboard - role:', role, 'sessionRole:', sessionRole, 'effectiveRole:', effectiveRole, 'phase:', phase, 'session:', session)
+    console.log('canEditTranslations:', canEditTranslations, 'canManageUsers:', canManageUsers)
+  }, [role, sessionRole, effectiveRole, phase, canEditTranslations, canManageUsers, session])
 
   const loadTranslations = async () => {
     try {
@@ -29,6 +58,15 @@ const AdminDashboard = () => {
       console.error('Error loading translations:', error)
       setMessage('Error loading translations')
     }
+  }
+
+  useEffect(() => {
+    loadTranslations()
+  }, [])
+  
+  // Show loading while checking role (after all hooks)
+  if (phase === 'checking' && !sessionRole) {
+    return <div style={{ padding: '2rem', textAlign: 'center' }}>בודק הרשאות...</div>
   }
 
   const handleLogout = () => {
@@ -136,27 +174,45 @@ const AdminDashboard = () => {
       <div className="admin-header">
         <h1>Admin Dashboard</h1>
         <div className="admin-actions">
-          <Link to="/admin/parliament" className="admin-link">Parliament Admin</Link>
+          {(effectiveRole === 'admin' || effectiveRole === 'committee') && (
+            <Link to="/admin/parliament" className="admin-link">Parliament Admin</Link>
+          )}
           <button onClick={handleLogout} className="logout-btn">Logout</button>
         </div>
       </div>
 
-      <div className="admin-nav">
-        <button
-          className={`admin-tab ${activeTab === 'translations' ? 'active' : ''}`}
-          onClick={() => setActiveTab('translations')}
-        >
-          Translation Editor
-        </button>
-        <button
-          className={`admin-tab ${activeTab === 'users' ? 'active' : ''}`}
-          onClick={() => setActiveTab('users')}
-        >
-          Users Management
-        </button>
-      </div>
+      {!canEditTranslations && !canManageUsers && effectiveRole && (
+        <div className="admin-message error">
+          אין לך הרשאה לגשת לדף זה. נדרשת הרשאת עורך או מנהל. (תפקיד נוכחי: {effectiveRole})
+        </div>
+      )}
+      
+      {!canEditTranslations && !canManageUsers && !effectiveRole && phase !== 'checking' && (
+        <div className="admin-message error">
+          אין לך הרשאה לגשת לדף זה. נדרשת הרשאת עורך או מנהל.
+        </div>
+      )}
 
-      {activeTab === 'users' && <UsersAdmin />}
+      {canEditTranslations && (
+        <div className="admin-nav">
+          <button
+            className={`admin-tab ${activeTab === 'translations' ? 'active' : ''}`}
+            onClick={() => setActiveTab('translations')}
+          >
+            Translation Editor
+          </button>
+          {canManageUsers && (
+            <button
+              className={`admin-tab ${activeTab === 'users' ? 'active' : ''}`}
+              onClick={() => setActiveTab('users')}
+            >
+              Users Management
+            </button>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'users' && canManageUsers && <UsersAdmin />}
 
       <div className="admin-controls">
         <div className="lang-selector">

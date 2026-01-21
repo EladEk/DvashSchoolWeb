@@ -38,7 +38,19 @@ export default function SubjectSubmitForm({ dates, currentUser }) {
   const [dateId, setDateId] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const openDates = useMemo(() => dates.filter(d => d.isOpen), [dates])
+  const openDates = useMemo(() => {
+    // Filter dates that are open (check for true, 'true', or undefined/null which defaults to open)
+    const filtered = dates.filter(d => {
+      const isOpen = d.isOpen
+      // If isOpen is explicitly false, exclude it. Otherwise include it (true, undefined, null all mean open)
+      const result = isOpen !== false && isOpen !== 'false'
+      console.log(`SubjectSubmitForm - date ${d.id} (${d.title}): isOpen=${isOpen}, result=${result}`)
+      return result
+    })
+    console.log('SubjectSubmitForm - all dates:', dates.map(d => ({ id: d.id, title: d.title, isOpen: d.isOpen })))
+    console.log('SubjectSubmitForm - openDates:', filtered.map(d => ({ id: d.id, title: d.title })))
+    return filtered
+  }, [dates])
 
   const uid =
     currentUser?.uid ||

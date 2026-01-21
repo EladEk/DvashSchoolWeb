@@ -1,95 +1,203 @@
+/* ============================================
+   ABOUT COMPONENT - LOGO COLOR SCHEME
+   ============================================ */
+
 .about {
-  padding: 5rem 2rem;
-  background: linear-gradient(to bottom, var(--white) 0%, var(--bg-color) 100%);
-  scroll-margin-top: 200px;
+  padding: 4rem 0;
+  background: var(--gradient-primary);
   position: relative;
+  overflow: hidden;
 }
 
-.container {
-  max-width: 1200px;
+.about::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('/assets/LOGO.avif') center/contain no-repeat;
+  opacity: 0.05;
+  z-index: 0;
+}
+
+.about .container {
+  max-width: 1400px;
   margin: 0 auto;
+  padding: 0 2rem;
+  position: relative;
+  z-index: 1;
 }
 
 .section-title {
   font-size: 2.5rem;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-weight: 700;
+  color: var(--text-on-primary);
   margin-bottom: 3rem;
   text-align: center;
-  font-weight: 700;
-  position: relative;
-}
-
-.section-title::after {
-  content: '';
-  position: absolute;
-  bottom: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80px;
-  height: 4px;
-  background: var(--gradient-warm);
-  border-radius: 2px;
 }
 
 .about-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.about-item {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3rem;
-  align-items: start;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: var(--shadow-lg);
+  border: 2px solid var(--text-on-primary);
+  transition: all 0.3s ease;
+}
+
+.about-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+}
+
+.about-item-reverse {
+  direction: rtl;
+}
+
+.about-item-reverse .about-text,
+.about-item-reverse .about-image {
+  direction: ltr;
 }
 
 .about-text {
-  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .about-text h3 {
   font-size: 1.8rem;
   color: var(--primary-color);
-  margin-bottom: 1.5rem;
-  font-weight: 600;
+  margin-bottom: 1rem;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .about-text p {
-  font-size: 1.1rem;
-  line-height: 1.8;
-  margin-bottom: 1.5rem;
   color: var(--text-color);
+  line-height: 1.8;
+  font-size: 1.1rem;
 }
 
-.about-images {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+.about-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.about-images .image-placeholder {
-  aspect-ratio: 1;
-  background-color: var(--light-gray);
-  border-radius: 8px;
+.image-placeholder {
+  background: var(--gradient-primary);
+  border: 3px solid var(--text-on-primary);
+  border-radius: 15px;
+  padding: 2rem;
+  text-align: center;
+  width: 100%;
+  min-height: 250px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-color);
-  font-size: 1rem;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.about-images .image-placeholder:first-child {
-  grid-column: 1 / -1;
+.image-placeholder::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('/assets/LOGO.avif') center/contain no-repeat;
+  opacity: 0.1;
+  z-index: 0;
+}
+
+.image-placeholder p {
+  color: var(--text-on-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+  opacity: 0.9;
+  position: relative;
+  z-index: 1;
+}
+
+.image-placeholder:hover {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 968px) {
+  .about-item {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    direction: ltr !important;
+  }
+
+  .about-item-reverse {
+    direction: ltr !important;
+  }
+
+  .about-item-reverse .about-text,
+  .about-item-reverse .about-image {
+    direction: ltr;
+  }
+
+  .about-image {
+    order: -1;
+  }
+
+  .about-item-reverse .about-image {
+    order: -1;
+  }
 }
 
 @media (max-width: 768px) {
-  .about-content {
-    grid-template-columns: 1fr;
+  .about {
+    padding: 3rem 0;
+  }
+
+  .about .container {
+    padding: 0 1rem;
   }
 
   .section-title {
     font-size: 2rem;
   }
 
-  .about-images {
-    grid-template-columns: 1fr;
+  .about-content {
+    gap: 2rem;
+  }
+
+  .about-item {
+    padding: 1.5rem;
+  }
+
+  .about-text h3 {
+    font-size: 1.5rem;
+  }
+
+  .about-text p {
+    font-size: 1rem;
+  }
+
+  .image-placeholder {
+    min-height: 200px;
+    padding: 1.5rem;
   }
 }

@@ -1,3 +1,7 @@
+/* ============================================
+   ADMIN DASHBOARD - LOGO COLOR SCHEME
+   ============================================ */
+
 .admin-dashboard {
   min-height: 100vh;
   background-color: var(--bg-color);
@@ -5,41 +9,67 @@
 }
 
 .admin-header {
-  background-color: var(--white);
+  background: var(--gradient-primary);
   padding: 1.5rem 2rem;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+  border: 2px solid var(--primary-color);
 }
 
 .admin-header h1 {
-  color: var(--primary-color);
+  color: var(--text-on-primary);
   font-size: 1.8rem;
   margin: 0;
+  font-weight: 700;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
 .admin-link {
   padding: 0.5rem 1rem;
-  background-color: var(--primary-color);
-  color: var(--white);
+  background-color: var(--text-on-primary);
+  color: var(--primary-color);
   text-decoration: none;
   border-radius: 5px;
-  margin-right: 1rem;
-  transition: background-color 0.3s ease;
+  font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .admin-link:hover {
-  background-color: var(--secondary-color);
+  background-color: var(--accent-color);
+  color: var(--text-on-primary);
+  transform: translateY(-2px);
+}
+
+.logout-btn {
+  padding: 0.5rem 1.5rem;
+  background-color: var(--warm-orange);
+  color: var(--text-on-primary);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background-color: #d65a3f;
+  transform: translateY(-2px);
 }
 
 .admin-nav {
   display: flex;
   gap: 1rem;
   margin-bottom: 2rem;
-  border-bottom: 2px solid var(--light-gray);
+  border-bottom: 2px solid var(--border-color);
 }
 
 .admin-tab {
@@ -49,8 +79,9 @@
   border-bottom: 3px solid transparent;
   cursor: pointer;
   font-size: 1rem;
-  color: var(--text-color);
+  color: var(--text-light);
   transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .admin-tab:hover {
@@ -63,32 +94,18 @@
   font-weight: 600;
 }
 
-.logout-btn {
-  padding: 0.5rem 1.5rem;
-  background-color: #dc3545;
-  color: var(--white);
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.3s ease;
-}
-
-.logout-btn:hover {
-  background-color: #c82333;
-}
-
 .admin-controls {
   background-color: var(--white);
   padding: 1.5rem 2rem;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   margin-bottom: 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
+  border: 2px solid var(--primary-color);
 }
 
 .lang-selector {
@@ -103,18 +120,18 @@
   color: var(--primary-color);
   border-radius: 5px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.3s ease;
 }
 
 .lang-btn:hover {
   background-color: var(--primary-color);
-  color: var(--white);
+  color: var(--text-on-primary);
 }
 
 .lang-btn.active {
   background-color: var(--primary-color);
-  color: var(--white);
+  color: var(--text-on-primary);
 }
 
 .save-controls {
@@ -124,8 +141,8 @@
 }
 
 .unsaved-indicator {
-  color: #ff9800;
-  font-weight: 500;
+  color: var(--accent-color);
+  font-weight: 600;
 }
 
 .save-btn,
@@ -134,17 +151,18 @@
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.3s ease;
+  font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .save-btn {
-  background-color: var(--primary-color);
-  color: var(--white);
+  background: var(--gradient-primary);
+  color: var(--text-on-primary);
 }
 
 .save-btn:hover:not(:disabled) {
-  background-color: var(--secondary-color);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .save-btn:disabled {
@@ -153,12 +171,13 @@
 }
 
 .export-btn {
-  background-color: #28a745;
-  color: var(--white);
+  background-color: var(--accent-color);
+  color: var(--text-on-primary);
 }
 
 .export-btn:hover {
-  background-color: #218838;
+  background-color: var(--warm-orange);
+  transform: translateY(-2px);
 }
 
 .admin-message {
@@ -166,24 +185,27 @@
   border-radius: 5px;
   margin-bottom: 1rem;
   text-align: center;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .admin-message.success {
-  background-color: #d4edda;
+  background-color: rgba(76, 175, 80, 0.2);
   color: #155724;
+  border: 2px solid #4caf50;
 }
 
 .admin-message.error {
-  background-color: #f8d7da;
+  background-color: rgba(244, 67, 54, 0.2);
   color: #721c24;
+  border: 2px solid #f44336;
 }
 
 .translation-editor {
   background-color: var(--white);
   padding: 2rem;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
+  border: 2px solid var(--border-color);
 }
 
 .section-group {
@@ -191,6 +213,7 @@
   padding: 1.5rem;
   background-color: var(--bg-color);
   border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 .section-title {
@@ -212,34 +235,37 @@
 .field-group label {
   display: block;
   margin-bottom: 0.5rem;
-  color: var(--text-color);
-  font-weight: 500;
+  color: var(--primary-color);
+  font-weight: 600;
   text-transform: capitalize;
 }
 
 .field-group textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid var(--light-gray);
+  border: 2px solid var(--border-color);
   border-radius: 5px;
   font-size: 1rem;
   font-family: inherit;
   resize: vertical;
   min-height: 60px;
+  color: var(--text-color);
+  background-color: var(--white);
+  transition: all 0.3s ease;
 }
 
 .field-group textarea:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(44, 95, 124, 0.1);
+  box-shadow: 0 0 0 3px rgba(44, 95, 124, 0.1);
 }
 
 .array-group {
   margin-bottom: 2rem;
   padding: 1rem;
-  background-color: #f8f9fa;
+  background-color: var(--bg-color);
   border-radius: 8px;
-  border: 1px solid var(--light-gray);
+  border: 1px solid var(--border-color);
 }
 
 .array-item {
@@ -247,7 +273,7 @@
   padding: 1rem;
   background-color: var(--white);
   border-radius: 5px;
-  border: 1px solid var(--light-gray);
+  border: 1px solid var(--border-color);
 }
 
 .array-item:last-child {
@@ -255,6 +281,10 @@
 }
 
 @media (max-width: 768px) {
+  .admin-dashboard {
+    padding: 1rem;
+  }
+
   .admin-controls {
     flex-direction: column;
     align-items: stretch;

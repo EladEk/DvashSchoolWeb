@@ -1,3 +1,7 @@
+/* ============================================
+   EDIT BUTTON - LOGO COLOR SCHEME
+   ============================================ */
+
 .edit-button {
   position: absolute;
   top: 0;
@@ -5,7 +9,7 @@
   width: 24px;
   height: 24px;
   background-color: var(--primary-color);
-  color: var(--white);
+  color: var(--text-on-primary);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -17,9 +21,9 @@
   line-height: 1;
   padding: 0;
   opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: all 0.3s ease;
   z-index: 100;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .edit-button:hover {
