@@ -11,6 +11,7 @@
     "dev:all": "concurrently \"npm run auth-server\" \"npm run dev\""
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "firebase": "^10.14.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

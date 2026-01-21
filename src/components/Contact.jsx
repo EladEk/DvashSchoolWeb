@@ -1,8 +1,11 @@
 import { useFormState, useFormStatus } from 'react-dom'
 import { useTranslation } from '../contexts/TranslationContext'
+import { useAdmin } from '../contexts/AdminContext'
 import EditableText from './EditableText'
 import EditableLink from './EditableLink'
+import EditButton from './EditButton'
 import { submitContactForm as submitToFirebase } from '../services/firebase'
+import { sendEmail } from '../services/emailService'
 import './Contact.css'
 
 // Submit button component using useFormStatus (React 19)
@@ -19,8 +22,12 @@ function SubmitButton() {
 
 const Contact = () => {
   const { t } = useTranslation()
+  const { isAdminMode } = useAdmin()
   
-  // Form action function (React 19 pattern) - ready for Firebase
+  // Get recipient email from translations (editable in admin mode)
+  const recipientEmail = t('contact.recipientEmail') || 'Dvashschool@gmail.com'
+  
+  // Form action function (React 19 pattern) - sends email and saves to Firebase
   const submitContactForm = async (prevState, formData) => {
     const data = {
       firstName: formData.get('firstName'),
@@ -30,13 +37,20 @@ const Contact = () => {
     }
     
     try {
-      // Submit to Firebase (will be connected when you provide API keys)
-      const result = await submitToFirebase(data)
+      // Send email
+      const emailResult = await sendEmail(data, recipientEmail)
       
-      if (result.success) {
+      // Also save to Firebase (optional, for backup)
+      try {
+        await submitToFirebase(data)
+      } catch (firebaseError) {
+        console.warn('Firebase save failed, but email was sent:', firebaseError)
+      }
+      
+      if (emailResult.success) {
         return { success: true, message: t('contact.success') }
       } else {
-        return { success: false, message: t('contact.error') }
+        return { success: false, message: emailResult.error || t('contact.error') }
       }
     } catch (error) {
       console.error('Error submitting form:', error)
@@ -156,6 +170,17 @@ const Contact = () => {
               </>
             )}
           </form>
+          {isAdminMode && (
+            <div className="contact-email-config" style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(44, 95, 124, 0.1)', borderRadius: '5px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: 'var(--primary-color)' }}>
+                <span>Email Recipient:</span>
+                <span className="editable-text">
+                  {recipientEmail}
+                  <EditButton translationKey="contact.recipientEmail" />
+                </span>
+              </label>
+            </div>
+          )}
         </div>
       </div>
     </section>
