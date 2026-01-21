@@ -8,7 +8,7 @@ import './AdminDashboard.css'
 
 const AdminDashboard = () => {
   const navigate = useNavigate()
-  const { reloadTranslations } = useTranslation()
+  const { t, reloadTranslations } = useTranslation()
   const { role, phase } = useEffectiveRole()
   
   // Also check session directly as fallback - use useMemo to ensure it's calculated correctly
