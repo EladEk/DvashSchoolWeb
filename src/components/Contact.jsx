@@ -1,6 +1,7 @@
 import { useFormState, useFormStatus } from 'react-dom'
 import { useTranslation } from '../contexts/TranslationContext'
 import EditableText from './EditableText'
+import EditableLink from './EditableLink'
 import { submitContactForm as submitToFirebase } from '../services/firebase'
 import './Contact.css'
 
@@ -78,16 +79,15 @@ const Contact = () => {
                 </EditableText>
               </h3>
               <div className="social-links">
-                <a href={t('contact.instagramUrl') || '#'} target="_blank" rel="noopener noreferrer">
-                  <EditableText translationKey="contact.instagram">
-                    {t('contact.instagram')}
-                  </EditableText>
-                </a>
-                <a href={t('contact.facebookUrl') || '#'} target="_blank" rel="noopener noreferrer">
-                  <EditableText translationKey="contact.facebook">
-                    {t('contact.facebook')}
-                  </EditableText>
-                </a>
+                <EditableLink translationKey="contact.instagramUrl" iconType="instagram">
+                  {t('contact.instagram')}
+                </EditableLink>
+                <EditableLink translationKey="contact.facebookUrl" iconType="facebook">
+                  {t('contact.facebook')}
+                </EditableLink>
+                <EditableLink translationKey="contact.whatsappUrl" iconType="whatsapp">
+                  {t('contact.whatsapp')}
+                </EditableLink>
               </div>
             </div>
           </div>

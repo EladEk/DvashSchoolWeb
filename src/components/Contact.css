@@ -109,6 +109,62 @@
   color: var(--text-on-primary);
 }
 
+.contact-info {
+  margin-bottom: 3rem;
+}
+
+.contact-item {
+  margin-bottom: 2rem;
+}
+
+.contact-item h3 {
+  font-size: 1.3rem;
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.contact-item p {
+  color: var(--text-color);
+  font-size: 1.1rem;
+}
+
+.social-links {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.social-links a,
+.social-links .editable-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--primary-color);
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.social-links a:hover,
+.social-links .editable-link:hover {
+  background-color: var(--primary-color);
+  color: var(--text-on-primary);
+  transform: translateY(-2px);
+}
+
+.social-icon {
+  font-size: 1.2rem;
+  display: inline-block;
+}
+
+.editable-link {
+  position: relative;
+}
+
 @media (max-width: 768px) {
   .contact {
     padding: 3rem 0;
