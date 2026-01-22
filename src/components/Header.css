@@ -53,23 +53,26 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1rem;
 }
 
 .nav-list {
   display: flex;
   list-style: none;
-  gap: 2rem;
+  gap: 1rem;
   align-items: center;
+  flex-wrap: nowrap;
+  margin-left: auto;
 }
 
 .nav-list a {
   color: var(--text-on-primary);
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   transition: all 0.3s ease;
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.75rem;
   border-radius: 5px;
+  white-space: nowrap;
 }
 
 .nav-list a:hover {
@@ -80,14 +83,15 @@
 .nav-admin-btn {
   color: var(--text-on-primary);
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   transition: all 0.3s ease;
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.75rem;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.3);
   cursor: pointer;
   font-family: inherit;
+  white-space: nowrap;
 }
 
 .nav-admin-btn:hover {

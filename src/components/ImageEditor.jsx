@@ -79,7 +79,7 @@ const ImageEditor = ({ imageKey, currentPath, onSave, onClose }) => {
     console.error('Upload error:', error)
     setError(error.message || t('image.uploadError') || 'שגיאה בהעלאת התמונה')
     setUploading(false)
-    setProgress(0)
+    setUploadProgress(0)
   }
 
   const handleUploadProgress = (progress) => {
@@ -141,7 +141,7 @@ const ImageEditor = ({ imageKey, currentPath, onSave, onClose }) => {
               folder="/school-website/"
               publicKey="public_Ubfj3JyFAbabaMCqAGRpVj+Jy7c="
               urlEndpoint="https://ik.imagekit.io/fzv0y7xbu"
-              authenticationEndpoint={import.meta.env.VITE_IMAGEKIT_AUTH_ENDPOINT || "/api/auth"}
+              authenticationEndpoint="/api/auth"
               transformationPosition="path"
             />
             <input

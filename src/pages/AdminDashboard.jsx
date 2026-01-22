@@ -180,7 +180,7 @@ const AdminDashboard = () => {
 
       {!canEditTranslations && !canManageUsers && effectiveRole && (
         <div className="admin-message error">
-          {t('users.noPermission')} ({t('users.role')}: {effectiveRole})
+          {t('users.noPermission')} ({t('users.roleLabel')}: {effectiveRole})
         </div>
       )}
       

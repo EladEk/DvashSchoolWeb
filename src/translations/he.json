@@ -41,7 +41,8 @@
     "learning": "למידה",
     "community": "קהילה",
     "faq": "שאלות תשובות",
-    "parents": "וועד הורים בית ספרי",
+    "parents": "וועד ההורים",
+    "parentsAssociation": "עמותת ההורים",
     "parliament": "פרלמנט",
     "contact": "צור קשר",
     "menu": "תפריט"
@@ -50,6 +51,12 @@
     "title": "בית ספר דב״ש",
     "subtitle": "בית הספר הדמוקרטי בבאר שבע",
     "image": "תמונה ראשית"
+  },
+  "parentsAssociationHero": {
+    "title": "עמותת ההורים",
+    "subtitle": "עמותת ההורים של בית הספר הדמוקרטי בבאר שבע",
+    "image": "parentsAssociationHero.image",
+    "imageAlt": "תמונה ראשית - עמותת ההורים"
   },
   "about": {
     "title": "עלינו",
@@ -131,11 +138,27 @@
     "contact": "צור קשר"
   },
   "parentCommittee": {
-    "title": "וועד הורים בית ספרי",
+    "title": "וועד ההורים",
     "intro1": "וועד ההורים הוא הגשר בין ההורים, הצוות והילדים.",
     "intro2": "אנחנו כאן להקשיב, ליזום, לעזור ולשתף פעולה בכל מה שיתרום לאווירה טובה ולקהילה חזקה בבית הספר.",
     "intro3": "נשמח לשמוע מכם!",
     "contactTitle": "צרו קשר עם וועד ההורים",
+    "fullName": "שם מלא",
+    "childClass": "הילד בכיתה",
+    "email": "כתובת מייל",
+    "message": "תוכן הפנייה",
+    "send": "שלח",
+    "sending": "שולח...",
+    "success": "תודה על הפנייה!",
+    "error": "אירעה שגיאה. אנא נסה שוב מאוחר יותר.",
+    "recipientEmail": "Dvashschool@gmail.com"
+  },
+  "parentsAssociation": {
+    "title": "עמותת ההורים",
+    "intro1": "עמותת ההורים היא הגוף המנהל והמארגן של פעילויות העשרה וקהילה בבית הספר.",
+    "intro2": "אנחנו כאן ליזום, לארגן ולנהל פעילויות שונות לטובת הקהילה והתלמידים.",
+    "intro3": "נשמח לשמוע מכם!",
+    "contactTitle": "צרו קשר עם עמותת ההורים",
     "fullName": "שם מלא",
     "childClass": "הילד בכיתה",
     "email": "כתובת מייל",
@@ -262,7 +285,7 @@
     "username": "שם משתמש",
     "firstName": "שם פרטי",
     "lastName": "שם משפחה",
-    "role": "תפקיד",
+    "roleLabel": "תפקיד",
     "birthday": "תאריך לידה",
     "classId": "כיתה",
     "password": "סיסמה",
@@ -317,6 +340,8 @@
     "contactDescription": "צור קשר עם בית הספר הדמוקרטי בבאר שבע",
     "parentCommitteeTitle": "וועד הורים בית ספרי - בית ספר דב״ש",
     "parentCommitteeDescription": "צרו קשר עם וועד ההורים של בית הספר הדמוקרטי בבאר שבע",
+    "parentsAssociationTitle": "עמותת ההורים - בית ספר דב״ש",
+    "parentsAssociationDescription": "צרו קשר עם עמותת ההורים של בית הספר הדמוקרטי בבאר שבע",
     "parliamentTitle": "פרלמנט - בית ספר דב״ש",
     "parliamentDescription": "הציעו, סקרו ודונו בנושאי הפרלמנט"
   },

@@ -8,6 +8,7 @@ import Home from './pages/Home'
 import FAQ from './pages/FAQ'
 import ContactPage from './pages/ContactPage'
 import ParentCommittee from './pages/ParentCommittee'
+import ParentsAssociation from './pages/ParentsAssociation'
 import AdminDashboard from './pages/AdminDashboard'
 import Parliament from './pages/Parliament'
 import ParliamentAdmin from './pages/ParliamentAdmin'
@@ -51,6 +52,7 @@ function AppContent() {
         <Route path="/contact-8" element={<ContactPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/parent-committee" element={<ParentCommittee />} />
+        <Route path="/parents-association" element={<ParentsAssociation />} />
         <Route path="/parliament" element={<Parliament />} />
         <Route path="/parliament/login" element={<ParliamentLogin />} />
         <Route path="/admin" element={<Navigate to="/parliament/login" replace />} />

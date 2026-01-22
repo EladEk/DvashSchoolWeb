@@ -85,6 +85,19 @@ export const TranslationProvider = ({ children }) => {
         en: deepMerge(defaultTranslations.en, adminTranslations?.en || {})
       }
       
+      // Fix nav.parents translation if it has the wrong value
+      // Ensure it's "וועד ההורים" instead of "וועד הורים בית ספרי"
+      if (mergedTranslations.he?.nav?.parents === "וועד הורים בית ספרי") {
+        mergedTranslations.he.nav.parents = "וועד ההורים"
+        // Save the fix to storage (async, don't wait) to persist the correction
+        import('../services/adminService').then(({ saveTranslations }) => {
+          // Save the merged translations to ensure the fix persists
+          saveTranslations(mergedTranslations, false).catch(err => {
+            console.warn('Could not save translation fix:', err)
+          })
+        })
+      }
+      
       setTranslations(mergedTranslations)
     } catch (error) {
       console.error('Error loading admin translations:', error)

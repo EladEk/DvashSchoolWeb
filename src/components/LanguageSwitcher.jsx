@@ -10,15 +10,17 @@ const LanguageSwitcher = () => {
         className={`lang-btn ${language === 'he' ? 'active' : ''}`}
         onClick={() => changeLanguage('he')}
         aria-label="עברית"
+        title="עברית"
       >
-        עברית
+        HE
       </button>
       <button
         className={`lang-btn ${language === 'en' ? 'active' : ''}`}
         onClick={() => changeLanguage('en')}
         aria-label="English"
+        title="English"
       >
-        English
+        EN
       </button>
     </div>
   )

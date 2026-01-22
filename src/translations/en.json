@@ -42,6 +42,7 @@
     "community": "Community",
     "faq": "FAQ",
     "parents": "School Parent Committee",
+    "parentsAssociation": "Parents Association",
     "parliament": "Parliament",
     "contact": "Contact",
     "menu": "Menu"
@@ -50,6 +51,12 @@
     "title": "Dvash School",
     "subtitle": "The Democratic School in Be'er Sheva",
     "image": "Main Image"
+  },
+  "parentsAssociationHero": {
+    "title": "Parents Association",
+    "subtitle": "Parents Association of the Democratic School in Be'er Sheva",
+    "image": "parentsAssociationHero.image",
+    "imageAlt": "Main Image - Parents Association"
   },
   "about": {
     "title": "About Us",
@@ -136,6 +143,22 @@
     "intro2": "We are here to listen, initiate, help and collaborate on everything that will contribute to a good atmosphere and a strong community at the school.",
     "intro3": "We would love to hear from you!",
     "contactTitle": "Contact the Parent Committee",
+    "fullName": "Full Name",
+    "childClass": "Child's Class",
+    "email": "Email Address",
+    "message": "Message Content",
+    "send": "Send",
+    "sending": "Sending...",
+    "success": "Thank you for your message!",
+    "error": "An error occurred. Please try again later.",
+    "recipientEmail": "Dvashschool@gmail.com"
+  },
+  "parentsAssociation": {
+    "title": "Parents Association",
+    "intro1": "The Parents Association is the managing and organizing body for enrichment and community activities at the school.",
+    "intro2": "We are here to initiate, organize and manage various activities for the benefit of the community and students.",
+    "intro3": "We would love to hear from you!",
+    "contactTitle": "Contact the Parents Association",
     "fullName": "Full Name",
     "childClass": "Child's Class",
     "email": "Email Address",
@@ -317,6 +340,8 @@
     "contactDescription": "Contact the Democratic School in Be'er Sheva",
     "parentCommitteeTitle": "School Parent Committee - Dvash School",
     "parentCommitteeDescription": "Contact the Parent Committee of the Democratic School in Be'er Sheva",
+    "parentsAssociationTitle": "Parents Association - Dvash School",
+    "parentsAssociationDescription": "Contact the Parents Association of the Democratic School in Be'er Sheva",
     "parliamentTitle": "Parliament - Dvash School",
     "parliamentDescription": "Submit, review and discuss school parliament topics"
   },

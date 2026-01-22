@@ -13,6 +13,7 @@ const Header = () => {
   const { t } = useTranslation()
   const { isAdminMode, toggleAdminMode } = useAdmin()
   const isHomePage = location.pathname === '/'
+  const isParentsAssociationPage = location.pathname === '/parents-association'
 
   // Check if user is logged in and has admin/editor/committee role
   useEffect(() => {
@@ -90,6 +91,7 @@ const Header = () => {
     { id: 'home', labelKey: 'nav.home', href: '/', hash: '' },
     { id: 'faq', labelKey: 'nav.faq', href: '/שאלות-תשובות', hash: '' },
     { id: 'parents', labelKey: 'nav.parents', href: '/parent-committee', hash: '' },
+    { id: 'parentsAssociation', labelKey: 'nav.parentsAssociation', href: '/parents-association', hash: '' },
     { id: 'parliament', labelKey: 'nav.parliament', href: '/parliament', hash: '' },
   ]
 
@@ -97,8 +99,20 @@ const Header = () => {
   // Navigation takes the name from section title
   const subtitleItems = []
   
-  // Get generic sections (not tied to specific section types)
-  const sections = t('sections')
+  // Get sections based on current page
+  let sections = []
+  let sectionPrefix = 'section'
+  
+  if (isParentsAssociationPage) {
+    // Get Parents Association sections
+    sections = t('parentsAssociationSections')
+    sectionPrefix = 'parents-association-section'
+  } else {
+    // Get home page sections
+    sections = t('sections')
+    sectionPrefix = 'section'
+  }
+  
   const hasSections = Array.isArray(sections) && sections.length > 0
   
   if (hasSections) {
@@ -113,7 +127,7 @@ const Header = () => {
     sortedSections.forEach((section, index) => {
       if (section && section.title) {
         // Use title for navigation label, create unique ID
-        const sectionId = `section-${index}`
+        const sectionId = `${sectionPrefix}-${index}`
         subtitleItems.push({
           id: sectionId,
           label: section.title,
@@ -155,11 +169,11 @@ const Header = () => {
   const handleLinkClick = (href, hash) => {
     setIsMenuOpen(false)
     if (hash) {
-      // If on home page, scroll to section
-      if (location.pathname === '/') {
+      // If on home page or Parents Association page, scroll to section
+      if (location.pathname === '/' || location.pathname === '/parents-association') {
         scrollToSection(hash)
       } else {
-        // Navigate to home then scroll
+        // Navigate to the page then scroll
         window.location.href = href + hash
       }
     }
@@ -239,7 +253,7 @@ const Header = () => {
           </button>
         </div>
       </div>
-      {isHomePage && subtitleItems.length > 0 && (
+      {(isHomePage || isParentsAssociationPage) && subtitleItems.length > 0 && (
         <div className="subtitle-nav-wrapper">
           <nav className="subtitle-nav">
             <div className="subtitle-nav-container">

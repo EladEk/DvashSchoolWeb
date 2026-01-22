@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useAdmin } from '../contexts/AdminContext'
 import EditableText from './EditableText'
@@ -9,7 +10,18 @@ import './Hero.css'
 const Hero = () => {
   const { t } = useTranslation()
   const { isAdminMode } = useAdmin()
+  const location = useLocation()
   const [showAddModal, setShowAddModal] = useState(false)
+  
+  // Determine which page we're on and use appropriate translation keys
+  const isHomePage = location.pathname === '/'
+  const isParentsAssociationPage = location.pathname === '/parents-association'
+  
+  // Use different translation keys based on the page
+  const titleKey = isParentsAssociationPage ? 'parentsAssociationHero.title' : 'hero.title'
+  const subtitleKey = isParentsAssociationPage ? 'parentsAssociationHero.subtitle' : 'hero.subtitle'
+  const imageKey = isParentsAssociationPage ? 'parentsAssociationHero.image' : 'hero.image'
+  const imageAltKey = isParentsAssociationPage ? 'parentsAssociationHero.imageAlt' : 'hero.image'
 
   const handleEditorClose = () => {
     setShowAddModal(false)
@@ -20,20 +32,20 @@ const Hero = () => {
   }
 
   return (
-    <section id="home" className="hero">
+    <section id={isParentsAssociationPage ? "parents-association-hero" : "home"} className="hero">
       <div className="hero-container">
         <div className="hero-content">
           <h2 className="hero-title">
-            <EditableText translationKey="hero.title">
-              {t('hero.title')}
+            <EditableText translationKey={titleKey}>
+              {t(titleKey)}
             </EditableText>
           </h2>
           <p className="hero-subtitle">
-            <EditableText translationKey="hero.subtitle">
-              {t('hero.subtitle')}
+            <EditableText translationKey={subtitleKey}>
+              {t(subtitleKey)}
             </EditableText>
           </p>
-          {isAdminMode && (
+          {isAdminMode && isHomePage && (
             <div style={{ marginTop: '1rem' }}>
               <button 
                 className="section-add-btn" 
@@ -47,7 +59,7 @@ const Hero = () => {
           )}
         </div>
         <div className="hero-image">
-          <EditableImage imageKey="hero.image" alt={t('hero.image')} />
+          <EditableImage imageKey={imageKey} alt={t(imageAltKey) || t(imageKey)} />
         </div>
       </div>
       {isAdminMode && showAddModal && (

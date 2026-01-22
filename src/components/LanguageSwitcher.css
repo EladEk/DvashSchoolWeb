@@ -9,17 +9,21 @@
 }
 
 .lang-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.25rem 0.5rem;
   border: 2px solid var(--text-on-primary);
   background-color: transparent;
   color: var(--text-on-primary) !important;
   border-radius: 5px;
-  font-size: 0.9rem;
+  font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   font-family: inherit;
-  min-width: 70px;
+  min-width: 35px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
 }
 

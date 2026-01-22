@@ -14,7 +14,7 @@ const ImageKitUpload = ({
   folder = '/school-website/',
   publicKey = 'public_Ubfj3JyFAbabaMCqAGRpVj+Jy7c=',
   urlEndpoint = 'https://ik.imagekit.io/fzv0y7xbu',
-  authenticationEndpoint = import.meta.env.VITE_IMAGEKIT_AUTH_ENDPOINT || 'http://localhost:3001/auth',
+  authenticationEndpoint = null, // Default to null, should be passed as prop
   transformationPosition = 'path'
 }) => {
   const { t } = useTranslation()
@@ -50,39 +50,72 @@ const ImageKitUpload = ({
     setProgress(0)
 
     try {
-      // Get authentication token from server
+      // Get authentication token from server (optional - only if endpoint is provided)
       let token, signature, expire
       
-      try {
-        const authResponse = await fetch(authenticationEndpoint, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-
-        if (authResponse.ok) {
-          const authData = await authResponse.json()
-          token = authData.token
-          signature = authData.signature
-          // Ensure expire is a number
-          expire = typeof authData.expire === 'number' ? authData.expire : parseInt(authData.expire, 10)
-          
-          if (!token || !signature || !expire || isNaN(expire)) {
-            throw new Error('Invalid authentication response: missing or invalid fields')
+      // Only try authentication if endpoint is provided and not empty
+      if (authenticationEndpoint && authenticationEndpoint.trim() !== '') {
+        try {
+          // Resolve relative URLs to absolute
+          let authUrl = authenticationEndpoint
+          if (authUrl.startsWith('/')) {
+            // Relative URL - make it absolute using current origin
+            authUrl = `${window.location.origin}${authUrl}`
           }
           
-          console.log('✅ Auth received:', { token: token.substring(0, 8) + '...', expire, signature: signature.substring(0, 16) + '...' })
-        } else {
-          const errorText = await authResponse.text()
-          throw new Error(`Authentication endpoint returned error: ${authResponse.status} - ${errorText}`)
+          console.log('🔐 Requesting auth from:', authUrl)
+          
+          const authResponse = await fetch(authUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          })
+
+          if (authResponse.ok) {
+            const authData = await authResponse.json()
+            token = authData.token
+            signature = authData.signature
+            // Ensure expire is a number
+            expire = typeof authData.expire === 'number' ? authData.expire : parseInt(authData.expire, 10)
+            
+            if (!token || !signature || !expire || isNaN(expire)) {
+              throw new Error('Invalid authentication response: missing or invalid fields')
+            }
+            
+            console.log('✅ Auth received:', { token: token.substring(0, 8) + '...', expire, signature: signature.substring(0, 16) + '...' })
+          } else {
+            const errorText = await authResponse.text()
+            throw new Error(`Authentication endpoint returned error: ${authResponse.status} - ${errorText}`)
+          }
+        } catch (authError) {
+          console.error('Auth endpoint error:', authError)
+          // ImageKit requires authentication - fail if we can't get it
+          let errorMessage = t('image.authError') || 'שגיאה באימות. אנא ודא שהשרת פועל או הגדר את VITE_IMAGEKIT_AUTH_ENDPOINT בקובץ .env'
+          
+          if (authError.message && authError.message.includes('Failed to fetch')) {
+            errorMessage = `לא ניתן להתחבר לשרת האימות (${authenticationEndpoint}). אנא ודא שהשרת פועל או הגדר את VITE_IMAGEKIT_AUTH_ENDPOINT בקובץ .env`
+          } else if (authError.message) {
+            errorMessage = authError.message
+          }
+          
+          if (onError) {
+            onError({
+              message: errorMessage,
+              error: authError
+            })
+          }
+          setUploading(false)
+          return
         }
-      } catch (authError) {
-        console.error('Auth endpoint error:', authError)
+      } else {
+        // No endpoint provided - ImageKit requires auth
+        const errorMessage = 'Authentication endpoint not configured. Please set VITE_IMAGEKIT_AUTH_ENDPOINT in .env file'
+        console.error(errorMessage)
         if (onError) {
           onError({
-            message: t('image.authError') || 'שגיאה באימות. אנא הגדר authentication endpoint.',
-            error: authError
+            message: errorMessage,
+            error: new Error('No authentication endpoint provided')
           })
         }
         setUploading(false)
@@ -97,7 +130,7 @@ const ImageKitUpload = ({
       formData.append('folder', folder)
       formData.append('publicKey', publicKey)
       
-      // Authentication is required
+      // ImageKit requires authentication - fail if we don't have it
       if (!token || !signature || !expire) {
         throw new Error('Authentication failed: missing token, signature, or expire')
       }
@@ -106,6 +139,7 @@ const ImageKitUpload = ({
       formData.append('signature', signature)
       // expire must be a number (not string) for ImageKit
       formData.append('expire', expire)
+      console.log('✅ Using authentication for upload')
       
       console.log('Uploading file:', {
         fileName: fileName || `upload-${Date.now()}`,
