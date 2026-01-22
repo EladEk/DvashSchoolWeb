@@ -119,7 +119,6 @@ const SectionEditor = ({ sectionKey, sectionIndex, onClose, onSave }) => {
       // Save to Firebase
       try {
         await saveAllTranslationsToDB(translations)
-        console.log('✅ Section saved to Firebase')
       } catch (firebaseError) {
         console.error('❌ Error saving section to Firebase:', firebaseError)
         setSaveMessage('נשמר מקומית, אך שגיאה ב-Firebase: ' + (firebaseError.message || 'שגיאה לא ידועה'))

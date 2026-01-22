@@ -246,7 +246,8 @@
     "confirmDeleteNote": "Are you sure you want to delete this note?",
     "deleteNote": "Delete note",
     "editNote": "Edit note",
-    "noPermission": "You don't have permission to perform this action"
+    "noPermission": "You don't have permission to perform this action",
+    "dateNotOpen": "The selected date is no longer open for submissions"
   },
   "parliamentLogin": {
     "loginTitle": "Login to Parliament",
@@ -371,5 +372,11 @@
     "authError": "Authentication error. Please configure authentication endpoint",
     "parseError": "Error parsing response",
     "saveError": "Error saving image path"
+  },
+  "unauthorized": {
+    "title": "You don't have permission to access this page",
+    "message": "You don't have the required permissions to access this page.",
+    "backHome": "Back to Home",
+    "goToParliament": "Go to Parliament"
   }
 }

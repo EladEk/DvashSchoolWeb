@@ -202,9 +202,7 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
       // Uses batch.commit() which sends both Hebrew and English updates in ONE network call
       try {
         const { saveTranslationToDB } = await import('../services/firebaseDB')
-        console.log('Attempting to save to Firebase:', { translationKey, hebrewValue, englishValue })
         await saveTranslationToDB(translationKey, hebrewValue, englishValue)
-        console.log('✅ Successfully saved to Firebase')
       } catch (firebaseError) {
         console.error('❌ Error saving to Firebase:', firebaseError)
         // Even if Firebase fails, localStorage save succeeded, so show warning

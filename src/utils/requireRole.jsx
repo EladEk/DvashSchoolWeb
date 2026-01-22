@@ -1,8 +1,7 @@
 // Role-based access control utilities
 import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
-import { db } from '../services/firebase'
-import { doc, getDoc, collection, query, where, limit, getDocs } from 'firebase/firestore'
+import { resolveUserRole } from '../services/firebaseDB'
 
 export const UserRole = {
   ADMIN: 'admin',        // מנהל - כל מה שוועד יכול + עריכת משתמשים + עריכת האתר
@@ -27,68 +26,7 @@ function getSession() {
   }
 }
 
-async function roleFromCollection(coll, ident) {
-  const { uid, email, usernameLower } = ident
-
-  // 1) by doc id
-  if (uid) {
-    try {
-      const s = await getDoc(doc(db, coll, uid))
-      if (s.exists()) {
-        const d = s.data()
-        const role = normalizeRole(d?.role) || (coll === 'users' && d?.isAdmin ? 'admin' : '')
-        if (role) return role
-      }
-    } catch {}
-  }
-
-  // 2) by uid field
-  if (uid) {
-    try {
-      const q1 = query(collection(db, coll), where('uid', '==', uid), limit(1))
-      const s1 = await getDocs(q1)
-      if (!s1.empty) {
-        const d = s1.docs[0].data()
-        const role = normalizeRole(d?.role) || (coll === 'users' && d?.isAdmin ? 'admin' : '')
-        if (role) return role
-      }
-    } catch {}
-  }
-
-  // 3) by email field
-  if (email) {
-    try {
-      const q2 = query(collection(db, coll), where('email', '==', email), limit(1))
-      const s2 = await getDocs(q2)
-      if (!s2.empty) {
-        const d = s2.docs[0].data()
-        const role = normalizeRole(d?.role) || (coll === 'users' && d?.isAdmin ? 'admin' : '')
-        if (role) return role
-      }
-    } catch {}
-  }
-
-  // 4) by usernameLower field
-  if (usernameLower) {
-    try {
-      const q3 = query(collection(db, coll), where('usernameLower', '==', usernameLower), limit(1))
-      const s3 = await getDocs(q3)
-      if (!s3.empty) {
-        const d = s3.docs[0].data()
-        const role = normalizeRole(d?.role) || (coll === 'users' && d?.isAdmin ? 'admin' : '')
-        if (role) return role
-      }
-    } catch {}
-  }
-
-  return ''
-}
-
-async function resolveRoleFromDB(ident) {
-  const r1 = await roleFromCollection('appUsers', ident)
-  if (r1) return r1
-  return roleFromCollection('users', ident)
-}
+// resolveRoleFromDB is now handled by firebaseDB.resolveUserRole
 
 export function useEffectiveRole() {
   const [phase, setPhase] = useState('checking') // 'checking' | 'allowed' | 'denied' | 'none'
@@ -133,7 +71,7 @@ export function useEffectiveRole() {
           return
         }
 
-        const r = await resolveRoleFromDB(ident)
+        const r = await resolveUserRole(ident)
         if (!alive) return
 
         if (r) {

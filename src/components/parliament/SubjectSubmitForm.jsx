@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
-import { db } from '../../services/firebase'
 import { useTranslation } from '../../contexts/TranslationContext'
+import { createParliamentSubject } from '../../services/firebaseDB'
 import './Parliament.css'
 
 function emailLocalPart(email) {
@@ -43,12 +42,8 @@ export default function SubjectSubmitForm({ dates, currentUser }) {
     const filtered = dates.filter(d => {
       const isOpen = d.isOpen
       // If isOpen is explicitly false, exclude it. Otherwise include it (true, undefined, null all mean open)
-      const result = isOpen !== false && isOpen !== 'false'
-      console.log(`SubjectSubmitForm - date ${d.id} (${d.title}): isOpen=${isOpen}, result=${result}`)
-      return result
+      return isOpen !== false && isOpen !== 'false'
     })
-    console.log('SubjectSubmitForm - all dates:', dates.map(d => ({ id: d.id, title: d.title, isOpen: d.isOpen })))
-    console.log('SubjectSubmitForm - openDates:', filtered.map(d => ({ id: d.id, title: d.title })))
     return filtered
   }, [dates])
 
@@ -65,21 +60,26 @@ export default function SubjectSubmitForm({ dates, currentUser }) {
     if (!uid || !dateId || !title.trim() || submitting) return
 
     const date = openDates.find(d => d.id === dateId)
-    if (!date) return
+    if (!date) {
+      alert(t('parliament.dateNotOpen') || 'התאריך שנבחר כבר לא פתוח להצעות')
+      return
+    }
+
+    // Double-check that the date is still open (race condition protection)
+    if (date.isOpen === false || date.isOpen === 'false') {
+      alert(t('parliament.dateNotOpen') || 'התאריך שנבחר כבר לא פתוח להצעות')
+      return
+    }
 
     setSubmitting(true)
     try {
-      await addDoc(collection(db, 'parliamentSubjects'), {
+      await createParliamentSubject({
         title: title.trim(),
         description: desc.trim(),
         createdByUid: uid,
         createdByName: displayName,
-        createdByFullName: displayName,
-        createdAt: serverTimestamp(),
-        status: 'pending',
         dateId,
         dateTitle: date?.title || '',
-        notesCount: 0,
       })
       setTitle('')
       setDesc('')
@@ -134,6 +134,7 @@ export default function SubjectSubmitForm({ dates, currentUser }) {
         rows={4}
         value={desc}
         onChange={e => setDesc(e.target.value)}
+        maxLength={2000}
         disabled={submitting}
       />
       <div className="parliament-actions">

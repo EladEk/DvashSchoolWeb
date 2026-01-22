@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { getTranslations } from '../services/adminService'
 import heTranslations from '../translations/he.json'
 import enTranslations from '../translations/en.json'
@@ -20,8 +20,13 @@ export const TranslationProvider = ({ children }) => {
 
   const [translations, setTranslations] = useState(null) // Start with null instead of defaults
   const [isLoading, setIsLoading] = useState(true) // Track loading state
+  const loadingRef = useRef(false) // Prevent double loading in Strict Mode
 
   useEffect(() => {
+    // Prevent double execution in React Strict Mode
+    if (loadingRef.current) return
+    loadingRef.current = true
+    
     // Load translations from admin storage or Firebase
     loadTranslations()
   }, [])
@@ -92,8 +97,8 @@ export const TranslationProvider = ({ children }) => {
         // Save the fix to storage (async, don't wait) to persist the correction
         import('../services/adminService').then(({ saveTranslations }) => {
           // Save the merged translations to ensure the fix persists
-          saveTranslations(mergedTranslations, false).catch(err => {
-            console.warn('Could not save translation fix:', err)
+          saveTranslations(mergedTranslations, false).catch(() => {
+            // Silently fail - translation fix is optional
           })
         })
       }
@@ -119,11 +124,6 @@ export const TranslationProvider = ({ children }) => {
     
     for (const k of keys) {
       value = value?.[k]
-    }
-    
-    // If value is not found, log for debugging
-    if (!value || value === key) {
-      console.warn(`⚠️ Translation key "${key}" not found in ${language}. Available keys:`, Object.keys(translations[language] || {}))
     }
     
     return value || key

@@ -119,7 +119,6 @@ const FAQEditor = ({ questionIndex, onClose, onSave }) => {
       // Save to Firebase
       try {
         await saveAllTranslationsToDB(translations)
-        console.log('✅ FAQ saved to Firebase')
       } catch (firebaseError) {
         console.error('❌ Error saving FAQ to Firebase:', firebaseError)
         setSaveMessage('נשמר מקומית, אך שגיאה ב-Firebase: ' + (firebaseError.message || 'שגיאה לא ידועה'))

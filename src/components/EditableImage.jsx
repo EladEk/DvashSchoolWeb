@@ -60,7 +60,6 @@ const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = ''
   }, [imageKey])
 
   const handleImageUpdate = (newPath) => {
-    console.log('🖼️ Updating image path:', imageKey, '->', newPath)
     // Update state immediately to trigger re-render
     setImagePath(newPath)
     // Save to localStorage

@@ -15,7 +15,6 @@ const AdminDashboard = () => {
   const session = (() => {
     try {
       const sess = JSON.parse(localStorage.getItem('session') || '{}') || {}
-      console.log('AdminDashboard - session from localStorage:', sess)
       return sess
     } catch (e) {
       console.error('AdminDashboard - error parsing session:', e)
@@ -26,8 +25,6 @@ const AdminDashboard = () => {
   
   // Use role from hook if available, otherwise use session role
   const effectiveRole = (role || sessionRole).trim()
-  
-  console.log('AdminDashboard - effectiveRole calculation:', { role, sessionRole, effectiveRole })
   
   const [translations, setTranslations] = useState({ he: {}, en: {} })
   const [currentLang, setCurrentLang] = useState('he')
@@ -43,11 +40,6 @@ const AdminDashboard = () => {
   const canEditTranslations = currentRole === 'admin' || currentRole === 'editor'
   const canManageUsers = currentRole === 'admin'
   
-  // Debug logging
-  useEffect(() => {
-    console.log('AdminDashboard - role:', role, 'sessionRole:', sessionRole, 'effectiveRole:', effectiveRole, 'phase:', phase, 'session:', session)
-    console.log('canEditTranslations:', canEditTranslations, 'canManageUsers:', canManageUsers)
-  }, [role, sessionRole, effectiveRole, phase, canEditTranslations, canManageUsers, session])
 
   const loadTranslations = async () => {
     try {

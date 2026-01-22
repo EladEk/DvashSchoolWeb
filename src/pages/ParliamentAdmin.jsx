@@ -1,19 +1,13 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-  getDocs,
-} from 'firebase/firestore'
-import { db } from '../services/firebase'
 import { useTranslation } from '../contexts/TranslationContext'
+import {
+  loadParliamentDates,
+  createParliamentDate,
+  toggleParliamentDate,
+  deleteParliamentDate,
+  loadParliamentSubjects,
+  updateParliamentSubjectStatus,
+} from '../services/firebaseDB'
 import './Parliament.css'
 
 export default function ParliamentAdmin() {
@@ -46,8 +40,8 @@ export default function ParliamentAdmin() {
   useEffect(() => {
     const loadDates = async () => {
       try {
-        const snap = await getDocs(query(collection(db, 'parliamentDates'), orderBy('date', 'asc')))
-        setDates(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        const datesList = await loadParliamentDates()
+        setDates(datesList)
         datesLoadedRef.current = true
       } catch (error) {
         console.error('Error loading dates:', error)
@@ -77,8 +71,7 @@ export default function ParliamentAdmin() {
       try {
         // Load all subjects in one query, then filter client-side
         // This reduces from 3 separate queries to 1 query
-        const snap = await getDocs(query(collection(db, 'parliamentSubjects')))
-        const allSubjects = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        const allSubjects = await loadParliamentSubjects(null)
         
         // Filter and sort client-side
         const pendingList = allSubjects.filter(s => s.status === 'pending')
@@ -115,11 +108,10 @@ export default function ParliamentAdmin() {
     if (!newDateTitle.trim() || !newDateWhen.trim()) return
     
     try {
-      await addDoc(collection(db, 'parliamentDates'), {
+      await createParliamentDate({
         title: newDateTitle.trim(),
         date: new Date(newDateWhen),
         isOpen: true,
-        createdAt: serverTimestamp(),
         createdByUid: user?.uid || '',
         createdByName: user?.displayName || user?.username || 'Admin',
       })
@@ -133,7 +125,12 @@ export default function ParliamentAdmin() {
   }
 
   async function toggleDate(d) {
-    await updateDoc(doc(db, 'parliamentDates', d.id), { isOpen: !d.isOpen })
+    try {
+      await toggleParliamentDate(d.id, !d.isOpen)
+    } catch (error) {
+      console.error('Error toggling date:', error)
+      alert(t('parliament.toggleDateError') || 'שגיאה בשינוי סטטוס תאריך')
+    }
   }
 
   async function deleteDate(d) {
@@ -144,14 +141,21 @@ export default function ParliamentAdmin() {
       )
     )
       return
-    await deleteDoc(doc(db, 'parliamentDates', d.id))
+    try {
+      await deleteParliamentDate(d.id)
+    } catch (error) {
+      console.error('Error deleting date:', error)
+      alert(t('parliament.deleteDateError') || 'שגיאה במחיקת תאריך')
+    }
   }
 
   async function approve(s) {
-    await updateDoc(doc(db, 'parliamentSubjects', s.id), {
-      status: 'approved',
-      statusReason: '',
-    })
+    try {
+      await updateParliamentSubjectStatus(s.id, 'approved', '')
+    } catch (error) {
+      console.error('Error approving subject:', error)
+      alert(t('parliament.approveError') || 'שגיאה באישור נושא')
+    }
   }
 
   function openRejectModal(s) {
@@ -164,10 +168,7 @@ export default function ParliamentAdmin() {
     if (!subjectToReject || !rejectReason.trim()) return
     
     try {
-      await updateDoc(doc(db, 'parliamentSubjects', subjectToReject.id), {
-        status: 'rejected',
-        statusReason: rejectReason.trim(),
-      })
+      await updateParliamentSubjectStatus(subjectToReject.id, 'rejected', rejectReason.trim())
       setShowRejectModal(false)
       setRejectReason('')
       setSubjectToReject(null)

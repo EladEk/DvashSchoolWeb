@@ -1,20 +1,13 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from 'firebase/firestore'
-import { db } from '../../services/firebase'
 import { useTranslation } from '../../contexts/TranslationContext'
 import { useEffectiveRole } from '../../utils/requireRole'
+import {
+  loadUsers,
+  checkUsernameExists,
+  createUser,
+  updateUser,
+  deleteUser,
+} from '../../services/firebaseDB'
 import './UsersAdmin.css'
 
 const CLASS_HE = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'יא', 'יב']
@@ -68,10 +61,9 @@ export default function UsersAdmin() {
   // Users list doesn't need instant updates
   const usersLoadedRef = useRef(false)
   useEffect(() => {
-    const loadUsers = async () => {
+    const loadUsersData = async () => {
       try {
-        const snap = await getDocs(query(collection(db, 'appUsers'), orderBy('usernameLower')))
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        const list = await loadUsers()
         setItems(list)
         usersLoadedRef.current = true
       } catch (err) {
@@ -79,9 +71,9 @@ export default function UsersAdmin() {
       }
     }
     
-    loadUsers()
+    loadUsersData()
     // Refresh every 30 seconds instead of real-time
-    const interval = setInterval(loadUsers, 30000)
+    const interval = setInterval(loadUsersData, 30000)
     return () => clearInterval(interval)
   }, [t])
 
@@ -116,17 +108,16 @@ export default function UsersAdmin() {
       const username = norm(form.username)
       const usernameLower = username.toLowerCase()
 
-      const dup = await getDocs(
-        query(collection(db, 'appUsers'), where('usernameLower', '==', usernameLower))
-      )
-      if (!dup.empty) {
+      const usernameExists = await checkUsernameExists(usernameLower)
+      if (usernameExists) {
         showToast('error', t('users.toasts.dup', { username }) || `Username already exists: ${username}`)
+        setCreating(false)
         return
       }
 
       const passwordHash = await sha256Hex(norm(form.password))
 
-      await addDoc(collection(db, 'appUsers'), {
+      await createUser({
         username,
         usernameLower,
         firstName: norm(form.firstName),
@@ -135,7 +126,6 @@ export default function UsersAdmin() {
         birthday: form.birthdayRaw,
         classId: form.classId,
         passwordHash,
-        createdAt: serverTimestamp(),
       })
 
       setForm({
@@ -174,11 +164,8 @@ export default function UsersAdmin() {
       const usernameLower = username.toLowerCase()
 
       if (username) {
-        const dup = await getDocs(
-          query(collection(db, 'appUsers'), where('usernameLower', '==', usernameLower))
-        )
-        const existsOther = dup.docs.some(d => d.id !== row.id)
-        if (existsOther) {
+        const usernameExists = await checkUsernameExists(usernameLower, row.id)
+        if (usernameExists) {
           showToast('error', t('users.toasts.dup', { username }) || `Username already exists: ${username}`)
           setSaving(false)
           return
@@ -199,7 +186,7 @@ export default function UsersAdmin() {
         payload.passwordHash = await sha256Hex(norm(passwordRaw))
       }
 
-      await updateDoc(doc(db, 'appUsers', row.id), payload)
+      await updateUser(row.id, payload)
 
       showToast('success', t('users.toasts.updated', { username: username || row.id }) || 'User updated')
       closeEdit()
@@ -213,7 +200,7 @@ export default function UsersAdmin() {
   async function removeUser(id) {
     if (!window.confirm('Are you sure?')) return
     try {
-      await deleteDoc(doc(db, 'appUsers', id))
+      await deleteUser(id)
       showToast('success', t('users.toasts.deleted') || 'User deleted')
     } catch (e) {
       showToast('error', t('users.toasts.deleteFail', { msg: e?.message || 'unknown' }) || 'Error deleting user')
@@ -244,6 +231,7 @@ export default function UsersAdmin() {
               placeholder={t('users.username') || 'Username'}
               value={form.username}
               onChange={e => setForm(v => ({ ...v, username: e.target.value }))}
+              maxLength={50}
             />
             <input
               className="users-input"
@@ -296,6 +284,8 @@ export default function UsersAdmin() {
               placeholder={t('users.password') || 'Password'}
               value={form.password}
               onChange={e => setForm(v => ({ ...v, password: e.target.value }))}
+              minLength={4}
+              maxLength={100}
             />
           </div>
           <button className="btn btn-primary" disabled={!canCreate || creating}>
@@ -374,6 +364,7 @@ export default function UsersAdmin() {
                 placeholder={t('users.username') || 'Username'}
                 value={edit.row.username || ''}
                 onChange={e => setEdit(prev => ({ ...prev, row: { ...prev.row, username: e.target.value } }))}
+                maxLength={50}
               />
               <input
                 className="users-input"
@@ -421,6 +412,8 @@ export default function UsersAdmin() {
                 placeholder={t('users.newPassword') || 'New password (optional)'}
                 value={edit.passwordRaw}
                 onChange={e => setEdit(prev => ({ ...prev, passwordRaw: e.target.value }))}
+                minLength={4}
+                maxLength={100}
               />
             </div>
             <div className="users-modal-actions">

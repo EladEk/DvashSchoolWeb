@@ -40,16 +40,6 @@ const Authorities = () => {
       // If displaySections has 1 item but sections array is empty, we're showing old structure
       const isShowingOldStructure = displaySections.length === 1 && sections.length === 0 && index === 0
 
-      console.log('Delete attempt:', {
-        index,
-        sectionsLength: sections.length,
-        displaySectionsLength: displaySections.length,
-        hasOldStructure,
-        isShowingOldStructure,
-        heText: translations.he.authorities?.text,
-        enText: translations.en.authorities?.text
-      })
-
       // Handle deletion
       if (isShowingOldStructure) {
         // We're displaying old structure (1 item from old text) and user clicked delete on index 0
@@ -62,14 +52,12 @@ const Authorities = () => {
         // Also explicitly set to null to ensure it's cleared
         translations.he.authorities.text = null
         translations.en.authorities.text = null
-        console.log('Deleted old structure text - section will be hidden')
       } else if (index >= 0 && index < sections.length) {
         // Normal case: remove section from array
         sections.splice(index, 1)
         sectionsEn.splice(index, 1)
         translations.he.authorities.sections = sections
         translations.en.authorities.sections = sectionsEn
-        console.log('Deleted section from array, new length:', sections.length)
       } else {
         // Invalid index - provide helpful error message
         console.error('Invalid index for deletion:', {

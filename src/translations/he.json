@@ -246,7 +246,8 @@
     "confirmDeleteNote": "האם אתה בטוח שברצונך למחוק הערה זו?",
     "deleteNote": "מחק הערה",
     "editNote": "ערוך הערה",
-    "noPermission": "אין לך הרשאה לבצע פעולה זו"
+    "noPermission": "אין לך הרשאה לבצע פעולה זו",
+    "dateNotOpen": "התאריך שנבחר כבר לא פתוח להצעות"
   },
   "parliamentLogin": {
     "loginTitle": "התחבר לפרלמנט",
@@ -371,5 +372,11 @@
     "authError": "שגיאה באימות. אנא הגדר authentication endpoint",
     "parseError": "שגיאה בפענוח התגובה",
     "saveError": "שגיאה בשמירת נתיב התמונה"
+  },
+  "unauthorized": {
+    "title": "אין לך הרשאה לגשת לדף זה",
+    "message": "אין לך את ההרשאות הנדרשות לגשת לדף זה.",
+    "backHome": "חזור לדף הבית",
+    "goToParliament": "לפרלמנט"
   }
 }

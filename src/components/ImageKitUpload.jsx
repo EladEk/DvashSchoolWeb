@@ -63,8 +63,6 @@ const ImageKitUpload = ({
             authUrl = `${window.location.origin}${authUrl}`
           }
           
-          console.log('🔐 Requesting auth from:', authUrl)
-          
           const authResponse = await fetch(authUrl, {
             method: 'GET',
             headers: {
@@ -82,8 +80,6 @@ const ImageKitUpload = ({
             if (!token || !signature || !expire || isNaN(expire)) {
               throw new Error('Invalid authentication response: missing or invalid fields')
             }
-            
-            console.log('✅ Auth received:', { token: token.substring(0, 8) + '...', expire, signature: signature.substring(0, 16) + '...' })
           } else {
             const errorText = await authResponse.text()
             throw new Error(`Authentication endpoint returned error: ${authResponse.status} - ${errorText}`)
@@ -139,16 +135,6 @@ const ImageKitUpload = ({
       formData.append('signature', signature)
       // expire must be a number (not string) for ImageKit
       formData.append('expire', expire)
-      console.log('✅ Using authentication for upload')
-      
-      console.log('Uploading file:', {
-        fileName: fileName || `upload-${Date.now()}`,
-        folder,
-        publicKey: publicKey.substring(0, 20) + '...',
-        hasToken: !!token,
-        hasSignature: !!signature,
-        expire
-      })
 
       // Upload with progress tracking
       const xhr = new XMLHttpRequest()
@@ -166,12 +152,9 @@ const ImageKitUpload = ({
 
       // Handle completion
       xhr.addEventListener('load', () => {
-        console.log('Upload response:', xhr.status, xhr.responseText.substring(0, 200))
-        
         if (xhr.status === 200) {
           try {
             const response = JSON.parse(xhr.responseText)
-            console.log('Upload success:', response)
             
             if (!response.filePath) {
               throw new Error('Upload succeeded but no filePath in response')

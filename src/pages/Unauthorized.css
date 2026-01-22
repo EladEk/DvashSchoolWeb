@@ -1,0 +1,59 @@
+.unauthorized-page {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: var(--bg-color, #f5f5f5);
+}
+
+.unauthorized-container {
+  text-align: center;
+  max-width: 600px;
+  padding: 3rem 2rem;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.unauthorized-title {
+  font-size: 2rem;
+  color: var(--primary-color, #2c5f7c);
+  margin-bottom: 1rem;
+}
+
+.unauthorized-message {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.unauthorized-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .unauthorized-container {
+    padding: 2rem 1.5rem;
+  }
+  
+  .unauthorized-title {
+    font-size: 1.5rem;
+  }
+  
+  .unauthorized-message {
+    font-size: 1rem;
+  }
+  
+  .unauthorized-actions {
+    flex-direction: column;
+  }
+  
+  .unauthorized-actions .btn {
+    width: 100%;
+  }
+}

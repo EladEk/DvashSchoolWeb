@@ -13,6 +13,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import Parliament from './pages/Parliament'
 import ParliamentAdmin from './pages/ParliamentAdmin'
 import ParliamentLogin from './pages/ParliamentLogin'
+import Unauthorized from './pages/Unauthorized'
 import AdminRoute from './components/AdminRoute'
 import { RequireRole } from './utils/requireRole'
 import { useScrollToHash } from './hooks/useScrollToHash'
@@ -55,6 +56,7 @@ function AppContent() {
         <Route path="/parents-association" element={<ParentsAssociation />} />
         <Route path="/parliament" element={<Parliament />} />
         <Route path="/parliament/login" element={<ParliamentLogin />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/admin" element={<Navigate to="/parliament/login" replace />} />
         <Route path="/admin/" element={<Navigate to="/parliament/login" replace />} />
         <Route

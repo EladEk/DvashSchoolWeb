@@ -44,7 +44,7 @@ const Contact = () => {
       try {
         await submitToFirebase(data)
       } catch (firebaseError) {
-        console.warn('Firebase save failed, but email was sent:', firebaseError)
+        // Firebase save failed, but email was sent - silently continue
       }
       
       if (emailResult.success) {

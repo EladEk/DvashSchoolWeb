@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '../services/firebase'
 import { useTranslation } from '../contexts/TranslationContext'
+import { findUserByUsername, checkUsernameExists, createUser } from '../services/firebaseDB'
 import './ParliamentLogin.css'
 
 
@@ -71,20 +70,15 @@ export default function ParliamentLogin() {
       }
 
       // Search for user
-      const q = query(
-        collection(db, 'appUsers'),
-        where('usernameLower', '==', usernameLower)
-      )
-      const snapshot = await getDocs(q)
+      const userResult = await findUserByUsername(usernameLower)
 
-      if (snapshot.empty) {
+      if (!userResult) {
         setError(t('parliamentLogin.userNotFound') || 'משתמש לא נמצא')
         setLoading(false)
         return
       }
 
-      const userDoc = snapshot.docs[0]
-      const userData = userDoc.data()
+      const userData = userResult.data
 
       if (userData.passwordHash !== passwordHash) {
         setError(t('parliamentLogin.wrongPassword') || 'סיסמה שגויה')
@@ -94,7 +88,7 @@ export default function ParliamentLogin() {
 
       // Create session
       const session = {
-        uid: userDoc.id,
+        uid: userResult.id,
         username: userData.username,
         usernameLower: userData.usernameLower,
         firstName: userData.firstName,
@@ -146,13 +140,9 @@ export default function ParliamentLogin() {
       const usernameLower = username.toLowerCase()
 
       // Check if username exists
-      const q = query(
-        collection(db, 'appUsers'),
-        where('usernameLower', '==', usernameLower)
-      )
-      const snapshot = await getDocs(q)
+      const usernameExists = await checkUsernameExists(usernameLower)
 
-      if (!snapshot.empty) {
+      if (usernameExists) {
         setError(t('parliamentLogin.usernameExists') || 'שם משתמש כבר קיים')
         setLoading(false)
         return
@@ -161,7 +151,7 @@ export default function ParliamentLogin() {
       const passwordHash = await sha256Hex(norm(registerForm.password))
 
       // Create user
-      const userRef = await addDoc(collection(db, 'appUsers'), {
+      const userResult = await createUser({
         username,
         usernameLower,
         firstName: norm(registerForm.firstName),
@@ -169,12 +159,11 @@ export default function ParliamentLogin() {
         role: registerForm.role,
         birthday: registerForm.birthday || '',
         passwordHash,
-        createdAt: serverTimestamp(),
       })
 
       // Create session
       const session = {
-        uid: userRef.id,
+        uid: userResult.id,
         username,
         usernameLower,
         firstName: registerForm.firstName,
@@ -247,6 +236,7 @@ export default function ParliamentLogin() {
                 required
                 disabled={loading}
                 autoComplete="username"
+                maxLength={50}
               />
             </div>
             <div className="parliament-form-group">
@@ -284,6 +274,7 @@ export default function ParliamentLogin() {
                   required
                   disabled={loading}
                   autoComplete="username"
+                  maxLength={50}
                 />
               </div>
               <div className="parliament-form-group">
@@ -356,6 +347,7 @@ export default function ParliamentLogin() {
                   disabled={loading}
                   autoComplete="new-password"
                   minLength={4}
+                  maxLength={100}
                 />
               </div>
               <div className="parliament-form-group">
@@ -370,6 +362,7 @@ export default function ParliamentLogin() {
                   disabled={loading}
                   autoComplete="new-password"
                   minLength={4}
+                  maxLength={100}
                 />
               </div>
             </div>

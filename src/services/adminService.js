@@ -46,7 +46,6 @@ export const getTranslations = async (skipFirebase = false) => {
         const parsed = JSON.parse(stored)
         if (parsed && (parsed.he || parsed.en)) {
           translationsCache = parsed
-          console.log('✅ Loaded translations from localStorage (cached)')
           return parsed
         }
       } catch (parseError) {
@@ -68,12 +67,10 @@ export const getTranslations = async (skipFirebase = false) => {
           // Update cache and localStorage with Firebase data
           translationsCache = firebaseTranslations
           localStorage.setItem(STORAGE_KEY, JSON.stringify(firebaseTranslations))
-          console.log('✅ Loaded translations from Firebase')
           return firebaseTranslations
         }
       } catch (firebaseError) {
         // Firebase timeout or error - continue to localStorage/defaults
-        console.log('Firebase not available or timeout:', firebaseError.message)
       }
     }
 
@@ -83,7 +80,6 @@ export const getTranslations = async (skipFirebase = false) => {
         const parsed = JSON.parse(stored)
         if (parsed && (parsed.he || parsed.en)) {
           translationsCache = parsed
-          console.log('✅ Loaded translations from localStorage')
           return parsed
         }
       } catch (parseError) {
@@ -94,7 +90,6 @@ export const getTranslations = async (skipFirebase = false) => {
     // Fallback to default translations (cached)
     const defaults = await getDefaultTranslations()
     translationsCache = defaults
-    console.log('✅ Loaded default translations')
     return defaults
   } catch (error) {
     console.error('Error loading translations:', error)
@@ -119,7 +114,6 @@ export const saveTranslations = async (translations, firebaseOnly = false) => {
       await saveToFirebase(translations, !firebaseOnly) // onlyChanged = true unless firebaseOnly
     } catch (firebaseError) {
       // Firebase not configured or error
-      console.log('Firebase save failed:', firebaseError.message)
       if (firebaseOnly) {
         // If firebaseOnly is true, we must throw the error
         throw firebaseError
@@ -200,24 +194,18 @@ export const loadFromFirebase = async () => {
     const firebaseData = await loadTranslationsFromDB()
     
     if (firebaseData) {
-      console.log('📥 Raw Firebase data:', firebaseData)
       // Deep merge with defaults to ensure all keys exist
       const defaults = await getDefaultTranslations()
       const merged = {
         he: deepMerge(defaults.he || {}, firebaseData.he || {}),
         en: deepMerge(defaults.en || {}, firebaseData.en || {})
       }
-      console.log('📥 Merged translations (sample):', {
-        'he.hero': merged.he?.hero,
-        'en.hero': merged.en?.hero
-      })
       return merged
     }
     
     return null
   } catch (error) {
     // Firebase not configured or error - silently fail
-    console.log('Firebase translations not available:', error.message)
     return null
   }
 }

@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, onSnapshot, query, where, addDoc, deleteDoc, doc, serverTimestamp, updateDoc, getDocs } from 'firebase/firestore'
-import { db } from '../services/firebase'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useEffectiveRole, UserRole } from '../utils/requireRole'
 import EditableText from '../components/EditableText'
 import SubjectSubmitForm from '../components/parliament/SubjectSubmitForm'
+import {
+  loadParliamentDates,
+  loadParliamentSubjects,
+  subscribeToUserParliamentSubjects,
+  loadParliamentNotes,
+  createParliamentNote,
+  updateParliamentNote,
+  deleteParliamentNote,
+} from '../services/firebaseDB'
 import './Parliament.css'
 
 function tsMillis(x) {
@@ -14,6 +21,20 @@ function tsMillis(x) {
   const d = x instanceof Date ? x : new Date(x)
   const t = d.getTime()
   return Number.isFinite(t) ? t : 0
+}
+
+function formatParliamentDate(dateObj) {
+  if (!dateObj) return ''
+  try {
+    const date = dateObj?.toDate ? dateObj.toDate() : new Date(dateObj)
+    return date.toLocaleDateString('he-IL', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+  } catch {
+    return ''
+  }
 }
 
 export default function Parliament() {
@@ -62,27 +83,24 @@ export default function Parliament() {
   // Only reload when component mounts or when explicitly needed
   const datesLoadedRef = useRef(false)
   useEffect(() => {
-    if (datesLoadedRef.current) return // Only load once unless explicitly reloaded
+    // Prevent double execution in React Strict Mode
+    if (datesLoadedRef.current) return
+    datesLoadedRef.current = true // Set immediately to prevent double execution
     
     const loadDates = async () => {
       try {
-        const snap = await getDocs(query(collection(db, 'parliamentDates')))
-        const list = snap.docs.map(d => {
-          const data = d.data()
-          // Ensure isOpen is a boolean
-          const dateObj = { 
-            id: d.id, 
-            ...data,
-            isOpen: data.isOpen !== false && data.isOpen !== 'false' // Default to true if not explicitly false
-          }
-          return dateObj
-        })
-        list.sort((a, b) => tsMillis(a.date) - tsMillis(b.date))
-        console.log('Parliament - loaded dates:', list)
-        setDates(list)
-        datesLoadedRef.current = true
+        const list = await loadParliamentDates()
+        // Ensure isOpen is a boolean
+        const processedList = list.map(d => ({
+          ...d,
+          isOpen: d.isOpen !== false && d.isOpen !== 'false' // Default to true if not explicitly false
+        }))
+        processedList.sort((a, b) => tsMillis(a.date) - tsMillis(b.date))
+        setDates(processedList)
       } catch (error) {
         console.error('Error loading dates:', error)
+        // Reset ref on error so it can retry
+        datesLoadedRef.current = false
       }
     }
     
@@ -90,23 +108,29 @@ export default function Parliament() {
     
     // Set up a refresh interval (every 30 seconds) instead of real-time
     const interval = setInterval(loadDates, 30000)
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      // Reset ref on cleanup so it can reload if component remounts
+      datesLoadedRef.current = false
+    }
   }, [])
 
   // Approved subjects (public) - use getDocs with refresh interval instead of real-time
   const subjectsLoadedRef = useRef(false)
   useEffect(() => {
+    // Prevent double execution in React Strict Mode
     if (subjectsLoadedRef.current) return
+    subjectsLoadedRef.current = true // Set immediately to prevent double execution
     
     const loadSubjects = async () => {
       try {
-        const snap = await getDocs(query(collection(db, 'parliamentSubjects'), where('status', '==', 'approved')))
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        const list = await loadParliamentSubjects('approved')
         list.sort((a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt))
         setSubjects(list)
-        subjectsLoadedRef.current = true
       } catch (error) {
         console.error('Error loading subjects:', error)
+        // Reset ref on error so it can retry
+        subjectsLoadedRef.current = false
       }
     }
     
@@ -114,31 +138,33 @@ export default function Parliament() {
     
     // Refresh every 30 seconds instead of real-time
     const interval = setInterval(loadSubjects, 30000)
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      // Reset ref on cleanup so it can reload if component remounts
+      subjectsLoadedRef.current = false
+    }
   }, [])
 
-  // My submissions (pending + rejected)
+  // My submissions (pending + rejected) - use real-time subscription
   useEffect(() => {
     if (!userUid) return
-    const unsub = onSnapshot(
-      query(collection(db, 'parliamentSubjects'), where('createdByUid', '==', userUid)),
-      snap => {
-        const mine = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        const pendingOnly = mine.filter(s => s.status === 'pending')
-        const rejectedOnly = mine.filter(s => s.status === 'rejected')
+    
+    const unsub = subscribeToUserParliamentSubjects(userUid, (mine) => {
+      const pendingOnly = mine.filter(s => s.status === 'pending')
+      const rejectedOnly = mine.filter(s => s.status === 'rejected')
 
-        const sortFn = (a, b) => {
-          const ta = tsMillis(a.createdAt) || 0
-          const tb = tsMillis(b.createdAt) || 0
-          return tb - ta
-        }
-        pendingOnly.sort(sortFn)
-        rejectedOnly.sort(sortFn)
-
-        setMyPending(pendingOnly)
-        setMyRejected(rejectedOnly)
+      const sortFn = (a, b) => {
+        const ta = tsMillis(a.createdAt) || 0
+        const tb = tsMillis(b.createdAt) || 0
+        return tb - ta
       }
-    )
+      pendingOnly.sort(sortFn)
+      rejectedOnly.sort(sortFn)
+
+      setMyPending(pendingOnly)
+      setMyRejected(rejectedOnly)
+    })
+    
     return () => unsub()
   }, [userUid])
 
@@ -153,8 +179,7 @@ export default function Parliament() {
 
     const loadNotes = async () => {
       try {
-        const snap = await getDocs(query(collection(db, 'parliamentNotes'), where('subjectId', '==', current.id)))
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        const list = await loadParliamentNotes(current.id)
         list.sort((a, b) => tsMillis(a.createdAt) - tsMillis(b.createdAt))
         setNotes(list)
         notesLoadedRef.current = true
@@ -170,6 +195,15 @@ export default function Parliament() {
     const interval = setInterval(loadNotes, 10000)
     return () => clearInterval(interval)
   }, [current?.id])
+
+  // Create a map of dateId to date object for quick lookup
+  const dateMap = useMemo(() => {
+    const map = new Map()
+    dates.forEach(d => {
+      map.set(d.id, d)
+    })
+    return map
+  }, [dates])
 
   // Group approved subjects by date
   const { openGroups, closedGroups } = useMemo(() => {
@@ -242,12 +276,11 @@ export default function Parliament() {
     setSubmittingNote(true)
     try {
       const displayName = session?.displayName || session?.username || session?.firstName || 'משתמש'
-      await addDoc(collection(db, 'parliamentNotes'), {
+      await createParliamentNote({
         subjectId: current.id,
         text: newNoteText.trim(),
         createdByUid: userUid,
         createdByName: displayName,
-        createdAt: serverTimestamp(),
         parentNoteId: null, // Top-level note
       })
       setNewNoteText('')
@@ -267,12 +300,11 @@ export default function Parliament() {
     setSubmittingReply(true)
     try {
       const displayName = session?.displayName || session?.username || session?.firstName || 'משתמש'
-      await addDoc(collection(db, 'parliamentNotes'), {
+      await createParliamentNote({
         subjectId: current.id,
         text: replyText.trim(),
         createdByUid: userUid,
         createdByName: displayName,
-        createdAt: serverTimestamp(),
         parentNoteId: parentNoteId,
       })
       setReplyText('')
@@ -299,13 +331,10 @@ export default function Parliament() {
 
   // Save edited note
   async function handleSaveEdit(noteId) {
-    if (!editingNoteText.trim() || !noteId) return
+    if (!editingNoteText.trim() || !noteId || !current?.id) return
 
     try {
-      await updateDoc(doc(db, 'parliamentNotes', noteId), {
-        text: editingNoteText.trim(),
-        updatedAt: serverTimestamp(),
-      })
+      await updateParliamentNote(noteId, editingNoteText.trim(), current.id)
       setEditingNoteId(null)
       setEditingNoteText('')
     } catch (error) {
@@ -316,7 +345,7 @@ export default function Parliament() {
 
   // Delete a note
   async function handleDeleteNote(noteId) {
-    if (!noteId) return
+    if (!noteId || !current?.id) return
     const note = notes.find(n => n.id === noteId)
     if (!note) return
     
@@ -328,7 +357,7 @@ export default function Parliament() {
     if (!confirm(t('parliament.deleteConfirmNote') || 'האם אתה בטוח שברצונך למחוק הערה זו?')) return
 
     try {
-      await deleteDoc(doc(db, 'parliamentNotes', noteId))
+      await deleteParliamentNote(noteId, current.id)
     } catch (error) {
       console.error('Error deleting note:', error)
       alert(t('parliament.noteDeleteError') || 'שגיאה במחיקת הערה')
@@ -380,29 +409,44 @@ export default function Parliament() {
             <div key={group.date?.id || 'unknown-open'} style={{ marginBottom: '1rem' }}>
               <div className="parliament-section-title">
                 {group.date?.title || t('parliament.unknownDate') || 'תאריך לא ידוע'}
+                {group.date?.date && (
+                  <span style={{ fontSize: '0.9em', opacity: 0.8, marginRight: '0.5rem' }}>
+                    ({formatParliamentDate(group.date.date)})
+                  </span>
+                )}
               </div>
               <div className="parliament-grid">
-                {group.items.map(s => (
-                  <div key={s.id} className="parliament-card">
-                    <div className="parliament-row" style={{ justifyContent: 'space-between' }}>
-                      <span className="parliament-badge">{s.dateTitle}</span>
-                      <span className="parliament-meta">✅</span>
+                {group.items.map(s => {
+                  const subjectDate = dateMap.get(s.dateId)
+                  return (
+                    <div key={s.id} className="parliament-card">
+                      <div className="parliament-row" style={{ justifyContent: 'space-between' }}>
+                        <span className="parliament-badge">
+                          {s.dateTitle}
+                          {subjectDate?.date && (
+                            <span style={{ marginRight: '0.5rem', opacity: 0.9 }}>
+                              {' - ' + formatParliamentDate(subjectDate.date)}
+                            </span>
+                          )}
+                        </span>
+                        <span className="parliament-meta">✅</span>
+                      </div>
+                      <h3 style={{ margin: '8px 0 6px' }}>{s.title}</h3>
+                      <div className="parliament-meta">{s.createdByName}</div>
+                      {s.description && (
+                        <div className="parliament-pre">{s.description}</div>
+                      )}
+                      <div className="parliament-actions" style={{ marginTop: 10 }}>
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => setCurrent(s)}
+                        >
+                          💬 {t('parliament.discuss') || 'דיון / הערות'}
+                        </button>
+                      </div>
                     </div>
-                    <h3 style={{ margin: '8px 0 6px' }}>{s.title}</h3>
-                    <div className="parliament-meta">{s.createdByName}</div>
-                    {s.description && (
-                      <div className="parliament-pre">{s.description}</div>
-                    )}
-                    <div className="parliament-actions" style={{ marginTop: 10 }}>
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => setCurrent(s)}
-                      >
-                        💬 {t('parliament.discuss') || 'דיון / הערות'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           ))
@@ -448,16 +492,26 @@ export default function Parliament() {
             </div>
           ) : (
             <div className="parliament-grid">
-              {myPending.map(p => (
-                <div key={p.id} className="parliament-card">
-                  <div className="parliament-row" style={{ justifyContent: 'space-between' }}>
-                    <span className="parliament-badge">{p.dateTitle}</span>
+              {myPending.map(p => {
+                const subjectDate = dateMap.get(p.dateId)
+                return (
+                  <div key={p.id} className="parliament-card">
+                    <div className="parliament-row" style={{ justifyContent: 'space-between' }}>
+                      <span className="parliament-badge">
+                        {p.dateTitle}
+                        {subjectDate?.date && (
+                          <span style={{ marginRight: '0.5rem', opacity: 0.9 }}>
+                            {' - ' + formatParliamentDate(subjectDate.date)}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <h3 style={{ margin: '8px 0 6px' }}>{p.title}</h3>
+                    <div className="parliament-meta">{p.createdByName}</div>
+                    <div className="parliament-pre">{p.description}</div>
                   </div>
-                  <h3 style={{ margin: '8px 0 6px' }}>{p.title}</h3>
-                  <div className="parliament-meta">{p.createdByName}</div>
-                  <div className="parliament-pre">{p.description}</div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </section>
@@ -479,21 +533,31 @@ export default function Parliament() {
             </div>
           ) : (
             <div className="parliament-grid">
-              {myRejected.map(r => (
-                <div key={r.id} className="parliament-card">
-                  <div className="parliament-row" style={{ justifyContent: 'space-between' }}>
-                    <span className="parliament-badge">{r.dateTitle}</span>
-                  </div>
-                  <h3 style={{ margin: '8px 0 6px' }}>{r.title}</h3>
-                  <div className="parliament-meta">{r.createdByName}</div>
-                  {r.statusReason && (
-                    <div className="parliament-meta" style={{ marginTop: '8px' }}>
-                      {t('parliament.rejectedReason') || 'סיבה'}: {r.statusReason}
+              {myRejected.map(r => {
+                const subjectDate = dateMap.get(r.dateId)
+                return (
+                  <div key={r.id} className="parliament-card">
+                    <div className="parliament-row" style={{ justifyContent: 'space-between' }}>
+                      <span className="parliament-badge">
+                        {r.dateTitle}
+                        {subjectDate?.date && (
+                          <span style={{ marginRight: '0.5rem', opacity: 0.9 }}>
+                            {' - ' + formatParliamentDate(subjectDate.date)}
+                          </span>
+                        )}
+                      </span>
                     </div>
-                  )}
-                  <div className="parliament-pre">{r.description}</div>
-                </div>
-              ))}
+                    <h3 style={{ margin: '8px 0 6px' }}>{r.title}</h3>
+                    <div className="parliament-meta">{r.createdByName}</div>
+                    {r.statusReason && (
+                      <div className="parliament-meta" style={{ marginTop: '8px' }}>
+                        {t('parliament.rejectedReason') || 'סיבה'}: {r.statusReason}
+                      </div>
+                    )}
+                    <div className="parliament-pre">{r.description}</div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </section>
@@ -517,20 +581,35 @@ export default function Parliament() {
             <div key={group.date?.id || 'unknown-closed'} style={{ marginBottom: '1rem' }}>
               <div className="parliament-section-title">
                 {group.date?.title || t('parliament.unknownDate') || 'תאריך לא ידוע'}
+                {group.date?.date && (
+                  <span style={{ fontSize: '0.9em', opacity: 0.8, marginRight: '0.5rem' }}>
+                    ({formatParliamentDate(group.date.date)})
+                  </span>
+                )}
               </div>
               <div className="parliament-grid">
-                {group.items.map(s => (
-                  <div key={s.id} className="parliament-card">
-                    <div className="parliament-row" style={{ justifyContent: 'space-between' }}>
-                      <span className="parliament-badge">{s.dateTitle}</span>
+                {group.items.map(s => {
+                  const subjectDate = dateMap.get(s.dateId)
+                  return (
+                    <div key={s.id} className="parliament-card">
+                      <div className="parliament-row" style={{ justifyContent: 'space-between' }}>
+                        <span className="parliament-badge">
+                          {s.dateTitle}
+                          {subjectDate?.date && (
+                            <span style={{ marginRight: '0.5rem', opacity: 0.9 }}>
+                              {' - ' + formatParliamentDate(subjectDate.date)}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <h3 style={{ margin: '8px 0 6px' }}>{s.title}</h3>
+                      <div className="parliament-meta">{s.createdByName}</div>
+                      {s.description && (
+                        <div className="parliament-pre">{s.description}</div>
+                      )}
                     </div>
-                    <h3 style={{ margin: '8px 0 6px' }}>{s.title}</h3>
-                    <div className="parliament-meta">{s.createdByName}</div>
-                    {s.description && (
-                      <div className="parliament-pre">{s.description}</div>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           ))
@@ -555,7 +634,19 @@ export default function Parliament() {
                 </button>
               </div>
               <div style={{ marginTop: '1rem' }}>
-                <span className="parliament-badge">{current.dateTitle}</span>
+                <span className="parliament-badge">
+                  {current.dateTitle}
+                  {(() => {
+                    if (!current.dateId) return null
+                    const subjectDate = dateMap.get(current.dateId)
+                    if (!subjectDate?.date) return null
+                    return (
+                      <span style={{ marginRight: '0.5rem', opacity: 0.9 }}>
+                        {' - ' + formatParliamentDate(subjectDate.date)}
+                      </span>
+                    )
+                  })()}
+                </span>
               </div>
               {current.description && (
                 <div className="parliament-pre" style={{ marginTop: '1rem' }}>
