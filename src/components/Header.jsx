@@ -187,22 +187,8 @@ const Header = () => {
     <header className="header">
       <div className="header-main">
         <div className="header-container">
-          <div className="logo">
-            <Link to="/" className="logo-link">
-              <img 
-                src="/assets/LOGO.avif" 
-                alt={t('common.schoolName') || 'בית ספר דב״ש'}
-                className="logo-image"
-                onError={(e) => {
-                  e.target.style.display = 'none'
-                  const textEl = e.target.nextSibling
-                  if (textEl) textEl.style.display = 'block'
-                }}
-              />
-              <h1 className="logo-text" style={{ display: 'none' }}>
-                {t('common.schoolName')}
-              </h1>
-            </Link>
+          <div className="header-left">
+            <LanguageSwitcher />
           </div>
           <nav className={`nav ${isMenuOpen ? 'nav-open' : ''}`}>
             <ul className="nav-list">
@@ -240,8 +226,26 @@ const Header = () => {
                 </li>
               )}
             </ul>
-            <LanguageSwitcher />
           </nav>
+          <div className="header-right">
+            <div className="logo">
+              <Link to="/" className="logo-link">
+                <img 
+                  src="/assets/LOGO.avif" 
+                  alt={t('common.schoolName') || 'בית ספר דב״ש'}
+                  className="logo-image"
+                  onError={(e) => {
+                    e.target.style.display = 'none'
+                    const textEl = e.target.nextSibling
+                    if (textEl) textEl.style.display = 'block'
+                  }}
+                />
+                <h1 className="logo-text" style={{ display: 'none' }}>
+                  {t('common.schoolName')}
+                </h1>
+              </Link>
+            </div>
+          </div>
           <button 
             className="menu-toggle"
             onClick={() => setIsMenuOpen(!isMenuOpen)}

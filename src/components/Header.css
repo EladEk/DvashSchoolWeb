@@ -24,11 +24,27 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  order: 1;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  order: 3;
 }
 
 .logo {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .logo-link {
@@ -54,6 +70,10 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-shrink: 0;
+  flex: 1;
+  justify-content: center;
+  order: 2;
 }
 
 .nav-list {
@@ -62,7 +82,39 @@
   gap: 1rem;
   align-items: center;
   flex-wrap: nowrap;
-  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* RTL support for Hebrew - adjust header container and navigation */
+html[dir="rtl"] .header-container {
+  direction: rtl;
+  padding-right: 3rem;
+  padding-left: 2rem;
+  gap: 1.5rem;
+  justify-content: space-between;
+}
+
+html[dir="rtl"] .header-left {
+  order: 3;
+}
+
+html[dir="rtl"] .header-right {
+  order: 1;
+}
+
+html[dir="rtl"] .nav {
+  order: 2;
+}
+
+html[dir="rtl"] .logo {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+html[dir="rtl"] .nav-list {
+  margin-left: 0;
+  margin-right: 0;
+  padding-right: 0;
 }
 
 .nav-list a {
