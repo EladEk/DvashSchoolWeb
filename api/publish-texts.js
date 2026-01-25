@@ -70,19 +70,51 @@ export default async function handler(req, res) {
         let serviceAccount
         try {
           // Try to parse as JSON
-          serviceAccount = JSON.parse(firebaseServiceAccountEnv)
+          // Handle both string and already-parsed JSON
+          if (typeof firebaseServiceAccountEnv === 'string') {
+            serviceAccount = JSON.parse(firebaseServiceAccountEnv)
+          } else {
+            serviceAccount = firebaseServiceAccountEnv
+          }
         } catch (parseError) {
           console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT:', parseError.message)
+          console.error('First 100 chars of env var:', firebaseServiceAccountEnv?.substring(0, 100))
           throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON. Make sure it\'s a single-line JSON string.')
         }
 
         if (!serviceAccount.type || serviceAccount.type !== 'service_account') {
-          throw new Error('FIREBASE_SERVICE_ACCOUNT is missing required fields')
+          console.error('Service account missing type field. Keys:', Object.keys(serviceAccount))
+          throw new Error('FIREBASE_SERVICE_ACCOUNT is missing required fields (type should be "service_account")')
         }
 
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount)
-        })
+        if (!serviceAccount.private_key || !serviceAccount.client_email) {
+          console.error('Service account missing required fields')
+          throw new Error('FIREBASE_SERVICE_ACCOUNT is missing private_key or client_email')
+        }
+
+        // Fix private_key newlines - ensure \n characters are preserved correctly
+        // Sometimes Vercel environment variables can mangle the newlines
+        if (serviceAccount.private_key) {
+          // Replace double-escaped newlines with single escaped
+          serviceAccount.private_key = serviceAccount.private_key.replace(/\\\\n/g, '\\n')
+          // If there are actual newlines (which shouldn't happen in JSON), replace with \n
+          if (serviceAccount.private_key.includes('\n') && !serviceAccount.private_key.includes('\\n')) {
+            serviceAccount.private_key = serviceAccount.private_key.replace(/\n/g, '\\n')
+          }
+        }
+
+        try {
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+          })
+          console.log('Firebase Admin initialized successfully')
+        } catch (initError) {
+          console.error('Firebase Admin initialization failed:', initError.message)
+          console.error('Service account project_id:', serviceAccount.project_id)
+          console.error('Service account client_email:', serviceAccount.client_email)
+          // Don't log private_key for security
+          throw new Error(`Failed to initialize Firebase Admin: ${initError.message}. Check that FIREBASE_SERVICE_ACCOUNT JSON is correctly formatted with proper \\n in private_key.`)
+        }
       }
     } catch (error) {
       console.error('Firebase Admin initialization error:', error)
