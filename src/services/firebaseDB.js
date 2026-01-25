@@ -674,9 +674,24 @@ export const archiveParliamentDate = async (dateId) => {
           type: item.type
         }
         
-        // Keep dateId reference for subjects
+        // Keep dateId reference for subjects and notes
         if (item.type === 'subject') {
           archiveData.dateId = dateId
+          archiveData.parliamentId = dateId // Also store as parliamentId for easier querying
+        }
+        if (item.type === 'note') {
+          // Keep subjectId reference for notes
+          archiveData.subjectId = item.data.subjectId
+        }
+        // For date type, store originalId as parliamentId and initialize decisions and summary
+        if (item.type === 'date') {
+          archiveData.parliamentId = dateId
+          archiveData.decisions = [] // Initialize decisions array
+          archiveData.summary = '' // Initialize summary
+        }
+        // For subject type, initialize decisions array
+        if (item.type === 'subject') {
+          archiveData.decisions = [] // Initialize decisions array for each subject
         }
         
         batch.set(historyRef, archiveData)
@@ -703,6 +718,8 @@ export const archiveParliamentDate = async (dateId) => {
     archivedSubjects.forEach(subjectId => {
       clearCache(`${CACHE_KEYS.PARLIAMENT_NOTES}${subjectId}`)
     })
+    // Clear history cache so it reloads on next access
+    clearCache('firebase_cache_parliament_history')
     
     return { 
       success: true, 
@@ -723,6 +740,90 @@ export const archiveParliamentDate = async (dateId) => {
  * @param {boolean} forceRefresh - If true, bypass cache and fetch from Firebase
  * @returns {Promise<Array>} Array of archived parliament items
  */
+/**
+ * Add a decision to an archived subject
+ * @param {string} subjectOriginalId - The original subject ID
+ * @param {string} decisionText - The decision text
+ * @param {string} createdByUid - User UID who created the decision
+ * @param {string} createdByName - User name who created the decision
+ * @returns {Promise<{success: boolean}>}
+ */
+export const addSubjectDecision = async (subjectOriginalId, decisionText, createdByUid = '', createdByName = 'Admin') => {
+  try {
+    if (!db) throw new Error('Firebase not configured')
+    
+    // Find the archived subject document
+    const historyQuery = query(
+      collection(db, 'parliamentHistory'),
+      where('type', '==', 'subject'),
+      where('originalId', '==', subjectOriginalId)
+    )
+    const historySnapshot = await getDocs(historyQuery)
+    
+    if (historySnapshot.empty) {
+      throw new Error('נושא לא נמצא בהיסטוריה')
+    }
+    
+    const subjectDoc = historySnapshot.docs[0]
+    const currentDecisions = subjectDoc.data().decisions || []
+    
+    await updateDoc(subjectDoc.ref, {
+      decisions: [...currentDecisions, {
+        text: decisionText.trim(),
+        createdAt: serverTimestamp(),
+        createdByUid: createdByUid,
+        createdByName: createdByName
+      }]
+    })
+    
+    // Clear cache
+    clearCache('firebase_cache_parliament_history')
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error adding subject decision:', error)
+    throw error
+  }
+}
+
+/**
+ * Update parliament summary
+ * @param {string} parliamentId - The original dateId of the parliament
+ * @param {string} summary - The summary text
+ * @returns {Promise<{success: boolean}>}
+ */
+export const updateParliamentSummary = async (parliamentId, summary) => {
+  try {
+    if (!db) throw new Error('Firebase not configured')
+    
+    // Find the archived parliament date document
+    const historyQuery = query(
+      collection(db, 'parliamentHistory'),
+      where('type', '==', 'date'),
+      where('parliamentId', '==', parliamentId)
+    )
+    const historySnapshot = await getDocs(historyQuery)
+    
+    if (historySnapshot.empty) {
+      throw new Error('פרלמנט לא נמצא בהיסטוריה')
+    }
+    
+    const parliamentDoc = historySnapshot.docs[0]
+    
+    await updateDoc(parliamentDoc.ref, {
+      summary: summary.trim()
+    })
+    
+    // Clear cache
+    clearCache('firebase_cache_parliament_history')
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating parliament summary:', error)
+    throw error
+  }
+}
+
 export const loadParliamentHistory = async (forceRefresh = false) => {
   const cacheKey = 'firebase_cache_parliament_history'
   

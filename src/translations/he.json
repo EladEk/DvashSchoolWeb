@@ -274,7 +274,21 @@
     "history": "היסטורית פרלמנטים",
     "loading": "טוען...",
     "date": "תאריך",
-    "subject": "נושא"
+    "subject": "נושא",
+    "subjects": "נושאים",
+    "decisions": "החלטות",
+    "addDecision": "הוסף החלטה",
+    "decisionText": "טקסט ההחלטה",
+    "decisionTextPlaceholder": "הכנס את טקסט ההחלטה...",
+    "addDecisionError": "שגיאה בהוספת החלטה",
+    "adding": "מוסיף...",
+    "summary": "סיכום פרלמנט",
+    "summaryText": "טקסט הסיכום",
+    "summaryPlaceholder": "הכנס את סיכום הפרלמנט...",
+    "addSummary": "הוסף סיכום",
+    "editSummary": "ערוך סיכום",
+    "saveSummaryError": "שגיאה בשמירת סיכום",
+    "saving": "שומר..."
   },
   "parliamentLogin": {
     "loginTitle": "התחבר לפרלמנט",

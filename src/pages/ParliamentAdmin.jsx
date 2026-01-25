@@ -13,6 +13,8 @@ import {
   updateParliamentSubject,
   deleteParliamentSubject,
   loadParliamentHistory,
+  addSubjectDecision,
+  updateParliamentSummary,
 } from '../services/firebaseDB'
 import './Parliament.css'
 
@@ -53,6 +55,15 @@ export default function ParliamentAdmin() {
   const [history, setHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [historyLoaded, setHistoryLoaded] = useState(false)
+  const [showAddDecisionModal, setShowAddDecisionModal] = useState(false)
+  const [selectedParliamentId, setSelectedParliamentId] = useState(null)
+  const [selectedSubjectId, setSelectedSubjectId] = useState(null)
+  const [newDecisionText, setNewDecisionText] = useState('')
+  const [addingDecision, setAddingDecision] = useState(false)
+  const [showSummaryModal, setShowSummaryModal] = useState(false)
+  const [editingParliamentId, setEditingParliamentId] = useState(null)
+  const [parliamentSummary, setParliamentSummary] = useState('')
+  const [updatingSummary, setUpdatingSummary] = useState(false)
 
   const session = useMemo(() => {
     try {
@@ -65,7 +76,6 @@ export default function ParliamentAdmin() {
 
   // Use polling instead of real-time for dates to reduce DB connections
   const datesLoadedRef = useRef(false)
-  useEffect(() => {
     const loadDates = async () => {
       try {
         const datesList = await loadParliamentDates()
@@ -76,6 +86,7 @@ export default function ParliamentAdmin() {
       }
     }
     
+  useEffect(() => {
     loadDates()
     // Refresh every 30 seconds instead of real-time
     const interval = setInterval(loadDates, 30000)
@@ -165,9 +176,10 @@ export default function ParliamentAdmin() {
 
   // Load history only when history tab is selected (lazy loading)
   useEffect(() => {
-    if (tab === 'history' && !historyLoaded && !loadingHistory) {
+    if (tab === 'history') {
+      // Always reload when switching to history tab to get latest data
       setLoadingHistory(true)
-      loadParliamentHistory()
+      loadParliamentHistory(true) // Force refresh
         .then(data => {
           setHistory(data)
           setLoadingHistory(false)
@@ -178,7 +190,103 @@ export default function ParliamentAdmin() {
           setLoadingHistory(false)
         })
     }
-  }, [tab, historyLoaded, loadingHistory])
+  }, [tab])
+
+  // Group history by parliament
+  const groupedHistory = useMemo(() => {
+    const parliaments = new Map()
+    
+    // First, find all parliament dates
+    history.forEach(item => {
+      if (item.type === 'date' && item.parliamentId) {
+        if (!parliaments.has(item.parliamentId)) {
+          parliaments.set(item.parliamentId, {
+            parliament: item,
+            subjects: [],
+            notes: [],
+            decisions: item.decisions || [],
+            summary: item.summary || ''
+          })
+        }
+      }
+    })
+    
+    // Then, add subjects and notes to their parliaments
+    history.forEach(item => {
+      if (item.type === 'subject' && item.parliamentId) {
+        const parliament = parliaments.get(item.parliamentId)
+        if (parliament) {
+          parliament.subjects.push({
+            ...item,
+            decisions: item.decisions || []
+          })
+        }
+      } else if (item.type === 'note' && item.subjectId) {
+        // Find which parliament this note belongs to by finding its subject
+        // Subjects in history have originalId that matches the note's subjectId
+        const subject = history.find(s => s.type === 'subject' && s.originalId === item.subjectId)
+        if (subject && subject.parliamentId) {
+          const parliament = parliaments.get(subject.parliamentId)
+          if (parliament) {
+            parliament.notes.push(item)
+          }
+        }
+      }
+    })
+    
+    return Array.from(parliaments.values()).sort((a, b) => 
+      tsMillis(b.parliament.archivedAt) - tsMillis(a.parliament.archivedAt)
+    )
+  }, [history])
+
+  async function addDecision() {
+    if (!newDecisionText.trim()) return
+    
+    setAddingDecision(true)
+    try {
+      if (selectedSubjectId) {
+        // Add decision to subject
+        await addSubjectDecision(
+          selectedSubjectId,
+          newDecisionText.trim(),
+          user?.uid || '',
+          user?.displayName || user?.username || 'Admin'
+        )
+      }
+      // Reload history
+      const updatedHistory = await loadParliamentHistory(true)
+      setHistory(updatedHistory)
+      setShowAddDecisionModal(false)
+      setNewDecisionText('')
+      setSelectedParliamentId(null)
+      setSelectedSubjectId(null)
+    } catch (error) {
+      console.error('Error adding decision:', error)
+      alert(error.message || t('parliament.addDecisionError') || 'שגיאה בהוספת החלטה')
+    } finally {
+      setAddingDecision(false)
+    }
+  }
+
+  async function saveSummary() {
+    if (!editingParliamentId) return
+    
+    setUpdatingSummary(true)
+    try {
+      await updateParliamentSummary(editingParliamentId, parliamentSummary)
+      // Reload history
+      const updatedHistory = await loadParliamentHistory(true)
+      setHistory(updatedHistory)
+      setShowSummaryModal(false)
+      setEditingParliamentId(null)
+      setParliamentSummary('')
+    } catch (error) {
+      console.error('Error saving summary:', error)
+      alert(error.message || t('parliament.saveSummaryError') || 'שגיאה בשמירת סיכום')
+    } finally {
+      setUpdatingSummary(false)
+    }
+  }
 
   function openCreateDateModal() {
     setNewDateTitle('')
@@ -205,6 +313,8 @@ export default function ParliamentAdmin() {
         title: editDateTitle.trim(),
         date: new Date(editDateWhen),
       })
+      // Reload dates immediately after update
+      await loadDates()
       setShowEditDateModal(false)
       setEditingDate(null)
       setEditDateTitle('')
@@ -229,6 +339,8 @@ export default function ParliamentAdmin() {
         createdByUid: user?.uid || '',
         createdByName: user?.displayName || user?.username || 'Admin',
       })
+      // Reload dates immediately after creation
+      await loadDates()
       setShowCreateDateModal(false)
       setNewDateTitle('')
       setNewDateWhen('')
@@ -244,6 +356,8 @@ export default function ParliamentAdmin() {
     setTogglingDateId(d.id)
     try {
       await toggleParliamentDate(d.id, !d.isOpen)
+      // Reload dates immediately after toggle
+      await loadDates()
     } catch (error) {
       console.error('Error toggling date:', error)
       alert(t('parliament.toggleDateError') || 'שגיאה בשינוי סטטוס תאריך')
@@ -263,6 +377,13 @@ export default function ParliamentAdmin() {
     setArchivingDateId(d.id)
     try {
       const result = await archiveParliamentDate(d.id)
+      // Reload dates immediately after archiving
+      await loadDates()
+      // Reload history if we're on the history tab
+      if (tab === 'history') {
+        const updatedHistory = await loadParliamentHistory(true)
+        setHistory(updatedHistory)
+      }
       alert(
         t('parliament.archiveSuccess') ||
           `הפרלמנט הועבר בהצלחה להיסטוריה. נשמרו: ${result.archivedCount.dates} תאריך, ${result.archivedCount.subjects} נושאים, ${result.archivedCount.notes} הערות.`
@@ -286,6 +407,8 @@ export default function ParliamentAdmin() {
     setDeletingDateId(d.id)
     try {
       await deleteParliamentDate(d.id)
+      // Reload dates immediately after deletion
+      await loadDates()
       alert(t('parliament.deleteDateSuccess') || 'התאריך נמחק בהצלחה')
     } catch (error) {
       console.error('Error deleting date:', error)
@@ -725,50 +848,101 @@ export default function ParliamentAdmin() {
             <div className="parliament-card">
               {t('parliament.loading') || 'טוען...'}
             </div>
-          ) : history.length === 0 ? (
+          ) : groupedHistory.length === 0 ? (
             <div className="parliament-card">
               {t('parliament.empty') || 'ריק'}
             </div>
           ) : (
             <div className="parliament-grid">
-              {history.map(item => (
-                <div key={item.id} className="parliament-card">
+              {groupedHistory.map(({ parliament, subjects, summary }) => (
+                <div key={parliament.id} className="parliament-card">
                   <div className="parliament-row" style={{ justifyContent: 'space-between' }}>
-                    <div>
-                      <span className="parliament-badge">
-                        {item.type === 'date' ? (t('parliament.date') || 'תאריך') : 
-                         item.type === 'subject' ? (t('parliament.subject') || 'נושא') : 
-                         (t('parliament.note') || 'הערה')}
-                      </span>
+                    <div style={{ fontWeight: 700 }}>
+                      {parliament.title}
+                      {parliament.date && (
+                        <span style={{ fontSize: '0.9em', fontWeight: 400, opacity: 0.8, marginRight: '0.5rem' }}>
+                          {' - ' + formatParliamentDate(parliament.date)}
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: 13, opacity: 0.7 }}>
-                      {item.archivedAt?.toDate ? 
-                        new Date(item.archivedAt.toDate()).toLocaleDateString('he-IL') : 
-                        (item.archivedAt ? new Date(item.archivedAt).toLocaleDateString('he-IL') : '')}
+                      {parliament.archivedAt?.toDate ? 
+                        new Date(parliament.archivedAt.toDate()).toLocaleDateString('he-IL') : 
+                        (parliament.archivedAt ? new Date(parliament.archivedAt).toLocaleDateString('he-IL') : '')}
                     </div>
                   </div>
-                  {item.type === 'date' && (
-                    <>
-                      <h3 style={{ margin: '8px 0 6px' }}>{item.title}</h3>
-                      {item.date && (
-                        <div style={{ opacity: 0.8 }}>
-                          {formatParliamentDate(item.date)}
+                  
+                  {summary && (
+                    <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(0,123,255,0.1)', borderRadius: '4px' }}>
+                      <h4 style={{ fontSize: '1em', marginBottom: '0.5rem', fontWeight: 600 }}>
+                        {t('parliament.summary') || 'סיכום פרלמנט'}
+                      </h4>
+                      <div style={{ whiteSpace: 'pre-wrap' }}>{summary}</div>
+                    </div>
+                  )}
+                  
+                  {subjects.length > 0 && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <h4 style={{ fontSize: '1em', marginBottom: '0.5rem' }}>
+                        {t('parliament.subjects') || 'נושאים'} ({subjects.length})
+                      </h4>
+                      {subjects.map(subject => (
+                        <div key={subject.id} style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(0,0,0,0.05)', borderRadius: '4px' }}>
+                          <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>{subject.title}</div>
+                          {subject.description && (
+                            <div style={{ fontSize: '0.9em', opacity: 0.8, marginBottom: '0.5rem', whiteSpace: 'pre-wrap' }}>
+                              {subject.description}
+                            </div>
+                          )}
+                          
+                          {subject.decisions && subject.decisions.length > 0 && (
+                            <div style={{ marginTop: '0.75rem' }}>
+                              <h5 style={{ fontSize: '0.9em', fontWeight: 600, marginBottom: '0.5rem' }}>
+                                {t('parliament.decisions') || 'החלטות'} ({subject.decisions.length})
+                              </h5>
+                              {subject.decisions.map((decision, idx) => (
+                                <div key={idx} style={{ marginBottom: '0.5rem', padding: '0.5rem', background: 'rgba(0,123,255,0.1)', borderRadius: '4px' }}>
+                                  <div style={{ whiteSpace: 'pre-wrap' }}>{decision.text}</div>
+                                  {decision.createdAt && (
+                                    <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '0.25rem' }}>
+                                      {decision.createdAt?.toDate ? 
+                                        new Date(decision.createdAt.toDate()).toLocaleDateString('he-IL') : 
+                                        (decision.createdAt ? new Date(decision.createdAt).toLocaleDateString('he-IL') : '')}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => {
+                              setSelectedSubjectId(subject.originalId)
+                              setNewDecisionText('')
+                              setShowAddDecisionModal(true)
+                            }}
+                            style={{ marginTop: '0.5rem', fontSize: '0.9em' }}
+                          >
+                            {t('parliament.addDecision') || 'הוסף החלטה'}
+                          </button>
                         </div>
-                      )}
-                    </>
+                      ))}
+                    </div>
                   )}
-                  {item.type === 'subject' && (
-                    <>
-                      <h3 style={{ margin: '8px 0 6px' }}>{item.title}</h3>
-                      <div style={{ whiteSpace: 'pre-wrap', opacity: 0.8 }}>{item.description}</div>
-                      <div style={{ fontSize: 13, opacity: 0.7, marginTop: '0.5rem' }}>
-                        {item.createdByName}
-                      </div>
-                    </>
-                  )}
-                  {item.type === 'note' && (
-                    <div style={{ whiteSpace: 'pre-wrap' }}>{item.text}</div>
-                  )}
+                  
+                  <div className="parliament-actions" style={{ marginTop: '1rem' }}>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => {
+                        setEditingParliamentId(parliament.parliamentId)
+                        setParliamentSummary(summary || '')
+                        setShowSummaryModal(true)
+                      }}
+                    >
+                      {summary ? (t('parliament.editSummary') || 'ערוך סיכום') : (t('parliament.addSummary') || 'הוסף סיכום')}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -907,6 +1081,69 @@ export default function ParliamentAdmin() {
               </button>
               <button className="btn btn-primary" onClick={updateSubject} disabled={!editSubjectTitle.trim() || !editSubjectDateId.trim() || updatingSubjectId === editingSubject?.id}>
                 {updatingSubjectId === editingSubject?.id ? (t('parliament.updating') || 'מעדכן...') : (t('common.save') || 'שמור')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Decision Modal */}
+      {showAddDecisionModal && (
+        <div className="parliament-modal-backdrop" onClick={() => setShowAddDecisionModal(false)}>
+          <div className="parliament-modal-panel" onClick={(e) => e.stopPropagation()}>
+            <h3>{t('parliament.addDecision') || 'הוסף החלטה'}</h3>
+            <div className="parliament-form-group" style={{ marginTop: '1rem' }}>
+              <label>{t('parliament.decisionText') || 'טקסט ההחלטה'}</label>
+              <textarea
+                value={newDecisionText}
+                onChange={(e) => setNewDecisionText(e.target.value)}
+                placeholder={t('parliament.decisionTextPlaceholder') || 'הכנס את טקסט ההחלטה...'}
+                rows={6}
+                style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
+              />
+            </div>
+            <div className="parliament-actions" style={{ marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => {
+                setShowAddDecisionModal(false)
+                setNewDecisionText('')
+                setSelectedParliamentId(null)
+                setSelectedSubjectId(null)
+              }} disabled={addingDecision}>
+                {t('common.cancel') || 'ביטול'}
+              </button>
+              <button className="btn btn-primary" onClick={addDecision} disabled={!newDecisionText.trim() || addingDecision}>
+                {addingDecision ? (t('parliament.adding') || 'מוסיף...') : (t('common.add') || 'הוסף')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Summary Modal */}
+      {showSummaryModal && (
+        <div className="parliament-modal-backdrop" onClick={() => setShowSummaryModal(false)}>
+          <div className="parliament-modal-panel" onClick={(e) => e.stopPropagation()}>
+            <h3>{t('parliament.summary') || 'סיכום פרלמנט'}</h3>
+            <div className="parliament-form-group" style={{ marginTop: '1rem' }}>
+              <label>{t('parliament.summaryText') || 'טקסט הסיכום'}</label>
+              <textarea
+                value={parliamentSummary}
+                onChange={(e) => setParliamentSummary(e.target.value)}
+                placeholder={t('parliament.summaryPlaceholder') || 'הכנס את סיכום הפרלמנט...'}
+                rows={10}
+                style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
+              />
+            </div>
+            <div className="parliament-actions" style={{ marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => {
+                setShowSummaryModal(false)
+                setParliamentSummary('')
+                setEditingParliamentId(null)
+              }} disabled={updatingSummary}>
+                {t('common.cancel') || 'ביטול'}
+              </button>
+              <button className="btn btn-primary" onClick={saveSummary} disabled={updatingSummary}>
+                {updatingSummary ? (t('parliament.saving') || 'שומר...') : (t('common.save') || 'שמור')}
               </button>
             </div>
           </div>
