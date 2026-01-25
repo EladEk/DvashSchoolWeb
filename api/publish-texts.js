@@ -92,15 +92,13 @@ export default async function handler(req, res) {
           throw new Error('FIREBASE_SERVICE_ACCOUNT is missing private_key or client_email')
         }
 
-        // Fix private_key newlines - ensure \n characters are preserved correctly
-        // Sometimes Vercel environment variables can mangle the newlines
+        // Fix private_key newlines
+        // When JSON has "\\n", JSON.parse() converts it to the literal string "\n" (backslash+n)
+        // Firebase needs actual newline characters, not the literal string "\n"
         if (serviceAccount.private_key) {
-          // Replace double-escaped newlines with single escaped
-          serviceAccount.private_key = serviceAccount.private_key.replace(/\\\\n/g, '\\n')
-          // If there are actual newlines (which shouldn't happen in JSON), replace with \n
-          if (serviceAccount.private_key.includes('\n') && !serviceAccount.private_key.includes('\\n')) {
-            serviceAccount.private_key = serviceAccount.private_key.replace(/\n/g, '\\n')
-          }
+          // Replace literal "\n" (backslash+n) with actual newline characters
+          // This handles the case where Vercel stored "\\n" which parsed to "\n"
+          serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n')
         }
 
         try {
