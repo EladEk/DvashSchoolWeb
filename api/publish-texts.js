@@ -37,7 +37,20 @@ export default async function handler(req, res) {
     // Import Firebase Admin SDK (server-side only)
     let admin
     try {
-      admin = await import('firebase-admin')
+      // Dynamic import for ES modules
+      const adminModule = await import('firebase-admin')
+      // firebase-admin exports as default, but also has named exports
+      // Try default first, then the module itself
+      admin = adminModule.default || adminModule
+      
+      // Verify admin object has required methods
+      if (!admin || typeof admin.initializeApp !== 'function') {
+        throw new Error('Firebase Admin module not loaded correctly')
+      }
+      
+      if (!admin.credential || typeof admin.credential.cert !== 'function') {
+        throw new Error('Firebase Admin credential API not available')
+      }
       
       // Initialize Firebase Admin if not already initialized
       if (!admin.apps || admin.apps.length === 0) {
@@ -78,6 +91,8 @@ export default async function handler(req, res) {
         message: error.message,
         hint: error.message.includes('not set') 
           ? 'Make sure FIREBASE_SERVICE_ACCOUNT is set in Vercel and redeploy the project'
+          : error.message.includes('Cannot find module')
+          ? 'firebase-admin may not be installed. Check package.json and redeploy.'
           : 'Check that FIREBASE_SERVICE_ACCOUNT is valid JSON'
       })
     }

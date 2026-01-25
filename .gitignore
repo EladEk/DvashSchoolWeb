@@ -27,3 +27,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+"VERCEL_ENV_SETUP.md" 
