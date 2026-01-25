@@ -26,7 +26,6 @@
       "dashboard": "לוח בקרה מנהל",
       "translationEditor": "עורך תרגומים",
       "usersManagement": "ניהול משתמשים",
-      "parliamentAdmin": "ניהול פרלמנט",
       "exportJsonFiles": "ייצא קבצי JSON",
       "saveToFirebase": "שמור ל-Firebase",
       "unsavedChanges": "יש לך שינויים שלא נשמרו",
@@ -44,7 +43,6 @@
       "faq": "שאלות תשובות",
       "parents": "וועד ההורים",
       "parentsAssociation": "עמותת ההורים",
-      "parliament": "פרלמנט",
       "contact": "צור קשר",
       "menu": "תפריט"
     },
@@ -180,9 +178,7 @@
       "parentCommitteeTitle": "וועד הורים בית ספרי - בית ספר דב״ש",
       "parentCommitteeDescription": "צרו קשר עם וועד ההורים של בית הספר הדמוקרטי בבאר שבע",
       "parentsAssociationTitle": "עמותת ההורים - בית ספר דב״ש",
-      "parentsAssociationDescription": "צרו קשר עם עמותת ההורים של בית הספר הדמוקרטי בבאר שבע",
-      "parliamentTitle": "פרלמנט - בית ספר דב״ש",
-      "parliamentDescription": "הציעו, סקרו ודונו בנושאי הפרלמנט"
+      "parentsAssociationDescription": "צרו קשר עם עמותת ההורים של בית הספר הדמוקרטי בבאר שבע"
     },
     "inlineEditor": {
       "title": "עריכת תרגום",
@@ -214,8 +210,7 @@
     "unauthorized": {
       "title": "אין לך הרשאה לגשת לדף זה",
       "message": "אין לך את ההרשאות הנדרשות לגשת לדף זה.",
-      "backHome": "חזור לדף הבית",
-      "goToParliament": "לפרלמנט"
+      "backHome": "חזור לדף הבית"
     }
   },
   "en": {
@@ -245,7 +240,6 @@
       "dashboard": "Admin Dashboard",
       "translationEditor": "Translation Editor",
       "usersManagement": "Users Management",
-      "parliamentAdmin": "Parliament Admin",
       "exportJsonFiles": "Export JSON Files",
       "saveToFirebase": "Save to Firebase",
       "unsavedChanges": "You have unsaved changes",
@@ -263,7 +257,6 @@
       "faq": "FAQ",
       "parents": "School Parent Committee",
       "parentsAssociation": "Parents Association",
-      "parliament": "Parliament",
       "contact": "Contact",
       "menu": "Menu"
     },
@@ -399,9 +392,7 @@
       "parentCommitteeTitle": "School Parent Committee - Dvash School",
       "parentCommitteeDescription": "Contact the Parent Committee of the Democratic School in Be'er Sheva",
       "parentsAssociationTitle": "Parents Association - Dvash School",
-      "parentsAssociationDescription": "Parents Association of the Democratic School in Be'er Sheva",
-      "parliamentTitle": "Parliament - Dvash School",
-      "parliamentDescription": "Submit, review and discuss school parliament topics"
+      "parentsAssociationDescription": "Parents Association of the Democratic School in Be'er Sheva"
     },
     "inlineEditor": {
       "title": "Edit Translation",
@@ -433,8 +424,7 @@
     "unauthorized": {
       "title": "You don't have permission to access this page",
       "message": "You don't have the required permissions to access this page.",
-      "backHome": "Back to Home",
-      "goToParliament": "Go to Parliament"
+      "backHome": "Back to Home"
     }
   }
 }
