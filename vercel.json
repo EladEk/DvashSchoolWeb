@@ -5,6 +5,10 @@
       "destination": "/api/auth.js"
     },
     {
+      "source": "/api/publish-texts",
+      "destination": "/api/publish-texts.js"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

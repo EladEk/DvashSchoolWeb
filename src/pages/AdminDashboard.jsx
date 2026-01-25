@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useEffectiveRole } from '../utils/requireRole'
 import { getTranslations, saveTranslations, exportTranslations } from '../services/adminService'
+import { publishTexts } from '../services/textService'
 import UsersAdmin from '../components/admin/UsersAdmin'
 import './AdminDashboard.css'
 
@@ -31,6 +32,7 @@ const AdminDashboard = () => {
   const [editedTranslations, setEditedTranslations] = useState({})
   const [hasChanges, setHasChanges] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [publishing, setPublishing] = useState(false)
   const [message, setMessage] = useState('')
   const [activeTab, setActiveTab] = useState('translations')
   
@@ -107,6 +109,33 @@ const AdminDashboard = () => {
     exportTranslations(editedTranslations)
     setMessage('Translation files exported! Check your downloads.')
     setTimeout(() => setMessage(''), 3000)
+  }
+
+  const handlePublish = async () => {
+    if (!confirm('Publish texts to GitHub? This will update the production site texts.')) {
+      return
+    }
+
+    setPublishing(true)
+    setMessage('')
+    try {
+      const commitMessage = prompt('Enter commit message (optional):') || 
+        `Update site texts - ${new Date().toISOString()}`
+      
+      const result = await publishTexts(commitMessage)
+      setMessage(`Published successfully! Commit: ${result.commit?.sha?.substring(0, 7)}`)
+      setTimeout(() => setMessage(''), 5000)
+      
+      // Reload translations to get fresh data from GitHub
+      await reloadTranslations(true)
+      await loadTranslations()
+    } catch (error) {
+      console.error('Error publishing texts:', error)
+      setMessage(`Error publishing: ${error.message}`)
+      setTimeout(() => setMessage(''), 5000)
+    } finally {
+      setPublishing(false)
+    }
   }
 
   const renderEditor = (obj, path = '') => {
@@ -232,6 +261,14 @@ const AdminDashboard = () => {
           </button>
           <button onClick={handleExport} className="export-btn">
             {t('admin.exportJsonFiles')}
+          </button>
+          <button 
+            onClick={handlePublish} 
+            disabled={publishing || hasChanges}
+            className="publish-btn"
+            title={hasChanges ? 'Save changes before publishing' : 'Publish texts to GitHub'}
+          >
+            {publishing ? 'Publishing...' : 'Publish to GitHub'}
           </button>
         </div>
       </div>

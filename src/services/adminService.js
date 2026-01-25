@@ -1,8 +1,11 @@
 // Admin service for managing translations
-// This service handles loading, saving, and exporting translations
+// This service now delegates to textService for the new architecture:
+// - Production: Reads from /content/texts.json (GitHub)
+// - Edit mode: Reads/writes from Firebase (drafts)
+// - Parliament: Completely excluded
 
-// For now, we'll use localStorage as a temporary storage
-// In production, this should connect to Firebase Firestore
+// This file maintains backward compatibility for admin dashboard components
+// while using the new textService under the hood
 
 const STORAGE_KEY = 'admin_translations'
 
@@ -30,96 +33,62 @@ export const getDefaultTranslations = async () => {
   }
 }
 
-// Load translations from storage or fallback to default (optimized for speed)
+// Load translations using new textService
+// This maintains backward compatibility while using the new architecture
 export const getTranslations = async (skipFirebase = false) => {
-  // Return cached translations if available (for quick access) - but only if skipFirebase
-  // If not skipping Firebase, we want fresh data
-  if (translationsCache && skipFirebase) {
-    return translationsCache
-  }
-
   try {
-    // Try localStorage first (faster, reduces Firebase calls)
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored && skipFirebase) {
-      try {
-        const parsed = JSON.parse(stored)
-        if (parsed && (parsed.he || parsed.en)) {
-          translationsCache = parsed
-          return parsed
-        }
-      } catch (parseError) {
-        console.error('Error parsing localStorage translations:', parseError)
-      }
+    // Use new textService which handles production vs edit mode automatically
+    // skipFirebase parameter is ignored - textService handles caching internally
+    const { loadTexts } = await import('./textService')
+    const translations = await loadTexts(!skipFirebase) // forceRefresh = !skipFirebase
+    
+    // Update cache for backward compatibility
+    translationsCache = translations
+    
+    // Also update localStorage for backward compatibility
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(translations))
+    } catch (e) {
+      // localStorage might be full, ignore
     }
-
-    // Try Firebase only if not skipped (most up-to-date source)
-    if (!skipFirebase) {
-      try {
-        // Add timeout for Firebase operations
-        const firebasePromise = loadFromFirebase()
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Firebase timeout')), 5000)
-        )
-        
-        const firebaseTranslations = await Promise.race([firebasePromise, timeoutPromise])
-        if (firebaseTranslations && (firebaseTranslations.he || firebaseTranslations.en)) {
-          // Update cache and localStorage with Firebase data
-          translationsCache = firebaseTranslations
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(firebaseTranslations))
-          return firebaseTranslations
-        }
-      } catch (firebaseError) {
-        // Firebase timeout or error - continue to localStorage/defaults
-      }
-    }
-
-    // Try to load from localStorage (fallback if Firebase failed or skipped)
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        if (parsed && (parsed.he || parsed.en)) {
-          translationsCache = parsed
-          return parsed
-        }
-      } catch (parseError) {
-        console.error('Error parsing localStorage translations:', parseError)
-      }
-    }
-
-    // Fallback to default translations (cached)
-    const defaults = await getDefaultTranslations()
-    translationsCache = defaults
-    return defaults
+    
+    return translations
   } catch (error) {
     console.error('Error loading translations:', error)
-    // Return cached defaults or empty structure
-    return defaultTranslationsCache || { he: {}, en: {} }
+    // Fallback to cached or defaults
+    if (translationsCache) {
+      return translationsCache
+    }
+    return await getDefaultTranslations()
   }
 }
 
-// Save translations to storage (and Firebase if configured)
+// Save translations using new textService
+// This maintains backward compatibility while using the new architecture
 export const saveTranslations = async (translations, firebaseOnly = false) => {
   try {
+    // Use new textService which handles edit mode check and Parliament exclusion
+    const { saveTexts, isEditMode } = await import('./textService')
+    
+    // Check if we're in edit mode
+    if (!isEditMode()) {
+      throw new Error('Cannot save translations outside of edit mode')
+    }
+
     // Update cache immediately
     translationsCache = translations
 
-    // Save to localStorage first (fast, synchronous)
+    // Save to localStorage for backward compatibility (fast, synchronous)
     if (!firebaseOnly) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(translations))
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(translations))
+      } catch (e) {
+        // localStorage might be full, continue anyway
+      }
     }
 
-    // Try to save to Firebase (only changed keys for speed)
-    try {
-      await saveToFirebase(translations, !firebaseOnly) // onlyChanged = true unless firebaseOnly
-    } catch (firebaseError) {
-      // Firebase not configured or error
-      if (firebaseOnly) {
-        // If firebaseOnly is true, we must throw the error
-        throw firebaseError
-      }
-      // Otherwise, continue - localStorage save already succeeded
-    }
+    // Save to Firebase using textService (handles Parliament exclusion automatically)
+    await saveTexts(translations)
 
     return { success: true }
   } catch (error) {
