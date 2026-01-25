@@ -130,7 +130,18 @@ export default async function handler(req, res) {
     // Fetch translations from Firebase
     let translations
     try {
+      // Verify Firebase Admin is properly initialized
+      if (!admin.apps || admin.apps.length === 0) {
+        throw new Error('Firebase Admin not initialized')
+      }
+      
+      console.log('Firebase Admin initialized, project:', admin.apps[0].options?.projectId)
+      
       const db = admin.firestore()
+      
+      // Test connection by checking if we can access Firestore
+      console.log('Attempting to fetch translations from Firestore...')
+      
       const translationsRef = db.collection('translations')
       
       const [heDoc, enDoc] = await Promise.all([
@@ -138,15 +149,30 @@ export default async function handler(req, res) {
         translationsRef.doc('en').get()
       ])
 
+      console.log('Fetched translations - he exists:', heDoc.exists, 'en exists:', enDoc.exists)
+
       translations = {
         he: heDoc.exists ? heDoc.data() : {},
         en: enDoc.exists ? enDoc.data() : {}
       }
     } catch (error) {
       console.error('Error fetching from Firebase:', error)
+      console.error('Error code:', error.code)
+      console.error('Error details:', error.details)
+      
+      // Provide more specific error messages
+      let errorMessage = error.message
+      if (error.code === 16 || error.message.includes('UNAUTHENTICATED')) {
+        errorMessage = 'Firebase authentication failed. Check that FIREBASE_SERVICE_ACCOUNT is correctly formatted and the service account has Firestore permissions.'
+      } else if (error.code === 7 || error.message.includes('PERMISSION_DENIED')) {
+        errorMessage = 'Firebase permission denied. Check that the service account has Firestore read permissions.'
+      }
+      
       return res.status(500).json({ 
         error: 'Failed to fetch translations from Firebase',
-        message: error.message
+        message: errorMessage,
+        code: error.code,
+        hint: 'Verify the service account JSON is correct and has Firestore permissions enabled'
       })
     }
 
