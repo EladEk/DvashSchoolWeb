@@ -26,7 +26,20 @@ function tsMillis(x) {
 function formatParliamentDate(dateObj) {
   if (!dateObj) return ''
   try {
-    const date = dateObj?.toDate ? dateObj.toDate() : new Date(dateObj)
+    let date
+    if (dateObj?.toDate && typeof dateObj.toDate === 'function') {
+      date = dateObj.toDate()
+    } else if (dateObj instanceof Date) {
+      date = dateObj
+    } else {
+      date = new Date(dateObj)
+    }
+    
+    // Check if date is valid
+    if (!date || isNaN(date.getTime())) {
+      return ''
+    }
+    
     return date.toLocaleDateString('he-IL', { 
       year: 'numeric', 
       month: 'long', 
@@ -410,8 +423,8 @@ export default function Parliament() {
               <div className="parliament-section-title">
                 {group.date?.title || t('parliament.unknownDate') || 'תאריך לא ידוע'}
                 {group.date?.date && (
-                  <span style={{ fontSize: '0.9em', opacity: 0.8, marginRight: '0.5rem' }}>
-                    ({formatParliamentDate(group.date.date)})
+                  <span style={{ fontSize: '0.9em', opacity: 0.8, marginRight: '0.5rem', fontWeight: 400 }}>
+                    {' - ' + formatParliamentDate(group.date.date)}
                   </span>
                 )}
               </div>
@@ -582,8 +595,8 @@ export default function Parliament() {
               <div className="parliament-section-title">
                 {group.date?.title || t('parliament.unknownDate') || 'תאריך לא ידוע'}
                 {group.date?.date && (
-                  <span style={{ fontSize: '0.9em', opacity: 0.8, marginRight: '0.5rem' }}>
-                    ({formatParliamentDate(group.date.date)})
+                  <span style={{ fontSize: '0.9em', opacity: 0.8, marginRight: '0.5rem', fontWeight: 400 }}>
+                    {' - ' + formatParliamentDate(group.date.date)}
                   </span>
                 )}
               </div>

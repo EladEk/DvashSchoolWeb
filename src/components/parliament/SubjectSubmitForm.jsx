@@ -30,6 +30,33 @@ function fullNameFromUser(u) {
   return uname || 'User'
 }
 
+function formatParliamentDate(dateObj) {
+  if (!dateObj) return ''
+  try {
+    let date
+    if (dateObj?.toDate && typeof dateObj.toDate === 'function') {
+      date = dateObj.toDate()
+    } else if (dateObj instanceof Date) {
+      date = dateObj
+    } else {
+      date = new Date(dateObj)
+    }
+    
+    // Check if date is valid
+    if (!date || isNaN(date.getTime())) {
+      return ''
+    }
+    
+    return date.toLocaleDateString('he-IL', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+  } catch {
+    return ''
+  }
+}
+
 export default function SubjectSubmitForm({ dates, currentUser }) {
   const { t } = useTranslation()
   const [title, setTitle] = useState('')
@@ -123,9 +150,14 @@ export default function SubjectSubmitForm({ dates, currentUser }) {
             disabled={submitting}
           >
             <option value="">{t('parliament.select') || 'בחר...'}</option>
-            {openDates.map(d => (
-              <option key={d.id} value={d.id}>{d.title}</option>
-            ))}
+            {openDates.map(d => {
+              const dateStr = d.date ? formatParliamentDate(d.date) : ''
+              return (
+                <option key={d.id} value={d.id}>
+                  {d.title}{dateStr ? ` - ${dateStr}` : ''}
+                </option>
+              )
+            })}
           </select>
         </div>
       </div>

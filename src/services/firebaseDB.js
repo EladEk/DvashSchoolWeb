@@ -548,6 +548,41 @@ export const createParliamentDate = async (dateData) => {
 }
 
 /**
+ * Update a parliament date (title and/or date)
+ * Clears cache after update
+ * @param {string} dateId - Document ID
+ * @param {object} updateData - {title?: string, date?: Date}
+ * @returns {Promise<{success: boolean}>}
+ */
+export const updateParliamentDate = async (dateId, updateData) => {
+  try {
+    if (!db) throw new Error('Firebase not configured')
+    
+    const updateFields = {}
+    if (updateData.title !== undefined) {
+      updateFields.title = updateData.title
+    }
+    if (updateData.date !== undefined) {
+      updateFields.date = updateData.date
+    }
+    
+    if (Object.keys(updateFields).length === 0) {
+      throw new Error('לא הוזנו שדות לעדכון')
+    }
+    
+    await updateDoc(doc(db, 'parliamentDates', dateId), updateFields)
+    
+    // Clear cache so next load gets fresh data
+    clearCache(CACHE_KEYS.PARLIAMENT_DATES)
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating parliament date:', error)
+    throw error
+  }
+}
+
+/**
  * Toggle parliament date open/closed status
  * Clears cache after update
  * @param {string} dateId - Document ID
@@ -571,7 +606,158 @@ export const toggleParliamentDate = async (dateId, isOpen) => {
 }
 
 /**
+ * Archive a parliament date to history with all related subjects and notes
+ * Moves the date, all subjects linked to it, and all notes linked to those subjects to history
+ * @param {string} dateId - Document ID
+ * @returns {Promise<{success: boolean, archivedCount: {dates: number, subjects: number, notes: number}}>}
+ */
+export const archiveParliamentDate = async (dateId) => {
+  try {
+    if (!db) throw new Error('Firebase not configured')
+    
+    // Get the date document
+    const dateDocRef = doc(db, 'parliamentDates', dateId)
+    const dateDoc = await getDoc(dateDocRef)
+    
+    if (!dateDoc.exists()) {
+      throw new Error('תאריך הפרלמנט לא נמצא')
+    }
+    
+    const dateData = dateDoc.data()
+    
+    // Get all subjects linked to this date
+    const subjectsQuery = query(
+      collection(db, 'parliamentSubjects'),
+      where('dateId', '==', dateId)
+    )
+    const subjectsSnapshot = await getDocs(subjectsQuery)
+    const subjects = subjectsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+    
+    // Get all notes for these subjects
+    let allNotes = []
+    for (const subject of subjects) {
+      const notesQuery = query(
+        collection(db, 'parliamentNotes'),
+        where('subjectId', '==', subject.id)
+      )
+      const notesSnapshot = await getDocs(notesQuery)
+      const notes = notesSnapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      allNotes.push(...notes)
+    }
+    
+    // Firestore batch limit is 500 operations
+    // Each item needs: 1 set (archive) + 1 delete (original) = 2 operations
+    // Total operations: 2 (date) + 2*subjects.length + 2*allNotes.length
+    const MAX_BATCH_SIZE = 500
+    const operationsPerItem = 2
+    const itemsPerBatch = Math.floor((MAX_BATCH_SIZE - 2) / operationsPerItem) // Reserve 2 for date operations
+    
+    const allItems = [
+      { type: 'date', data: dateData, id: dateId, ref: dateDocRef },
+      ...subjects.map(s => ({ type: 'subject', data: s, id: s.id, ref: doc(db, 'parliamentSubjects', s.id) })),
+      ...allNotes.map(n => ({ type: 'note', data: n, id: n.id, ref: doc(db, 'parliamentNotes', n.id) }))
+    ]
+    
+    // Process in batches
+    const archivedSubjects = []
+    for (let i = 0; i < allItems.length; i += itemsPerBatch) {
+      const batch = writeBatch(db)
+      const batchItems = allItems.slice(i, i + itemsPerBatch)
+      
+      for (const item of batchItems) {
+        // Archive to history
+        const historyRef = doc(collection(db, 'parliamentHistory'))
+        const archiveData = {
+          ...item.data,
+          originalId: item.id,
+          archivedAt: serverTimestamp(),
+          type: item.type
+        }
+        
+        // Keep dateId reference for subjects
+        if (item.type === 'subject') {
+          archiveData.dateId = dateId
+        }
+        
+        batch.set(historyRef, archiveData)
+        
+        // Delete original
+        batch.delete(item.ref)
+        
+        // Track archived subjects for cache clearing
+        if (item.type === 'subject') {
+          archivedSubjects.push(item.id)
+        }
+      }
+      
+      await batch.commit()
+    }
+    
+    // Clear all related caches
+    clearCache(CACHE_KEYS.PARLIAMENT_DATES)
+    clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_all`)
+    clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_pending`)
+    clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_approved`)
+    clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_rejected`)
+    // Clear notes cache for all archived subjects
+    archivedSubjects.forEach(subjectId => {
+      clearCache(`${CACHE_KEYS.PARLIAMENT_NOTES}${subjectId}`)
+    })
+    
+    return { 
+      success: true, 
+      archivedCount: {
+        dates: 1,
+        subjects: subjects.length,
+        notes: allNotes.length
+      }
+    }
+  } catch (error) {
+    console.error('Error archiving parliament date:', error)
+    throw error
+  }
+}
+
+/**
+ * Load archived parliament history
+ * @param {boolean} forceRefresh - If true, bypass cache and fetch from Firebase
+ * @returns {Promise<Array>} Array of archived parliament items
+ */
+export const loadParliamentHistory = async (forceRefresh = false) => {
+  const cacheKey = 'firebase_cache_parliament_history'
+  
+  // Check cache first (unless force refresh)
+  if (!forceRefresh) {
+    const cached = getFromCache(cacheKey)
+    if (cached !== null) {
+      return cached
+    }
+  }
+  
+  try {
+    if (!db) {
+      const cached = getFromCache(cacheKey, false)
+      return cached || []
+    }
+    
+    const snap = await getDocs(query(collection(db, 'parliamentHistory'), orderBy('archivedAt', 'desc')))
+    const history = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    
+    // Save to cache
+    saveToCache(cacheKey, history)
+    
+    return history
+  } catch (error) {
+    console.error('Error loading parliament history:', error)
+    const cached = getFromCache(cacheKey, false)
+    return cached || []
+  }
+}
+
+/**
  * Delete a parliament date
+ * Only deletes the specific date - does NOT delete related subjects or notes
+ * Use archiveParliamentDate if you want to move everything to history
  * Clears cache after deletion
  * @param {string} dateId - Document ID
  * @returns {Promise<{success: boolean}>}
@@ -579,6 +765,18 @@ export const toggleParliamentDate = async (dateId, isOpen) => {
 export const deleteParliamentDate = async (dateId) => {
   try {
     if (!db) throw new Error('Firebase not configured')
+    
+    // Check if there are subjects linked to this date
+    const subjectsQuery = query(
+      collection(db, 'parliamentSubjects'),
+      where('dateId', '==', dateId)
+    )
+    const subjectsSnapshot = await getDocs(subjectsQuery)
+    
+    if (!subjectsSnapshot.empty) {
+      // Warn that there are linked subjects - suggest archiving instead
+      throw new Error(`לא ניתן למחוק תאריך זה כי יש ${subjectsSnapshot.size} נושאים המקושרים אליו. השתמש באפשרות "העבר להיסטוריה" כדי לשמור את כל הנתונים.`)
+    }
     
     await deleteDoc(doc(db, 'parliamentDates', dateId))
     
@@ -716,6 +914,105 @@ export const createParliamentSubject = async (subjectData) => {
     return { success: true, id: docRef.id }
   } catch (error) {
     console.error('Error creating parliament subject:', error)
+    throw error
+  }
+}
+
+/**
+ * Update a parliament subject (title, description, dateId)
+ * Clears cache after update
+ * @param {string} subjectId - Document ID
+ * @param {object} updateData - {title?: string, description?: string, dateId?: string, dateTitle?: string}
+ * @returns {Promise<{success: boolean}>}
+ */
+export const updateParliamentSubject = async (subjectId, updateData) => {
+  try {
+    if (!db) throw new Error('Firebase not configured')
+    
+    const updateFields = {}
+    if (updateData.title !== undefined) {
+      updateFields.title = updateData.title
+    }
+    if (updateData.description !== undefined) {
+      updateFields.description = updateData.description
+    }
+    if (updateData.dateId !== undefined) {
+      updateFields.dateId = updateData.dateId
+    }
+    if (updateData.dateTitle !== undefined) {
+      updateFields.dateTitle = updateData.dateTitle
+    }
+    
+    if (Object.keys(updateFields).length === 0) {
+      throw new Error('לא הוזנו שדות לעדכון')
+    }
+    
+    await updateDoc(doc(db, 'parliamentSubjects', subjectId), updateFields)
+    
+    // Clear all subject caches (pending, approved, rejected, all)
+    clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_all`)
+    clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_pending`)
+    clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_approved`)
+    clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_rejected`)
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating parliament subject:', error)
+    throw error
+  }
+}
+
+/**
+ * Delete a parliament subject
+ * Also deletes all notes linked to this subject
+ * Clears cache after deletion
+ * @param {string} subjectId - Document ID
+ * @returns {Promise<{success: boolean, deletedNotes: number}>}
+ */
+export const deleteParliamentSubject = async (subjectId) => {
+  try {
+    if (!db) throw new Error('Firebase not configured')
+    
+    // Get all notes for this subject
+    const notesQuery = query(
+      collection(db, 'parliamentNotes'),
+      where('subjectId', '==', subjectId)
+    )
+    const notesSnapshot = await getDocs(notesQuery)
+    const notes = notesSnapshot.docs.map(d => ({ id: d.id }))
+    
+    // Delete notes and subject in batches if needed
+    const MAX_BATCH_SIZE = 500
+    const itemsPerBatch = Math.floor(MAX_BATCH_SIZE / 2) // Each item needs 1 delete operation
+    
+    const allItems = [
+      { type: 'subject', id: subjectId, ref: doc(db, 'parliamentSubjects', subjectId) },
+      ...notes.map(n => ({ type: 'note', id: n.id, ref: doc(db, 'parliamentNotes', n.id) }))
+    ]
+    
+    // Process in batches
+    for (let i = 0; i < allItems.length; i += itemsPerBatch) {
+      const batch = writeBatch(db)
+      const batchItems = allItems.slice(i, i + itemsPerBatch)
+      
+      for (const item of batchItems) {
+        batch.delete(item.ref)
+      }
+      
+      await batch.commit()
+    }
+    
+    // Clear all subject caches
+    clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_all`)
+    clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_pending`)
+    clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_approved`)
+    clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_rejected`)
+    // Clear notes cache for this subject
+    clearCache(`${CACHE_KEYS.PARLIAMENT_NOTES}${subjectId}`)
+    
+    return { success: true, deletedNotes: notes.length }
+  } catch (error) {
+    console.error('Error deleting parliament subject:', error)
     throw error
   }
 }
