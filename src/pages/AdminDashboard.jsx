@@ -123,7 +123,7 @@ const AdminDashboard = () => {
         `Update site texts - ${new Date().toISOString()}`
       
       const result = await publishTexts(commitMessage)
-      setMessage(`Published successfully! Commit: ${result.commit?.sha?.substring(0, 7)}`)
+      setMessage(`✅ Published successfully! Commit: ${result.commit?.sha?.substring(0, 7)}`)
       setTimeout(() => setMessage(''), 5000)
       
       // Reload translations to get fresh data from GitHub
@@ -131,8 +131,11 @@ const AdminDashboard = () => {
       await loadTranslations()
     } catch (error) {
       console.error('Error publishing texts:', error)
-      setMessage(`Error publishing: ${error.message}`)
-      setTimeout(() => setMessage(''), 5000)
+      const errorMsg = error.message || 'Unknown error'
+      const errorDetails = error.details ? `\nDetails: ${JSON.stringify(error.details, null, 2)}` : ''
+      const errorHint = error.details?.hint ? `\nHint: ${error.details.hint}` : ''
+      setMessage(`❌ Error publishing: ${errorMsg}${errorDetails}${errorHint}`)
+      setTimeout(() => setMessage(''), 10000) // Show longer for detailed errors
     } finally {
       setPublishing(false)
     }

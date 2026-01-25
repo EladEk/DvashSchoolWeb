@@ -19,103 +19,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Verify Firebase Auth token (if provided)
-    const authToken = req.headers.authorization?.replace('Bearer ', '')
-    
-    // TODO: Verify token with Firebase Admin SDK
-    // For now, we'll rely on the client-side check and environment variable protection
-    // In production, you should verify the token here:
-    // const admin = require('firebase-admin')
-    // const decodedToken = await admin.auth().verifyIdToken(authToken)
-    // if (!decodedToken || !['admin', 'editor'].includes(decodedToken.role)) {
-    //   return res.status(403).json({ error: 'Unauthorized' })
-    // }
-
     // Get environment variables
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN
-    const GITHUB_OWNER = process.env.GITHUB_OWNER || 'your-username'
-    const GITHUB_REPO = process.env.GITHUB_REPO || 'SchoolWebsite'
+    const GITHUB_OWNER = process.env.GITHUB_OWNER || 'EladEk'
+    const GITHUB_REPO = process.env.GITHUB_REPO || 'DvashSchoolWeb'
     const GITHUB_FILE_PATH = process.env.GITHUB_FILE_PATH || 'content/texts.json'
 
+    // Validate required environment variables
     if (!GITHUB_TOKEN) {
       console.error('GITHUB_TOKEN environment variable is not set')
-      return res.status(500).json({ error: 'Server configuration error' })
+      return res.status(500).json({ 
+        error: 'Server configuration error',
+        message: 'GITHUB_TOKEN is not set in environment variables'
+      })
     }
 
     // Import Firebase Admin SDK (server-side only)
-    // Note: You'll need to install firebase-admin: npm install firebase-admin
-    let admin
-    try {
-      admin = await import('firebase-admin')
-      
-      // Initialize Firebase Admin if not already initialized
-      if (!admin.apps.length) {
-        const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
-          ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-          : null
-
-        if (!serviceAccount) {
-          throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set')
-        }
-
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount)
-        })
-      }
-    } catch (error) {
-      console.error('Firebase Admin initialization error:', error)
-      return res.status(500).json({ error: 'Firebase configuration error' })
-    }
-
-/**
- * Vercel Serverless Function: Publish Texts to GitHub
- * 
- * This endpoint:
- * 1. Fetches latest texts from Firebase (excluding Parliament)
- * 2. Formats them as texts.json
- * 3. Updates the file in GitHub repository via REST API
- * 
- * Security:
- * - Requires Firebase Auth token (verified server-side)
- * - GitHub token stored in environment variables (never exposed to client)
- * - Only admins/editors can publish
- */
-
-// Note: This uses dynamic imports for Firebase Admin SDK
-// Install: npm install firebase-admin
-
-export default async function handler(req, res) {
-  // Only allow POST requests
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
-  try {
-    // Verify Firebase Auth token (if provided)
-    const authToken = req.headers.authorization?.replace('Bearer ', '')
-    
-    // TODO: Verify token with Firebase Admin SDK
-    // For now, we'll rely on the client-side check and environment variable protection
-    // In production, you should verify the token here:
-    // const admin = await import('firebase-admin')
-    // const decodedToken = await admin.auth().verifyIdToken(authToken)
-    // if (!decodedToken || !['admin', 'editor'].includes(decodedToken.role)) {
-    //   return res.status(403).json({ error: 'Unauthorized' })
-    // }
-
-    // Get environment variables
-    const GITHUB_TOKEN = process.env.GITHUB_TOKEN
-    const GITHUB_OWNER = process.env.GITHUB_OWNER || 'your-username'
-    const GITHUB_REPO = process.env.GITHUB_REPO || 'SchoolWebsite'
-    const GITHUB_FILE_PATH = process.env.GITHUB_FILE_PATH || 'content/texts.json'
-
-    if (!GITHUB_TOKEN) {
-      console.error('GITHUB_TOKEN environment variable is not set')
-      return res.status(500).json({ error: 'Server configuration error' })
-    }
-
-    // Import Firebase Admin SDK (server-side only)
-    // Note: You'll need to install firebase-admin: npm install firebase-admin
     let admin
     try {
       admin = await import('firebase-admin')
@@ -136,25 +55,37 @@ export default async function handler(req, res) {
       }
     } catch (error) {
       console.error('Firebase Admin initialization error:', error)
-      return res.status(500).json({ error: 'Firebase configuration error', details: error.message })
+      return res.status(500).json({ 
+        error: 'Firebase configuration error',
+        message: error.message,
+        hint: 'Make sure FIREBASE_SERVICE_ACCOUNT is set in Vercel environment variables'
+      })
     }
 
     // Fetch translations from Firebase
-    const db = admin.firestore()
-    const translationsRef = db.collection('translations')
-    
-    const [heDoc, enDoc] = await Promise.all([
-      translationsRef.doc('he').get(),
-      translationsRef.doc('en').get()
-    ])
+    let translations
+    try {
+      const db = admin.firestore()
+      const translationsRef = db.collection('translations')
+      
+      const [heDoc, enDoc] = await Promise.all([
+        translationsRef.doc('he').get(),
+        translationsRef.doc('en').get()
+      ])
 
-    const translations = {
-      he: heDoc.exists ? heDoc.data() : {},
-      en: enDoc.exists ? enDoc.data() : {}
+      translations = {
+        he: heDoc.exists ? heDoc.data() : {},
+        en: enDoc.exists ? enDoc.data() : {}
+      }
+    } catch (error) {
+      console.error('Error fetching from Firebase:', error)
+      return res.status(500).json({ 
+        error: 'Failed to fetch translations from Firebase',
+        message: error.message
+      })
     }
 
     // IMPORTANT: Exclude Parliament-related data
-    // Remove any keys that start with "parliament" (case-insensitive)
     const excludeParliament = (obj) => {
       if (!obj || typeof obj !== 'object') return obj
       if (Array.isArray(obj)) return obj.map(excludeParliament)
@@ -184,6 +115,11 @@ export default async function handler(req, res) {
     // Format as JSON string
     const jsonContent = JSON.stringify(cleanedTranslations, null, 2)
 
+    // Determine GitHub API auth header (fine-grained tokens use Bearer, classic use token)
+    const authHeader = GITHUB_TOKEN.startsWith('ghp_') 
+      ? `token ${GITHUB_TOKEN}`
+      : `Bearer ${GITHUB_TOKEN}`
+
     // Get the current file SHA (required for updating existing files)
     const getFileSha = async () => {
       try {
@@ -191,7 +127,7 @@ export default async function handler(req, res) {
           `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`,
           {
             headers: {
-              'Authorization': `token ${GITHUB_TOKEN}`,
+              'Authorization': authHeader,
               'Accept': 'application/vnd.github.v3+json',
               'User-Agent': 'SchoolWebsite-Publish'
             }
@@ -205,6 +141,7 @@ export default async function handler(req, res) {
 
         if (!response.ok) {
           const errorText = await response.text()
+          console.error('GitHub API error getting SHA:', response.status, errorText)
           throw new Error(`GitHub API error: ${response.status} - ${errorText}`)
         }
 
@@ -220,7 +157,16 @@ export default async function handler(req, res) {
       }
     }
 
-    const fileSha = await getFileSha()
+    let fileSha
+    try {
+      fileSha = await getFileSha()
+    } catch (error) {
+      console.error('Failed to get file SHA:', error)
+      return res.status(500).json({ 
+        error: 'Failed to get file SHA from GitHub',
+        message: error.message
+      })
+    }
 
     // Encode content to base64
     const contentBase64 = Buffer.from(jsonContent, 'utf-8').toString('base64')
@@ -234,7 +180,7 @@ export default async function handler(req, res) {
       {
         method: 'PUT',
         headers: {
-          'Authorization': `token ${GITHUB_TOKEN}`,
+          'Authorization': authHeader,
           'Accept': 'application/vnd.github.v3+json',
           'Content-Type': 'application/json',
           'User-Agent': 'SchoolWebsite-Publish'
@@ -243,17 +189,29 @@ export default async function handler(req, res) {
           message: commitMessage,
           content: contentBase64,
           sha: fileSha, // Required for updates, null for new files
-          branch: 'main' // or 'master' depending on your default branch
+          branch: 'main' // Change to 'master' if your default branch is master
         })
       }
     )
 
     if (!updateResponse.ok) {
       const errorText = await updateResponse.text()
-      console.error('GitHub API update error:', errorText)
+      let errorData
+      try {
+        errorData = JSON.parse(errorText)
+      } catch {
+        errorData = { message: errorText }
+      }
+      
+      console.error('GitHub API update error:', updateResponse.status, errorData)
       return res.status(updateResponse.status).json({ 
         error: 'Failed to update GitHub file',
-        details: errorText 
+        status: updateResponse.status,
+        details: errorData.message || errorText,
+        hint: updateResponse.status === 401 ? 'Check GITHUB_TOKEN is valid' :
+              updateResponse.status === 403 ? 'Check token has repo permissions' :
+              updateResponse.status === 404 ? 'Check GITHUB_OWNER, GITHUB_REPO, and file path' :
+              'Check GitHub API response for details'
       })
     }
 
@@ -278,7 +236,8 @@ export default async function handler(req, res) {
     console.error('Publish error:', error)
     return res.status(500).json({ 
       error: 'Internal server error',
-      message: error.message 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     })
   }
 }

@@ -269,7 +269,13 @@ export const publishTexts = async (commitMessage) => {
     const authToken = localStorage.getItem('firebaseAuthToken') || 
                      sessionStorage.getItem('firebaseAuthToken')
 
-    const response = await fetch('/api/publish-texts', {
+    // For local testing, use /api/publish-texts-local
+    // Change this back to /api/publish-texts for production
+    const apiEndpoint = process.env.NODE_ENV === 'development' 
+      ? '/api/publish-texts-local'  // Local testing
+      : '/api/publish-texts'        // Production
+    
+    const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -281,8 +287,18 @@ export const publishTexts = async (commitMessage) => {
     })
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-      throw new Error(errorData.error || `Publish failed: ${response.status}`)
+      let errorData
+      try {
+        errorData = await response.json()
+      } catch {
+        errorData = { error: `HTTP ${response.status}`, message: await response.text().catch(() => 'Unknown error') }
+      }
+      
+      const errorMessage = errorData.message || errorData.error || errorData.details || `Publish failed: ${response.status}`
+      const error = new Error(errorMessage)
+      error.status = response.status
+      error.details = errorData
+      throw error
     }
 
     const result = await response.json()
