@@ -96,9 +96,28 @@ export default async function handler(req, res) {
         // When JSON has "\\n", JSON.parse() converts it to the literal string "\n" (backslash+n)
         // Firebase needs actual newline characters, not the literal string "\n"
         if (serviceAccount.private_key) {
+          // Log diagnostic info (first 50 chars only for security)
+          const keyPreview = serviceAccount.private_key.substring(0, 50)
+          console.log('Private key preview (first 50 chars):', keyPreview)
+          console.log('Private key contains \\n (literal):', serviceAccount.private_key.includes('\\n'))
+          console.log('Private key contains actual newlines:', serviceAccount.private_key.includes('\n'))
+          
           // Replace literal "\n" (backslash+n) with actual newline characters
           // This handles the case where Vercel stored "\\n" which parsed to "\n"
+          const beforeLength = serviceAccount.private_key.length
           serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n')
+          const afterLength = serviceAccount.private_key.length
+          
+          console.log('Private key length before/after newline fix:', beforeLength, '/', afterLength)
+          console.log('Private key after fix contains actual newlines:', serviceAccount.private_key.includes('\n'))
+          
+          // Verify the key starts correctly
+          if (!serviceAccount.private_key.startsWith('-----BEGIN PRIVATE KEY-----')) {
+            console.error('WARNING: Private key does not start with expected header')
+          }
+          if (!serviceAccount.private_key.includes('-----END PRIVATE KEY-----')) {
+            console.error('WARNING: Private key does not contain expected footer')
+          }
         }
 
         try {
@@ -158,21 +177,42 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error('Error fetching from Firebase:', error)
       console.error('Error code:', error.code)
+      console.error('Error message:', error.message)
       console.error('Error details:', error.details)
+      console.error('Error stack:', error.stack)
+      
+      // Check if Firebase Admin was initialized
+      const isInitialized = admin.apps && admin.apps.length > 0
+      console.error('Firebase Admin initialized:', isInitialized)
+      if (isInitialized) {
+        console.error('Firebase project ID:', admin.apps[0].options?.projectId)
+      }
       
       // Provide more specific error messages
       let errorMessage = error.message
+      let hint = 'Verify the service account JSON is correct and has Firestore permissions enabled'
+      
       if (error.code === 16 || error.message.includes('UNAUTHENTICATED')) {
-        errorMessage = 'Firebase authentication failed. Check that FIREBASE_SERVICE_ACCOUNT is correctly formatted and the service account has Firestore permissions.'
+        errorMessage = 'Firebase authentication failed. This usually means:'
+        hint = '1. Check FIREBASE_SERVICE_ACCOUNT JSON format (especially private_key newlines)\n' +
+               '2. Verify service account has "Firebase Admin SDK Administrator Service Agent" role in Google Cloud Console\n' +
+               '3. Ensure Firestore API is enabled for your project\n' +
+               '4. Check Vercel function logs for detailed error information'
       } else if (error.code === 7 || error.message.includes('PERMISSION_DENIED')) {
-        errorMessage = 'Firebase permission denied. Check that the service account has Firestore read permissions.'
+        errorMessage = 'Firebase permission denied. The service account needs Firestore read permissions.'
+        hint = 'Grant the service account "Cloud Datastore User" or "Firebase Admin SDK Administrator Service Agent" role in Google Cloud Console'
       }
       
       return res.status(500).json({ 
         error: 'Failed to fetch translations from Firebase',
         message: errorMessage,
         code: error.code,
-        hint: 'Verify the service account JSON is correct and has Firestore permissions enabled'
+        hint: hint,
+        // Include more details in development
+        ...(process.env.NODE_ENV === 'development' && {
+          details: error.details,
+          stack: error.stack
+        })
       })
     }
 
