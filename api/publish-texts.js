@@ -41,12 +41,30 @@ export default async function handler(req, res) {
       
       // Initialize Firebase Admin if not already initialized
       if (!admin.apps || admin.apps.length === 0) {
-        const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
-          ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-          : null
+        // Check if environment variable exists
+        const firebaseServiceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT
+        
+        if (!firebaseServiceAccountEnv) {
+          console.error('FIREBASE_SERVICE_ACCOUNT is not set')
+          // Debug: log available env vars (without sensitive data)
+          const envKeys = Object.keys(process.env).filter(k => 
+            k.includes('GITHUB') || k.includes('FIREBASE')
+          )
+          console.error('Available env vars:', envKeys)
+          throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set. Please redeploy after adding the variable.')
+        }
 
-        if (!serviceAccount) {
-          throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set')
+        let serviceAccount
+        try {
+          // Try to parse as JSON
+          serviceAccount = JSON.parse(firebaseServiceAccountEnv)
+        } catch (parseError) {
+          console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT:', parseError.message)
+          throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON. Make sure it\'s a single-line JSON string.')
+        }
+
+        if (!serviceAccount.type || serviceAccount.type !== 'service_account') {
+          throw new Error('FIREBASE_SERVICE_ACCOUNT is missing required fields')
         }
 
         admin.initializeApp({
@@ -58,7 +76,9 @@ export default async function handler(req, res) {
       return res.status(500).json({ 
         error: 'Firebase configuration error',
         message: error.message,
-        hint: 'Make sure FIREBASE_SERVICE_ACCOUNT is set in Vercel environment variables'
+        hint: error.message.includes('not set') 
+          ? 'Make sure FIREBASE_SERVICE_ACCOUNT is set in Vercel and redeploy the project'
+          : 'Check that FIREBASE_SERVICE_ACCOUNT is valid JSON'
       })
     }
 
