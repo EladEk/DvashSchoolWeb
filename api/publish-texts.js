@@ -120,13 +120,32 @@ export default async function handler(req, res) {
           }
         }
 
+        // Validate service account before initialization
+        console.log('Service account project_id:', serviceAccount.project_id)
+        console.log('Service account client_email:', serviceAccount.client_email)
+        if (!serviceAccount.project_id) {
+          throw new Error('Service account JSON is missing project_id field')
+        }
+        
         try {
           admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
+            credential: admin.credential.cert(serviceAccount),
+            projectId: serviceAccount.project_id // Explicitly set project ID
           })
+          
+          // Verify initialization succeeded
+          if (!admin.apps || admin.apps.length === 0) {
+            throw new Error('Firebase Admin initialization returned no apps')
+          }
+          
+          const app = admin.apps[0]
+          const projectId = app.options?.projectId || app.options?.credential?.projectId || serviceAccount.project_id
           console.log('Firebase Admin initialized successfully')
+          console.log('Firebase project ID:', projectId)
+          console.log('Firebase app name:', app.name)
         } catch (initError) {
           console.error('Firebase Admin initialization failed:', initError.message)
+          console.error('Init error stack:', initError.stack)
           console.error('Service account project_id:', serviceAccount.project_id)
           console.error('Service account client_email:', serviceAccount.client_email)
           // Don't log private_key for security
@@ -154,9 +173,20 @@ export default async function handler(req, res) {
         throw new Error('Firebase Admin not initialized')
       }
       
-      console.log('Firebase Admin initialized, project:', admin.apps[0].options?.projectId)
+      const app = admin.apps[0]
+      const projectId = app.options?.projectId || app.options?.credential?.projectId || 'unknown'
+      console.log('Firebase Admin initialized, project:', projectId)
+      console.log('Firebase app options keys:', Object.keys(app.options || {}))
       
-      const db = admin.firestore()
+      // Verify we can get a Firestore instance
+      let db
+      try {
+        db = admin.firestore()
+        console.log('Firestore instance created successfully')
+      } catch (dbError) {
+        console.error('Failed to create Firestore instance:', dbError.message)
+        throw new Error(`Failed to create Firestore instance: ${dbError.message}`)
+      }
       
       // Test connection by checking if we can access Firestore
       console.log('Attempting to fetch translations from Firestore...')
@@ -193,14 +223,11 @@ export default async function handler(req, res) {
       let hint = 'Verify the service account JSON is correct and has Firestore permissions enabled'
       
       if (error.code === 16 || error.message.includes('UNAUTHENTICATED')) {
-        errorMessage = 'Firebase authentication failed. This usually means:'
-        hint = '1. Check FIREBASE_SERVICE_ACCOUNT JSON format (especially private_key newlines)\n' +
-               '2. Verify service account has "Firebase Admin SDK Administrator Service Agent" role in Google Cloud Console\n' +
-               '3. Ensure Firestore API is enabled for your project\n' +
-               '4. Check Vercel function logs for detailed error information'
+        errorMessage = 'Firebase authentication failed. Check Vercel logs for details.'
+        hint = 'Possible causes: 1) FIREBASE_SERVICE_ACCOUNT JSON format issue (check private_key newlines), 2) Missing IAM role "Firebase Admin SDK Administrator Service Agent", 3) Firestore API not enabled. See DEBUG_FIREBASE_AUTH.md for steps.'
       } else if (error.code === 7 || error.message.includes('PERMISSION_DENIED')) {
-        errorMessage = 'Firebase permission denied. The service account needs Firestore read permissions.'
-        hint = 'Grant the service account "Cloud Datastore User" or "Firebase Admin SDK Administrator Service Agent" role in Google Cloud Console'
+        errorMessage = 'Firebase permission denied. Service account needs Firestore read permissions.'
+        hint = 'Grant the service account "Firebase Admin SDK Administrator Service Agent" role in Google Cloud Console IAM settings.'
       }
       
       return res.status(500).json({ 
@@ -208,10 +235,13 @@ export default async function handler(req, res) {
         message: errorMessage,
         code: error.code,
         hint: hint,
+        // Always include error code for debugging
+        errorCode: error.code,
         // Include more details in development
         ...(process.env.NODE_ENV === 'development' && {
           details: error.details,
-          stack: error.stack
+          stack: error.stack,
+          fullMessage: error.message
         })
       })
     }
