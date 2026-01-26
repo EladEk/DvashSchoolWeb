@@ -47,20 +47,24 @@ const ImageEditor = ({ imageKey, currentPath, onSave, onClose }) => {
         throw new Error('Upload succeeded but no file path returned')
       }
 
-      // Update preview immediately with the new image (add timestamp to force reload)
-      const imageUrl = `https://ik.imagekit.io/fzv0y7xbu${imagePath}?t=${Date.now()}`
-      setPreview(imageUrl)
+      // Construct full ImageKit URL
+      const imageUrl = `https://ik.imagekit.io/fzv0y7xbu${imagePath}`
+      const imageUrlWithCache = `${imageUrl}?t=${Date.now()}`
+      setPreview(imageUrlWithCache)
 
-      // Save to Firebase
-      await saveImagePathToDB(imageKey, imagePath)
+      // Save full URL to Firebase (as per user requirement)
+      await saveImagePathToDB(imageKey, imageUrl)
 
-      // Save to localStorage
+      // Save path to localStorage (for backward compatibility)
       localStorage.setItem(`image_${imageKey}`, imagePath)
 
       // Update parent component state immediately (this triggers re-render)
       if (onSave) {
         onSave(imagePath)
       }
+      
+      // Clear uploading state
+      setUploading(false)
       
       // Close modal after a brief delay to show success
       setTimeout(() => {
