@@ -172,6 +172,8 @@ export default async function handler(req, res) {
     }
 
     // Fetch translations from Firebase
+    // IMPORTANT: Declare db outside try block so it's accessible for image fetching later
+    let db = null
     let translations
     try {
       // Verify Firebase Admin is properly initialized
@@ -185,7 +187,6 @@ export default async function handler(req, res) {
       console.log('Firebase app options keys:', Object.keys(app.options || {}))
       
       // Verify we can get a Firestore instance
-      let db
       try {
         // Get Firestore instance
         // Note: In serverless functions, Firestore might be reused across invocations
@@ -312,17 +313,17 @@ export default async function handler(req, res) {
     console.log(`[${requestId}] 📸 Fetching images from Firebase images collection...`)
     let images = {}
     try {
-      // Ensure db is available - recreate if needed
-      let imagesDb = db
-      if (!imagesDb) {
+      // Ensure db is available - use existing or create new
+      if (!db) {
         console.log(`[${requestId}] db not available, creating new Firestore instance...`)
-        imagesDb = admin.firestore()
+        db = admin.firestore()
         console.log(`[${requestId}] New Firestore instance created for images`)
       }
       
       console.log(`[${requestId}] Querying images collection from Firestore...`)
-      console.log(`[${requestId}] Firestore instance available:`, !!imagesDb)
-      const imagesRef = imagesDb.collection('images')
+      console.log(`[${requestId}] Firestore instance available:`, !!db)
+      console.log(`[${requestId}] Using db instance for images collection`)
+      const imagesRef = db.collection('images')
       console.log(`[${requestId}] Collection reference created, fetching documents...`)
       const imagesSnapshot = await imagesRef.get()
       
@@ -667,6 +668,10 @@ export default async function handler(req, res) {
 
       console.log(`[${requestId}] ✅ Successfully updated ${filePaths.length} files in a single commit: ${commit.sha.substring(0, 7)}`)
 
+      // Check if images were included
+      const imagesIncluded = Object.keys(images).length > 0
+      const imagesWithValues = Object.values(images).filter(v => v !== null && v !== undefined).length
+      
       return res.status(200).json({
         success: true,
         message: `Texts published successfully - ${filePaths.length} files updated in a single commit`,
@@ -676,7 +681,18 @@ export default async function handler(req, res) {
           url: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${commit.sha}`
         },
         files: filePaths.map(path => ({ path })),
-        requestId: requestId
+        requestId: requestId,
+        images: {
+          included: imagesIncluded,
+          count: Object.keys(images).length,
+          withValues: imagesWithValues,
+          ...(imagesIncluded && imagesWithValues === 0 && {
+            warning: 'Images collection found but no images have valid path/location/url fields. Check Firebase images collection structure.'
+          }),
+          ...(!imagesIncluded && {
+            warning: 'No images found in Firebase. Images collection may be empty or images may not have been uploaded yet.'
+          })
+        }
       })
 
     } catch (error) {
