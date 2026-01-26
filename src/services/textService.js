@@ -114,8 +114,8 @@ const extractParliament = (translations) => {
 
 /**
  * Merge two translation objects (deep merge)
- * @param {object} target - Target object
- * @param {object} source - Source object to merge in
+ * @param {object} target - Target object (GitHub data)
+ * @param {object} source - Source object to merge in (Parliament from Firebase)
  * @returns {object} Merged object
  */
 const mergeTranslations = (target, source) => {
@@ -128,9 +128,23 @@ const mergeTranslations = (target, source) => {
 
   const merged = { ...target }
   for (const key in source) {
-    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+    // Skip if source value is null/undefined/empty
+    if (source[key] == null) {
+      continue
+    }
+    
+    // For arrays, only overwrite if source has a non-empty array
+    // Otherwise keep target array (preserves GitHub sections, etc.)
+    if (Array.isArray(source[key])) {
+      if (source[key].length > 0) {
+        merged[key] = source[key]
+      }
+      // If source array is empty, keep target array (don't overwrite)
+    } else if (source[key] && typeof source[key] === 'object') {
+      // Recursive merge for nested objects
       merged[key] = mergeTranslations(target[key] || {}, source[key])
     } else {
+      // For primitives, overwrite with source value
       merged[key] = source[key]
     }
   }
@@ -178,6 +192,7 @@ const loadFromProduction = async () => {
 
   try {
     // Load from /content/texts.json (GitHub)
+    console.log('[textService] Loading from /content/texts.json')
     const response = await fetch('/content/texts.json', {
       cache: 'no-cache', // Always fetch fresh in production
       headers: {
@@ -190,19 +205,33 @@ const loadFromProduction = async () => {
     }
 
     const texts = await response.json()
+    console.log('[textService] Loaded texts.json, keys:', Object.keys(texts))
+    console.log('[textService] Has sections in he:', 'sections' in (texts.he || {}))
+    console.log('[textService] Has sections in en:', 'sections' in (texts.en || {}))
+    if (texts.he?.sections) {
+      console.log('[textService] Sections count in he:', Array.isArray(texts.he.sections) ? texts.he.sections.length : 'not an array')
+    }
 
     // IMPORTANT: Exclude Parliament data from GitHub (defensive check)
     const cleaned = {
       he: excludeParliament(texts.he || {}),
       en: excludeParliament(texts.en || {})
     }
+    console.log('[textService] After excluding Parliament, has sections in he:', 'sections' in (cleaned.he || {}))
+    console.log('[textService] After excluding Parliament, sections count in he:', cleaned.he?.sections?.length || 0)
 
     // Load Parliament translations from Firebase and merge
+    console.log('[textService] Loading Parliament from Firebase...')
     const parliamentTranslations = await loadParliamentFromFirebase()
+    console.log('[textService] Parliament translations loaded, keys in he:', Object.keys(parliamentTranslations.he || {}))
+    
     const merged = {
       he: mergeTranslations(cleaned.he, parliamentTranslations.he),
       en: mergeTranslations(cleaned.en, parliamentTranslations.en)
     }
+    console.log('[textService] After merge, has sections in he:', 'sections' in (merged.he || {}))
+    console.log('[textService] After merge, sections count in he:', merged.he?.sections?.length || 0)
+    console.log('[textService] Final merged keys in he:', Object.keys(merged.he || {}))
 
     // Cache the result
     productionTextsCache = merged
@@ -210,14 +239,17 @@ const loadFromProduction = async () => {
 
     return merged
   } catch (error) {
-    console.error('Error loading production texts:', error)
+    console.error('[textService] Error loading production texts:', error)
+    console.error('[textService] Error stack:', error.stack)
     
     // Return cached data if available (even if expired)
     if (productionTextsCache) {
+      console.log('[textService] Returning cached data')
       return productionTextsCache
     }
 
     // Fallback to default translations
+    console.log('[textService] Falling back to default translations')
     return await getDefaultTranslations()
   }
 }
