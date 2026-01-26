@@ -319,11 +319,11 @@ export default async function handler(req, res) {
       ? `token ${GITHUB_TOKEN}`
       : `Bearer ${GITHUB_TOKEN}`
 
-    // Get the current file SHA (required for updating existing files)
-    const getFileSha = async () => {
+    // Helper function to get file SHA
+    const getFileSha = async (filePath) => {
       try {
         const response = await fetch(
-          `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`,
+          `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`,
           {
             headers: {
               'Authorization': authHeader,
@@ -334,21 +334,18 @@ export default async function handler(req, res) {
         )
 
         if (response.status === 404) {
-          // File doesn't exist yet, return null (will create new file)
-          return null
+          return null // File doesn't exist yet
         }
 
         if (!response.ok) {
           const errorText = await response.text()
-          console.error('GitHub API error getting SHA:', response.status, errorText)
+          console.error(`GitHub API error getting SHA for ${filePath}:`, response.status, errorText)
           throw new Error(`GitHub API error: ${response.status} - ${errorText}`)
         }
 
         const data = await response.json()
         return data.sha
       } catch (error) {
-        console.error('Error getting file SHA:', error)
-        // If file doesn't exist, return null to create it
         if (error.message.includes('404')) {
           return null
         }
@@ -356,79 +353,92 @@ export default async function handler(req, res) {
       }
     }
 
-    let fileSha
-    try {
-      fileSha = await getFileSha()
-    } catch (error) {
-      console.error('Failed to get file SHA:', error)
-      return res.status(500).json({ 
-        error: 'Failed to get file SHA from GitHub',
-        message: error.message
+    // Helper function to update a file in GitHub
+    const updateFile = async (filePath, sha) => {
+      const contentBase64 = Buffer.from(jsonContent, 'utf-8').toString('base64')
+      const commitMessage = req.body.commitMessage || 
+        `Update site texts from Firebase - ${new Date().toISOString()}`
+
+      const updateResponse = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': authHeader,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'SchoolWebsite-Publish'
+          },
+          body: JSON.stringify({
+            message: commitMessage,
+            content: contentBase64,
+            sha: sha, // Required for updates, null for new files
+            branch: 'main'
+          })
+        }
+      )
+
+      if (!updateResponse.ok) {
+        const errorText = await updateResponse.text()
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          errorData = { message: errorText }
+        }
+        throw new Error(`Failed to update ${filePath}: ${errorData.message || errorText}`)
+      }
+
+      return await updateResponse.json()
+    }
+
+    // Update both files: content/texts.json (version control) and public/content/texts.json (served by Vite)
+    const filePaths = [
+      GITHUB_FILE_PATH,  // content/texts.json (version control)
+      'public/content/texts.json'  // public/content/texts.json (served by Vite)
+    ]
+
+    const results = []
+    const errors = []
+
+    for (const filePath of filePaths) {
+      try {
+        console.log(`Updating ${filePath}...`)
+        const sha = await getFileSha(filePath)
+        const updateData = await updateFile(filePath, sha)
+        results.push({
+          path: filePath,
+          sha: updateData.content.sha,
+          url: updateData.content.html_url
+        })
+        console.log(`Successfully updated ${filePath}`)
+      } catch (error) {
+        console.error(`Error updating ${filePath}:`, error)
+        errors.push({ path: filePath, error: error.message })
+      }
+    }
+
+    // If all updates failed, return error
+    if (results.length === 0) {
+      return res.status(500).json({
+        error: 'Failed to update GitHub files',
+        errors: errors,
+        hint: 'Check GITHUB_TOKEN permissions and file paths'
       })
     }
 
-    // Encode content to base64
-    const contentBase64 = Buffer.from(jsonContent, 'utf-8').toString('base64')
-
-    // Update or create file in GitHub
+    // If some succeeded, return success with warnings
     const commitMessage = req.body.commitMessage || 
       `Update site texts from Firebase - ${new Date().toISOString()}`
 
-    const updateResponse = await fetch(
-      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Authorization': authHeader,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
-          'User-Agent': 'SchoolWebsite-Publish'
-        },
-        body: JSON.stringify({
-          message: commitMessage,
-          content: contentBase64,
-          sha: fileSha, // Required for updates, null for new files
-          branch: 'main' // Change to 'master' if your default branch is master
-        })
-      }
-    )
-
-    if (!updateResponse.ok) {
-      const errorText = await updateResponse.text()
-      let errorData
-      try {
-        errorData = JSON.parse(errorText)
-      } catch {
-        errorData = { message: errorText }
-      }
-      
-      console.error('GitHub API update error:', updateResponse.status, errorData)
-      return res.status(updateResponse.status).json({ 
-        error: 'Failed to update GitHub file',
-        status: updateResponse.status,
-        details: errorData.message || errorText,
-        hint: updateResponse.status === 401 ? 'Check GITHUB_TOKEN is valid' :
-              updateResponse.status === 403 ? 'Check token has repo permissions' :
-              updateResponse.status === 404 ? 'Check GITHUB_OWNER, GITHUB_REPO, and file path' :
-              'Check GitHub API response for details'
-      })
-    }
-
-    const updateData = await updateResponse.json()
-
     return res.status(200).json({
       success: true,
-      message: 'Texts published successfully',
-      commit: {
-        sha: updateData.commit.sha,
-        message: commitMessage,
-        url: updateData.commit.html_url
-      },
-      file: {
-        path: updateData.content.path,
-        sha: updateData.content.sha,
-        url: updateData.content.html_url
-      }
+      message: `Texts published successfully (${results.length}/${filePaths.length} files updated)`,
+      files: results,
+      ...(errors.length > 0 && {
+        warnings: errors,
+        message: `Texts published with warnings. ${results.length} files updated, ${errors.length} failed.`
+      })
     })
 
   } catch (error) {
