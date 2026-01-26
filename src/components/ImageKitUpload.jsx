@@ -133,9 +133,20 @@ const ImageKitUpload = ({
       
       formData.append('token', token)
       formData.append('signature', signature)
-      // expire must be sent as a number for ImageKit (FormData will convert it to string)
-      // But we need to ensure it matches the signature calculation (which uses expire.toString())
-      formData.append('expire', expire)
+      // expire must be sent as a string to match signature calculation exactly
+      // ImageKit is very strict about signature matching - must use same string format
+      const expireStr = expire.toString()
+      formData.append('expire', expireStr)
+      
+      // Debug: Log what we're sending (for troubleshooting)
+      console.log('ImageKit upload params:', {
+        token: token.substring(0, 8) + '...',
+        signature: signature.substring(0, 16) + '...',
+        expire: expire,
+        expireStr: expireStr,
+        fileName: fileName || `upload-${Date.now()}`,
+        folder: folder
+      })
 
       // Upload with progress tracking
       const xhr = new XMLHttpRequest()
