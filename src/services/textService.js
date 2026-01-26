@@ -2,12 +2,14 @@
  * Text Service - Manages site texts with dual-source architecture
  * 
  * Architecture:
- * - Production mode: Reads from /content/texts.json (GitHub)
- * - Edit mode: Reads/writes from Firebase (drafts)
- * - Parliament page: Completely excluded from this system
+ * - Production mode: Reads from /content/texts.json (GitHub) + Parliament from Firebase
+ * - Edit mode: Reads/writes from Firebase (drafts, including Parliament)
+ * - Parliament translations: In production, loaded from Firebase; in edit mode, from Firebase
  * 
- * IMPORTANT: Parliament-related translations are NEVER loaded or saved
- * through this service. The Parliament page manages its own content.
+ * IMPORTANT: 
+ * - Parliament translations are NEVER saved to GitHub (excluded during publish)
+ * - In production mode, Parliament translations are loaded from Firebase and merged
+ * - In edit mode, everything (including Parliament) comes from Firebase
  */
 
 // Cache for production texts
@@ -76,7 +78,93 @@ const excludeParliament = (translations) => {
 }
 
 /**
+ * Extract only Parliament-related keys from translations
+ * @param {object} translations - Translations object
+ * @returns {object} Only Parliament-related translations
+ */
+const extractParliament = (translations) => {
+  if (!translations || typeof translations !== 'object') {
+    return {}
+  }
+
+  if (Array.isArray(translations)) {
+    return {}
+  }
+
+  const parliament = {}
+  for (const key in translations) {
+    // Include only Parliament-related keys
+    if (isParliamentKey(key)) {
+      if (translations[key] && typeof translations[key] === 'object') {
+        parliament[key] = extractParliament(translations[key])
+      } else {
+        parliament[key] = translations[key]
+      }
+    } else if (translations[key] && typeof translations[key] === 'object') {
+      // Recursively check nested objects
+      const nestedParliament = extractParliament(translations[key])
+      if (Object.keys(nestedParliament).length > 0) {
+        parliament[key] = nestedParliament
+      }
+    }
+  }
+
+  return parliament
+}
+
+/**
+ * Merge two translation objects (deep merge)
+ * @param {object} target - Target object
+ * @param {object} source - Source object to merge in
+ * @returns {object} Merged object
+ */
+const mergeTranslations = (target, source) => {
+  if (!source || typeof source !== 'object') {
+    return target || {}
+  }
+  if (!target || typeof target !== 'object') {
+    return source || {}
+  }
+
+  const merged = { ...target }
+  for (const key in source) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      merged[key] = mergeTranslations(target[key] || {}, source[key])
+    } else {
+      merged[key] = source[key]
+    }
+  }
+
+  return merged
+}
+
+/**
+ * Load Parliament translations from Firebase
+ * @returns {Promise<{he: object, en: object}>}
+ */
+const loadParliamentFromFirebase = async () => {
+  try {
+    const { loadTranslationsFromDB } = await import('./firebaseDB')
+    const firebaseData = await loadTranslationsFromDB()
+
+    if (!firebaseData) {
+      return { he: {}, en: {} }
+    }
+
+    // Extract only Parliament-related translations
+    return {
+      he: extractParliament(firebaseData.he || {}),
+      en: extractParliament(firebaseData.en || {})
+    }
+  } catch (error) {
+    console.error('Error loading Parliament from Firebase:', error)
+    return { he: {}, en: {} }
+  }
+}
+
+/**
  * Load texts from production source (GitHub JSON file)
+ * Parliament translations are loaded from Firebase and merged
  * @returns {Promise<{he: object, en: object}>}
  */
 const loadFromProduction = async () => {
@@ -89,7 +177,7 @@ const loadFromProduction = async () => {
   }
 
   try {
-    // Load from /content/texts.json
+    // Load from /content/texts.json (GitHub)
     const response = await fetch('/content/texts.json', {
       cache: 'no-cache', // Always fetch fresh in production
       headers: {
@@ -103,17 +191,24 @@ const loadFromProduction = async () => {
 
     const texts = await response.json()
 
-    // IMPORTANT: Exclude Parliament data (defensive check)
+    // IMPORTANT: Exclude Parliament data from GitHub (defensive check)
     const cleaned = {
       he: excludeParliament(texts.he || {}),
       en: excludeParliament(texts.en || {})
     }
 
+    // Load Parliament translations from Firebase and merge
+    const parliamentTranslations = await loadParliamentFromFirebase()
+    const merged = {
+      he: mergeTranslations(cleaned.he, parliamentTranslations.he),
+      en: mergeTranslations(cleaned.en, parliamentTranslations.en)
+    }
+
     // Cache the result
-    productionTextsCache = cleaned
+    productionTextsCache = merged
     productionTextsCacheTime = Date.now()
 
-    return cleaned
+    return merged
   } catch (error) {
     console.error('Error loading production texts:', error)
     
@@ -151,6 +246,7 @@ const getDefaultTranslations = async () => {
 
 /**
  * Load texts from Firebase (edit mode)
+ * In edit mode, includes everything including Parliament
  * @returns {Promise<{he: object, en: object}>}
  */
 const loadFromFirebase = async () => {
@@ -163,13 +259,11 @@ const loadFromFirebase = async () => {
       return await loadFromProduction()
     }
 
-    // IMPORTANT: Exclude Parliament data from Firebase too
-    const cleaned = {
-      he: excludeParliament(firebaseData.he || {}),
-      en: excludeParliament(firebaseData.en || {})
+    // In edit mode, return everything including Parliament
+    return {
+      he: firebaseData.he || {},
+      en: firebaseData.en || {}
     }
-
-    return cleaned
   } catch (error) {
     console.error('Error loading from Firebase:', error)
     // Fallback to production

@@ -181,8 +181,15 @@ export default async function handler(req, res) {
       // Verify we can get a Firestore instance
       let db
       try {
+        // Explicitly specify the database (default database)
+        // If you have multiple databases, you might need to specify: admin.firestore('your-database-id')
         db = admin.firestore()
         console.log('Firestore instance created successfully')
+        
+        // Set Firestore settings to avoid connection issues
+        db.settings({
+          ignoreUndefinedProperties: true
+        })
       } catch (dbError) {
         console.error('Failed to create Firestore instance:', dbError.message)
         throw new Error(`Failed to create Firestore instance: ${dbError.message}`)
@@ -190,19 +197,41 @@ export default async function handler(req, res) {
       
       // Test connection by checking if we can access Firestore
       console.log('Attempting to fetch translations from Firestore...')
+      console.log('Database project:', db.app.options.projectId)
       
-      const translationsRef = db.collection('translations')
-      
-      const [heDoc, enDoc] = await Promise.all([
-        translationsRef.doc('he').get(),
-        translationsRef.doc('en').get()
-      ])
+      // Try a simple read operation first to test authentication
+      try {
+        const translationsRef = db.collection('translations')
+        console.log('Collection reference created, attempting to read documents...')
+        
+        const [heDoc, enDoc] = await Promise.all([
+          translationsRef.doc('he').get(),
+          translationsRef.doc('en').get()
+        ])
 
-      console.log('Fetched translations - he exists:', heDoc.exists, 'en exists:', enDoc.exists)
+        console.log('Fetched translations - he exists:', heDoc.exists, 'en exists:', enDoc.exists)
 
-      translations = {
-        he: heDoc.exists ? heDoc.data() : {},
-        en: enDoc.exists ? enDoc.data() : {}
+        translations = {
+          he: heDoc.exists ? heDoc.data() : {},
+          en: enDoc.exists ? enDoc.data() : {}
+        }
+        
+        // Log what keys are in the translations (for debugging)
+        console.log('Translation keys in he:', Object.keys(translations.he || {}))
+        console.log('Translation keys in en:', Object.keys(translations.en || {}))
+        console.log('Has sections in he:', 'sections' in (translations.he || {}))
+        console.log('Has sections in en:', 'sections' in (translations.en || {}))
+        if (translations.he?.sections) {
+          console.log('Sections count in he:', Array.isArray(translations.he.sections) ? translations.he.sections.length : 'not an array')
+        }
+        if (translations.en?.sections) {
+          console.log('Sections count in en:', Array.isArray(translations.en.sections) ? translations.en.sections.length : 'not an array')
+        }
+      } catch (readError) {
+        console.error('Error reading from Firestore collection:', readError)
+        console.error('Read error code:', readError.code)
+        console.error('Read error message:', readError.message)
+        throw readError // Re-throw to be caught by outer catch
       }
     } catch (error) {
       console.error('Error fetching from Firebase:', error)
@@ -272,9 +301,18 @@ export default async function handler(req, res) {
       he: excludeParliament(translations.he),
       en: excludeParliament(translations.en)
     }
+    
+    // Log what's being published (for debugging)
+    console.log('Keys after Parliament exclusion in he:', Object.keys(cleanedTranslations.he || {}))
+    console.log('Keys after Parliament exclusion in en:', Object.keys(cleanedTranslations.en || {}))
+    console.log('Has sections after exclusion in he:', 'sections' in (cleanedTranslations.he || {}))
+    console.log('Has sections after exclusion in en:', 'sections' in (cleanedTranslations.en || {}))
 
     // Format as JSON string
     const jsonContent = JSON.stringify(cleanedTranslations, null, 2)
+    
+    // Log file size for debugging
+    console.log('Generated JSON size:', jsonContent.length, 'bytes')
 
     // Determine GitHub API auth header (fine-grained tokens use Bearer, classic use token)
     const authHeader = GITHUB_TOKEN.startsWith('ghp_') 
