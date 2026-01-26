@@ -74,20 +74,12 @@ const ImageKitUpload = ({
             const authData = await authResponse.json()
             token = authData.token
             signature = authData.signature
-            // CRITICAL: Use expire exactly as received from server (as string or number)
-            // The signature was calculated with expire.toString(), so we must use the same value
-            // Store both the number and string representation to ensure consistency
-            const expireNum = typeof authData.expire === 'number' ? authData.expire : parseInt(authData.expire, 10)
-            const expireStrFromServer = String(authData.expire) // Use exact string from server
+            // Ensure expire is a number
+            expire = typeof authData.expire === 'number' ? authData.expire : parseInt(authData.expire, 10)
             
-            if (!token || !signature || !expireNum || isNaN(expireNum)) {
+            if (!token || !signature || !expire || isNaN(expire)) {
               throw new Error('Invalid authentication response: missing or invalid fields')
             }
-            
-            // Store expire as number for validation, but use the string from server for upload
-            expire = expireNum
-            // Store the exact string that was used for signature calculation
-            window._imageKitExpireStr = expireStrFromServer
           } else {
             const errorText = await authResponse.text()
             throw new Error(`Authentication endpoint returned error: ${authResponse.status} - ${errorText}`)
@@ -163,35 +155,8 @@ const ImageKitUpload = ({
       
       formData.append('token', token)
       formData.append('signature', signature)
-      // CRITICAL: Use the exact expire string from server to match signature calculation
-      // The signature was calculated with expire.toString() on the server
-      // We must use the exact same string representation that was used for the signature
-      const expireStrToSend = window._imageKitExpireStr || expire.toString()
-      formData.append('expire', expireStrToSend) // Send as string to match signature exactly
-      
-      // Debug: Log what we're sending (for troubleshooting)
-      console.log('ImageKit upload params:', {
-        token: token.substring(0, 8) + '...',
-        tokenLength: token.length,
-        signature: signature.substring(0, 16) + '...',
-        signatureLength: signature.length,
-        expire: expire,
-        expireType: typeof expire,
-        expireStrToSend: expireStrToSend,
-        expireStrToSendType: typeof expireStrToSend,
-        usingStoredString: !!window._imageKitExpireStr,
-        signatureInput: (token + expireStrToSend).substring(0, 20) + '...', // What should match server calculation
-        fileName: fileName || `upload-${Date.now()}`,
-        folder: folder
-      })
-      
-      // Verify signature format (should be 40 hex characters for HMAC-SHA1)
-      if (signature.length !== 40 || !/^[0-9a-f]{40}$/i.test(signature)) {
-        console.error('⚠️ Signature format is invalid:', {
-          length: signature.length,
-          format: /^[0-9a-f]{40}$/i.test(signature) ? 'valid hex' : 'invalid format'
-        })
-      }
+      // expire must be a number (not string) for ImageKit
+      formData.append('expire', expire)
 
       // Upload with progress tracking
       const xhr = new XMLHttpRequest()
