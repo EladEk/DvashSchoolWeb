@@ -29,6 +29,7 @@
     "exportJsonFiles": "Export JSON Files",
     "saveJsonFiles": "Save JSON Files",
     "saveToFirebase": "Save to Firebase",
+    "publish": "Publish",
     "unsavedChanges": "You have unsaved changes",
     "goToAdminDashboard": "Go to Admin Dashboard",
     "exportTranslations": "Export translations to JSON files",

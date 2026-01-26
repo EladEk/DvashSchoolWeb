@@ -29,6 +29,7 @@
     "exportJsonFiles": "ייצא קבצי JSON",
     "saveJsonFiles": "שמור קבצי JSON",
     "saveToFirebase": "שמור ל-Firebase",
+    "publish": "פרסם",
     "unsavedChanges": "יש לך שינויים שלא נשמרו",
     "goToAdminDashboard": "עבור ללוח בקרה מנהל",
     "exportTranslations": "ייצא תרגומים לקבצי JSON",

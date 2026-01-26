@@ -231,6 +231,8 @@ export default async function handler(req, res) {
     }
     
     let images = {}
+    let imagesIncluded = false
+    let imagesWithValues = 0
     try {
       if (!db) {
         db = admin.firestore()
@@ -240,6 +242,7 @@ export default async function handler(req, res) {
       const imagesSnapshot = await imagesRef.get()
       
       if (!imagesSnapshot.empty) {
+        imagesIncluded = true
         imagesSnapshot.forEach((doc) => {
           const data = doc.data()
           const imageKey = doc.id
@@ -248,6 +251,7 @@ export default async function handler(req, res) {
           
           if (imagePath) {
             images[imageKey] = normalizeImagePath(imagePath)
+            imagesWithValues++
           } else {
             images[imageKey] = null
           }

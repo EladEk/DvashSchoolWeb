@@ -319,7 +319,7 @@ const AdminDashboard = () => {
                 Publishing...
               </>
             ) : (
-              'publish only'
+              t('admin.publish') || (currentLang === 'he' ? 'פרסם' : 'Publish')
             )}
           </button>
           <button 
