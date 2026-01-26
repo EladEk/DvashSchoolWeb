@@ -608,5 +608,13 @@
       }
     ]
   },
-  "images": {}
+  "images": {
+    "about.image1": "/school-website/about.image1-1769010772982_WDQS6aeXP",
+    "hero.image": "/school-website/hero.image-1769082919567_JbbNNzQI6",
+    "parentsAssociationHero.image": "/school-website/parentsAssociationHero.image-1769082962106_TDx1CdYhs",
+    "section.image1": "/school-website/section.image1-1769035047257_kqAcL_lg3",
+    "section.image2": "/school-website/section.image2-1769034896114_hEZVgfwR7",
+    "section.image3": "/school-website/section.image3-1769034830329_41L5zV98l",
+    "section.image4": "/school-website/section.image4-1769034801409_X1h13ntwN"
+  }
 }
