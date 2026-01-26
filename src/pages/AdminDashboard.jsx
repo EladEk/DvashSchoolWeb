@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useEffectiveRole } from '../utils/requireRole'
-import { getTranslations, saveTranslations, exportTranslations } from '../services/adminService'
+import { getTranslations, saveTranslations } from '../services/adminService'
 import { publishTexts } from '../services/textService'
 import UsersAdmin from '../components/admin/UsersAdmin'
 import './AdminDashboard.css'
@@ -18,7 +18,6 @@ const AdminDashboard = () => {
       const sess = JSON.parse(localStorage.getItem('session') || '{}') || {}
       return sess
     } catch (e) {
-      console.error('AdminDashboard - error parsing session:', e)
       return {}
     }
   })()
@@ -33,6 +32,7 @@ const AdminDashboard = () => {
   const [hasChanges, setHasChanges] = useState(false)
   const [saving, setSaving] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [savingJson, setSavingJson] = useState(false)
   const [message, setMessage] = useState('')
   const [activeTab, setActiveTab] = useState('translations')
   
@@ -49,7 +49,6 @@ const AdminDashboard = () => {
       setTranslations(data)
       setEditedTranslations(data)
     } catch (error) {
-      console.error('Error loading translations:', error)
       setMessage('Error loading translations')
     }
   }
@@ -98,17 +97,49 @@ const AdminDashboard = () => {
       setMessage('Translations saved successfully! The website will now use the updated translations.')
       setTimeout(() => setMessage(''), 5000)
     } catch (error) {
-      console.error('Error saving translations:', error)
       setMessage('Error saving translations')
     } finally {
       setSaving(false)
     }
   }
 
-  const handleExport = () => {
-    exportTranslations(editedTranslations)
-    setMessage('Translation files exported! Check your downloads.')
-    setTimeout(() => setMessage(''), 3000)
+  const handleExport = async () => {
+    setSavingJson(true)
+    setMessage('')
+    try {
+      // Use the same logic as publish but save locally without GitHub
+      const { loadTexts } = await import('../services/textService')
+      const currentTexts = await loadTexts(true) // Force refresh from source
+      
+      // Call API to save JSON files locally (same files as publish)
+      const apiEndpoint = process.env.NODE_ENV === 'development'
+        ? '/api/save-json-local'
+        : '/api/save-json-local'
+      
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          texts: currentTexts
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.message || errorData.error || 'Failed to save JSON files')
+      }
+
+      const result = await response.json()
+      setMessage('✅ JSON files saved successfully to content/texts.json and public/content/texts.json')
+      setTimeout(() => setMessage(''), 5000)
+    } catch (error) {
+      setMessage(`❌ Error saving JSON files: ${error.message || 'Unknown error'}`)
+      setTimeout(() => setMessage(''), 5000)
+    } finally {
+      setSavingJson(false)
+    }
   }
 
   const handlePublish = async () => {
@@ -137,7 +168,6 @@ const AdminDashboard = () => {
       await reloadTranslations(true)
       await loadTranslations()
     } catch (error) {
-      console.error('[AdminDashboard] Error publishing texts:', error)
       const errorMsg = error.message || 'Unknown error'
       const errorDetails = error.details ? `\nDetails: ${JSON.stringify(error.details, null, 2)}` : ''
       const errorHint = error.details?.hint ? `\nHint: ${error.details.hint}` : ''
@@ -269,16 +299,35 @@ const AdminDashboard = () => {
           >
             {saving ? t('common.saving') : t('admin.saveToFirebase')}
           </button>
-          <button onClick={handleExport} className="export-btn">
-            {t('admin.exportJsonFiles')}
-          </button>
           <button 
             onClick={handlePublish} 
             disabled={publishing || hasChanges}
             className="publish-btn"
             title={hasChanges ? 'Save changes before publishing' : 'Publish texts to GitHub'}
           >
-            {publishing ? 'Publishing...' : 'Publish to GitHub'}
+            {publishing ? (
+              <>
+                <span className="spinner"></span>
+                Publishing...
+              </>
+            ) : (
+              'Publish to GitHub'
+            )}
+          </button>
+          <button 
+            onClick={handleExport} 
+            disabled={savingJson || hasChanges}
+            className="export-btn"
+            title={hasChanges ? 'Save changes before exporting' : 'Save JSON files locally'}
+          >
+            {savingJson ? (
+              <>
+                <span className="spinner"></span>
+                Saving...
+              </>
+            ) : (
+              t('admin.saveJsonFiles') || 'Save JSON Files'
+            )}
           </button>
         </div>
       </div>

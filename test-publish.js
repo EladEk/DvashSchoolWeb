@@ -21,7 +21,21 @@ try {
   process.exit(1)
 }
 
-// Check for Parliament keys
+import { readFileSync, writeFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+let texts
+try {
+  const contentPath = join(__dirname, 'content', 'texts.json')
+  texts = JSON.parse(readFileSync(contentPath, 'utf-8'))
+} catch (error) {
+  console.error('❌ Error loading texts:', error.message)
+  process.exit(1)
+}
 const hasParliamentKeys = (obj, path = '') => {
   const keys = []
   for (const key in obj) {
@@ -42,13 +56,10 @@ const parliamentKeys = [
 ]
 
 if (parliamentKeys.length > 0) {
-  console.log('⚠️  Found Parliament keys (should be excluded):')
   parliamentKeys.forEach(key => console.log(`   - ${key}`))
 } else {
-  console.log('✅ No Parliament keys found (good!)')
 }
 
-// Simulate excluding Parliament
 const excludeParliament = (obj) => {
   if (!obj || typeof obj !== 'object') return obj
   if (Array.isArray(obj)) return obj.map(excludeParliament)
@@ -79,14 +90,11 @@ const remainingParliamentKeys = [
 ]
 
 if (remainingParliamentKeys.length > 0) {
-  console.log('❌ ERROR: Parliament keys still present after exclusion!')
   remainingParliamentKeys.forEach(key => console.log(`   - ${key}`))
   process.exit(1)
 } else {
-  console.log('✅ Parliament exclusion verified')
 }
 
-// Write to both locations
 try {
   const publicPath = join(__dirname, 'public', 'content', 'texts.json')
   const contentPath = join(__dirname, 'content', 'texts.json')
@@ -96,10 +104,8 @@ try {
   writeFileSync(publicPath, jsonContent, 'utf-8')
   writeFileSync(contentPath, jsonContent, 'utf-8')
   
-  console.log('✅ Texts processed and saved to:')
   console.log(`   - ${publicPath}`)
   console.log(`   - ${contentPath}`)
-  console.log('\n✅ All tests passed!')
 } catch (error) {
   console.error('❌ Error writing files:', error.message)
   process.exit(1)

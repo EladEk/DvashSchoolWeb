@@ -173,7 +173,6 @@ const loadParliamentFromFirebase = async () => {
       en: extractParliament(firebaseData.en || {})
     }
   } catch (error) {
-    console.error('Error loading Parliament from Firebase:', error)
     return { he: {}, en: {} }
   }
 }
@@ -236,8 +235,6 @@ const loadFromProduction = async () => {
 
     return merged
   } catch (error) {
-    console.error('[textService] Error loading production texts:', error)
-    console.error('[textService] Error stack:', error.stack)
     
     // Return cached data if available (even if expired)
     if (productionTextsCache) {
@@ -266,7 +263,6 @@ const getDefaultTranslations = async () => {
       en: excludeParliament(enTranslations.default || enTranslations)
     }
   } catch (error) {
-    console.error('Error loading default translations:', error)
     return { he: {}, en: {} }
   }
 }
@@ -292,7 +288,6 @@ const loadFromFirebase = async () => {
       en: firebaseData.en || {}
     }
   } catch (error) {
-    console.error('Error loading from Firebase:', error)
     // Fallback to production
     return await loadFromProduction()
   }
@@ -342,7 +337,6 @@ export const saveTexts = async (translations) => {
     await saveAllTranslationsToDB(cleaned)
     return { success: true }
   } catch (error) {
-    console.error('Error saving texts to Firebase:', error)
     throw error
   }
 }
@@ -370,7 +364,6 @@ export const saveTranslation = async (translationKey, hebrewValue, englishValue)
     await saveTranslationToDB(translationKey, hebrewValue, englishValue)
     return { success: true }
   } catch (error) {
-    console.error('Error saving translation:', error)
     throw error
   }
 }
@@ -401,11 +394,9 @@ export const publishTexts = async (commitMessage) => {
     const authToken = localStorage.getItem('firebaseAuthToken') || 
                      sessionStorage.getItem('firebaseAuthToken')
 
-    // For local testing, use /api/publish-texts-local
-    // Change this back to /api/publish-texts for production
     const apiEndpoint = process.env.NODE_ENV === 'development' 
-      ? '/api/publish-texts-local'  // Local testing
-      : '/api/publish-texts'        // Production
+      ? '/api/publish-texts-local'
+      : '/api/publish-texts'
     
     const response = await fetch(apiEndpoint, {
       method: 'POST',
@@ -441,7 +432,6 @@ export const publishTexts = async (commitMessage) => {
 
     return result
   } catch (error) {
-    console.error('[textService] ❌ Error publishing texts:', error)
     throw error
   } finally {
     // Always reset the publishing flag, even on error

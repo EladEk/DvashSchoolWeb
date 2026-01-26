@@ -53,12 +53,6 @@ export default function imagekitAuth() {
             .update(token + expireStr)
             .digest('hex')
           
-          console.log('Generated auth:', { 
-            token: token.substring(0, 8) + '...', 
-            expire, 
-            signature: signature.substring(0, 16) + '...' 
-          })
-          
           res.writeHead(200, {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
@@ -71,7 +65,6 @@ export default function imagekitAuth() {
             expire
           }))
         } catch (error) {
-          console.error('Auth error:', error)
           res.writeHead(500, { 'Content-Type': 'application/json' })
           res.end(JSON.stringify({ error: 'Failed to generate authentication' }))
         }

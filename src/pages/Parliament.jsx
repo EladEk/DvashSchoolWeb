@@ -92,13 +92,10 @@ export default function Parliament() {
     window.location.reload()
   }
 
-  // Dates - use getDocs instead of onSnapshot to reduce real-time connections
-  // Only reload when component mounts or when explicitly needed
   const datesLoadedRef = useRef(false)
   useEffect(() => {
-    // Prevent double execution in React Strict Mode
     if (datesLoadedRef.current) return
-    datesLoadedRef.current = true // Set immediately to prevent double execution
+    datesLoadedRef.current = true
     
     const loadDates = async () => {
       try {
@@ -111,29 +108,23 @@ export default function Parliament() {
         processedList.sort((a, b) => tsMillis(a.date) - tsMillis(b.date))
         setDates(processedList)
       } catch (error) {
-        console.error('Error loading dates:', error)
-        // Reset ref on error so it can retry
         datesLoadedRef.current = false
       }
     }
     
     loadDates()
     
-    // Set up a refresh interval (every 30 seconds) instead of real-time
     const interval = setInterval(loadDates, 30000)
     return () => {
       clearInterval(interval)
-      // Reset ref on cleanup so it can reload if component remounts
       datesLoadedRef.current = false
     }
   }, [])
 
-  // Approved subjects (public) - use getDocs with refresh interval instead of real-time
   const subjectsLoadedRef = useRef(false)
   useEffect(() => {
-    // Prevent double execution in React Strict Mode
     if (subjectsLoadedRef.current) return
-    subjectsLoadedRef.current = true // Set immediately to prevent double execution
+    subjectsLoadedRef.current = true
     
     const loadSubjects = async () => {
       try {
@@ -141,24 +132,19 @@ export default function Parliament() {
         list.sort((a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt))
         setSubjects(list)
       } catch (error) {
-        console.error('Error loading subjects:', error)
-        // Reset ref on error so it can retry
         subjectsLoadedRef.current = false
       }
     }
     
     loadSubjects()
     
-    // Refresh every 30 seconds instead of real-time
     const interval = setInterval(loadSubjects, 30000)
     return () => {
       clearInterval(interval)
-      // Reset ref on cleanup so it can reload if component remounts
       subjectsLoadedRef.current = false
     }
   }, [])
 
-  // My submissions (pending + rejected) - use real-time subscription
   useEffect(() => {
     if (!userUid) return
     
@@ -181,7 +167,6 @@ export default function Parliament() {
     return () => unsub()
   }, [userUid])
 
-  // Fetch notes for current subject - use polling instead of real-time to reduce DB connections
   const notesLoadedRef = useRef(false)
   useEffect(() => {
     if (!current?.id) {
@@ -197,19 +182,15 @@ export default function Parliament() {
         setNotes(list)
         notesLoadedRef.current = true
       } catch (error) {
-        console.error('Error loading notes:', error)
       }
     }
     
-    // Load immediately
     loadNotes()
     
-    // Refresh every 10 seconds instead of real-time (notes don't need instant updates)
     const interval = setInterval(loadNotes, 10000)
     return () => clearInterval(interval)
   }, [current?.id])
 
-  // Create a map of dateId to date object for quick lookup
   const dateMap = useMemo(() => {
     const map = new Map()
     dates.forEach(d => {
@@ -218,7 +199,6 @@ export default function Parliament() {
     return map
   }, [dates])
 
-  // Group approved subjects by date
   const { openGroups, closedGroups } = useMemo(() => {
     const map = new Map()
     for (const s of subjects) {
@@ -237,13 +217,11 @@ export default function Parliament() {
     return { openGroups, closedGroups }
   }, [subjects, dates])
 
-  // Check permissions
   const sessionRole = session?.role || ''
   const effectiveRole = userRole || sessionRole
   const canDeleteNotes = effectiveRole === UserRole.ADMIN || effectiveRole === UserRole.COMMITTEE
   const canEditAnyNote = effectiveRole === UserRole.ADMIN || effectiveRole === UserRole.COMMITTEE
   
-  // Check if user can edit/delete a specific note
   const canEditNote = (note) => {
     if (!note || !isLoggedIn) return false
     if (canEditAnyNote) return true
@@ -256,7 +234,6 @@ export default function Parliament() {
     return note.createdByUid === userUid
   }
   
-  // Organize notes into threaded structure (parent notes and replies)
   const organizedNotes = useMemo(() => {
     const parentNotes = notes.filter(n => !n.parentNoteId)
     const replies = notes.filter(n => n.parentNoteId)
@@ -273,7 +250,6 @@ export default function Parliament() {
       }
     })
     
-    // Sort replies by creation time
     noteMap.forEach(note => {
       note.replies.sort((a, b) => tsMillis(a.createdAt) - tsMillis(b.createdAt))
     })
@@ -281,7 +257,6 @@ export default function Parliament() {
     return Array.from(noteMap.values()).sort((a, b) => tsMillis(a.createdAt) - tsMillis(b.createdAt))
   }, [notes])
 
-  // Add a new note (or reply)
   async function handleAddNote(e) {
     e.preventDefault()
     if (!isLoggedIn || !current?.id || !newNoteText.trim() || submittingNote) return
@@ -294,18 +269,16 @@ export default function Parliament() {
         text: newNoteText.trim(),
         createdByUid: userUid,
         createdByName: displayName,
-        parentNoteId: null, // Top-level note
+        parentNoteId: null,
       })
       setNewNoteText('')
     } catch (error) {
-      console.error('Error adding note:', error)
       alert(t('parliament.noteAddError') || 'שגיאה בהוספת הערה')
     } finally {
       setSubmittingNote(false)
     }
   }
 
-  // Add a reply to a note
   async function handleAddReply(e, parentNoteId) {
     e.preventDefault()
     if (!isLoggedIn || !current?.id || !replyText.trim() || submittingReply || !parentNoteId) return
@@ -323,26 +296,22 @@ export default function Parliament() {
       setReplyText('')
       setReplyingToNoteId(null)
     } catch (error) {
-      console.error('Error adding reply:', error)
       alert(t('parliament.noteAddError') || 'שגיאה בהוספת תגובה')
     } finally {
       setSubmittingReply(false)
     }
   }
 
-  // Start editing a note
   function startEditNote(note) {
     setEditingNoteId(note.id)
     setEditingNoteText(note.text)
   }
 
-  // Cancel editing
   function cancelEditNote() {
     setEditingNoteId(null)
     setEditingNoteText('')
   }
 
-  // Save edited note
   async function handleSaveEdit(noteId) {
     if (!editingNoteText.trim() || !noteId || !current?.id) return
 
@@ -351,12 +320,10 @@ export default function Parliament() {
       setEditingNoteId(null)
       setEditingNoteText('')
     } catch (error) {
-      console.error('Error updating note:', error)
       alert(t('parliament.noteUpdateError') || 'שגיאה בעדכון הערה')
     }
   }
 
-  // Delete a note
   async function handleDeleteNote(noteId) {
     if (!noteId || !current?.id) return
     const note = notes.find(n => n.id === noteId)
@@ -372,7 +339,6 @@ export default function Parliament() {
     try {
       await deleteParliamentNote(noteId, current.id)
     } catch (error) {
-      console.error('Error deleting note:', error)
       alert(t('parliament.noteDeleteError') || 'שגיאה במחיקת הערה')
     }
   }
@@ -404,7 +370,6 @@ export default function Parliament() {
         </div>
       </div>
 
-      {/* OPEN dates: Approved subjects */}
       <section className="parliament-section">
         <h3 className="parliament-section-title">
           <EditableText translationKey="parliament.approvedSubjects">
@@ -466,7 +431,6 @@ export default function Parliament() {
         )}
       </section>
 
-      {/* Submit new subject - students, parents, admins, and managers can submit */}
       {isLoggedIn && (session?.role === 'student' || session?.role === 'parent' || session?.role === 'admin' || session?.role === 'editor' || session?.role === 'committee') ? (
         <section className="parliament-section">
           <SubjectSubmitForm dates={dates} currentUser={user || session} />
@@ -489,7 +453,6 @@ export default function Parliament() {
         </section>
       )}
 
-      {/* My pending submissions */}
       {userUid && (
         <section className="parliament-section">
           <h3 className="parliament-section-title">
@@ -530,7 +493,6 @@ export default function Parliament() {
         </section>
       )}
 
-      {/* My rejected submissions */}
       {userUid && (
         <section className="parliament-section">
           <h3 className="parliament-section-title">
@@ -576,7 +538,6 @@ export default function Parliament() {
         </section>
       )}
 
-      {/* CLOSED dates */}
       <section className="parliament-section">
         <h3 className="parliament-section-title">
           <EditableText translationKey="parliament.closedSectionTitle">
@@ -629,7 +590,6 @@ export default function Parliament() {
         )}
       </section>
 
-      {/* Popup modal for notes */}
       {current && (
         <div
           className="parliament-modal-backdrop"
@@ -675,7 +635,6 @@ export default function Parliament() {
                   </div>
                 </div>
 
-                {/* Notes list */}
                 {organizedNotes.length === 0 ? (
                   <div className="parliament-empty">
                     {t('parliament.noNotes') || 'אין הערות עדיין. היה הראשון להגיב.'}
@@ -760,7 +719,6 @@ export default function Parliament() {
                           </div>
                         )}
                         
-                        {/* Reply button */}
                         {isLoggedIn && editingNoteId !== note.id && (
                           <div style={{ marginTop: '0.5rem' }}>
                             {replyingToNoteId === note.id ? (
@@ -815,7 +773,6 @@ export default function Parliament() {
                           </div>
                         )}
                         
-                        {/* Replies */}
                         {note.replies && note.replies.length > 0 && (
                           <div className="parliament-replies" style={{ marginTop: '1rem', marginRight: '1.5rem', borderRight: '2px solid var(--border-color)', paddingRight: '1rem' }}>
                             {note.replies.map(reply => (
@@ -904,7 +861,6 @@ export default function Parliament() {
                   </div>
                 )}
 
-                {/* Add note form - only for logged-in users */}
                 {isLoggedIn ? (
                   <form onSubmit={handleAddNote} style={{ marginTop: '1rem' }}>
                     <textarea

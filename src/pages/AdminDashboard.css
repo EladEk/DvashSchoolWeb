@@ -148,13 +148,18 @@
 }
 
 .save-btn,
-.export-btn {
+.export-btn,
+.publish-btn {
   padding: 0.5rem 1.5rem;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
 }
 
 .save-btn {
@@ -177,9 +182,49 @@
   color: var(--text-on-primary);
 }
 
-.export-btn:hover {
+.export-btn:hover:not(:disabled) {
   background-color: var(--warm-orange);
   transform: translateY(-2px);
+}
+
+.export-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.publish-btn {
+  background-color: #28a745;
+  color: var(--text-on-primary);
+  font-weight: 600;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.publish-btn:hover:not(:disabled) {
+  background-color: #218838;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.publish-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--text-on-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .admin-message {
@@ -298,7 +343,8 @@
   }
 
   .save-btn,
-  .export-btn {
+  .export-btn,
+  .publish-btn {
     width: 100%;
   }
 }

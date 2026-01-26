@@ -73,14 +73,12 @@ const ImageEditor = ({ imageKey, currentPath, onSave, onClose }) => {
         }
       }, 300)
     } catch (err) {
-      console.error('Error saving image path:', err)
       setError(err.message || t('image.saveError') || 'שגיאה בשמירת נתיב התמונה')
       setUploading(false)
     }
   }
 
   const handleUploadError = (error) => {
-    console.error('Upload error:', error)
     setError(error.message || t('image.uploadError') || 'שגיאה בהעלאת התמונה')
     setUploading(false)
     setUploadProgress(0)
@@ -118,7 +116,6 @@ const ImageEditor = ({ imageKey, currentPath, onSave, onClose }) => {
       onSave(null)
       onClose()
     } catch (err) {
-      console.error('Delete error:', err)
       setError(err.message || t('image.deleteError') || 'שגיאה במחיקת התמונה')
     }
   }

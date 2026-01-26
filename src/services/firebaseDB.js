@@ -1,6 +1,4 @@
 // Centralized Firebase Database Operations
-// ALL Firestore read/write operations should go through this file
-// Cache-first strategy: Check localStorage/cache before making Firebase calls
 
 import { db } from './firebase'
 import { 
@@ -48,7 +46,6 @@ const memoryCacheTime = new Map()
  * @returns {any|null} Cached data or null
  */
 const getFromCache = (cacheKey, checkMemory = true) => {
-  // Check memory cache first (fastest)
   if (checkMemory) {
     const cached = memoryCache.get(cacheKey)
     const cacheTime = memoryCacheTime.get(cacheKey)
@@ -57,7 +54,6 @@ const getFromCache = (cacheKey, checkMemory = true) => {
       if (age < CACHE_DURATION) {
         return cached
       } else {
-        // Expired, remove from memory
         memoryCache.delete(cacheKey)
         memoryCacheTime.delete(cacheKey)
       }
@@ -72,18 +68,15 @@ const getFromCache = (cacheKey, checkMemory = true) => {
       if (parsed && parsed.data !== undefined && parsed.timestamp) {
         const age = Date.now() - parsed.timestamp
         if (age < CACHE_DURATION) {
-          // Update memory cache
           memoryCache.set(cacheKey, parsed.data)
           memoryCacheTime.set(cacheKey, parsed.timestamp)
           return parsed.data
         } else {
-          // Expired, remove from localStorage
           localStorage.removeItem(cacheKey)
         }
       }
     }
   } catch (error) {
-    console.error(`Error reading cache for ${cacheKey}:`, error)
   }
 
   return null
@@ -97,19 +90,15 @@ const getFromCache = (cacheKey, checkMemory = true) => {
 const saveToCache = (cacheKey, data) => {
   const timestamp = Date.now()
   
-  // Save to memory cache
   memoryCache.set(cacheKey, data)
   memoryCacheTime.set(cacheKey, timestamp)
   
-  // Save to localStorage
   try {
     localStorage.setItem(cacheKey, JSON.stringify({
       data,
       timestamp
     }))
   } catch (error) {
-    console.error(`Error saving cache for ${cacheKey}:`, error)
-    // If localStorage is full, clear old cache entries
     if (error.name === 'QuotaExceededError') {
       clearOldCache()
     }
@@ -126,7 +115,6 @@ const clearCache = (cacheKey) => {
   try {
     localStorage.removeItem(cacheKey)
   } catch (error) {
-    console.error(`Error clearing cache for ${cacheKey}:`, error)
   }
 }
 
@@ -137,7 +125,6 @@ const clearOldCache = () => {
   const now = Date.now()
   const keysToRemove = []
   
-  // Check localStorage
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
@@ -151,7 +138,6 @@ const clearOldCache = () => {
             }
           }
         } catch (e) {
-          // Invalid cache entry, remove it
           keysToRemove.push(key)
         }
       }
@@ -163,7 +149,6 @@ const clearOldCache = () => {
       memoryCacheTime.delete(key)
     })
   } catch (error) {
-    console.error('Error clearing old cache:', error)
   }
 }
 
@@ -184,7 +169,6 @@ export const clearAllCache = () => {
     }
     keysToRemove.forEach(key => localStorage.removeItem(key))
   } catch (error) {
-    console.error('Error clearing all cache:', error)
   }
 }
 
@@ -194,7 +178,6 @@ export const clearAllCache = () => {
 
 /**
  * Load translations from Firebase
- * Uses a single query to fetch both documents, reducing DB calls
  * @returns {Promise<{he: object, en: object} | null>}
  */
 export const loadTranslationsFromDB = async () => {
@@ -203,8 +186,6 @@ export const loadTranslationsFromDB = async () => {
       return null
     }
     
-    // Batch fetch both translation documents in a single query
-    // This reduces from 2 separate getDoc calls to 1 query
     const translationsRef = collection(db, 'translations')
     const snapshot = await getDocs(translationsRef)
     
@@ -246,8 +227,7 @@ const buildNestedUpdate = (translationKey, value) => {
 }
 
 /**
- * Save a single translation to Firebase using batch write (SINGLE network call)
- * Only updates the specific field that was changed
+ * Save a single translation to Firebase
  * @param {string} translationKey - Translation key path (e.g., 'about.title')
  * @param {string} hebrewValue - Hebrew value
  * @param {string} englishValue - English value
@@ -259,39 +239,28 @@ export const saveTranslationToDB = async (translationKey, hebrewValue, englishVa
       throw new Error('Firebase not configured')
     }
     
-    // Build nested update objects - ONLY the changed field
-    // Example: translationKey='about.title' creates { about: { title: value } }
     const heUpdate = buildNestedUpdate(translationKey, hebrewValue)
     const enUpdate = buildNestedUpdate(translationKey, englishValue)
     
-    // Use batch write - SINGLE Firebase network call for both documents
-    // This ensures atomicity and efficiency
-    // Use setDoc with merge instead of update to handle documents that don't exist yet
     const batch = writeBatch(db)
     const heDocRef = doc(db, 'translations', 'he')
     const enDocRef = doc(db, 'translations', 'en')
     
-    // Use setDoc with merge: true to create or update
-    // This works even if the documents don't exist yet
     batch.set(heDocRef, heUpdate, { merge: true })
     batch.set(enDocRef, enUpdate, { merge: true })
     
-    // Commit the batch with timeout to prevent hanging
     const commitPromise = batch.commit()
     const timeoutPromise = new Promise((_, reject) => {
       const timeoutId = setTimeout(() => {
         reject(new Error('Firebase save timeout - client may be offline'))
       }, 10000)
-      // Clear timeout if commit succeeds
       commitPromise.finally(() => clearTimeout(timeoutId))
     })
     
-    // Race between commit and timeout
     await Promise.race([commitPromise, timeoutPromise])
     
     return { success: true }
   } catch (error) {
-    console.error('❌ Error saving translation to Firebase:', error)
     throw error
   }
 }
@@ -350,7 +319,6 @@ export const saveAllTranslationsToDB = async (translations) => {
     
     return { success: true }
   } catch (error) {
-    console.error('Error saving all translations to Firebase:', error)
     throw error
   }
 }
@@ -380,7 +348,6 @@ export const submitContactFormToDB = async (formData) => {
     
     return { success: true, id: docRef.id }
   } catch (error) {
-    console.error('Error submitting contact form:', error)
     return { success: false, error: error.message }
   }
 }
@@ -476,7 +443,6 @@ export const saveImagePathToDB = async (imageKey, imagePath) => {
     
     return { success: true }
   } catch (error) {
-    console.error('Error saving image path to Firebase:', error)
     throw error
   }
 }
@@ -552,8 +518,6 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
         return null
       }
     } catch (error) {
-      console.error(`[firebaseDB] ❌ Error loading image path from GitHub texts.json for ${imageKey}:`, error)
-      // Return null if JSON loading fails (no Firebase fallback in production)
       return null
     }
   }
@@ -582,8 +546,6 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
     
     return imagePath
   } catch (error) {
-    console.error(`[firebaseDB] Error loading image path for ${imageKey}:`, error)
-    // Return cached data if available, even if expired
     const cached = getFromCache(cacheKey, false)
     return cached || null
   }
@@ -612,7 +574,6 @@ export const loadParliamentDates = async (forceRefresh = false) => {
   
   try {
     if (!db) {
-      // If no DB, return cached data if available
       const cached = getFromCache(cacheKey, false)
       return cached || []
     }
@@ -625,8 +586,6 @@ export const loadParliamentDates = async (forceRefresh = false) => {
     
     return dates
   } catch (error) {
-    console.error('Error loading parliament dates:', error)
-    // Return cached data if available, even if expired
     const cached = getFromCache(cacheKey, false)
     return cached || []
   }
@@ -656,7 +615,6 @@ export const createParliamentDate = async (dateData) => {
     
     return { success: true, id: docRef.id }
   } catch (error) {
-    console.error('Error creating parliament date:', error)
     throw error
   }
 }
@@ -691,7 +649,6 @@ export const updateParliamentDate = async (dateId, updateData) => {
     
     return { success: true }
   } catch (error) {
-    console.error('Error updating parliament date:', error)
     throw error
   }
 }
@@ -714,7 +671,6 @@ export const toggleParliamentDate = async (dateId, isOpen) => {
     
     return { success: true }
   } catch (error) {
-    console.error('Error toggling parliament date:', error)
     throw error
   }
 }
@@ -844,7 +800,6 @@ export const archiveParliamentDate = async (dateId) => {
       }
     }
   } catch (error) {
-    console.error('Error archiving parliament date:', error)
     throw error
   }
 }
@@ -895,7 +850,6 @@ export const addSubjectDecision = async (subjectOriginalId, decisionText, create
     
     return { success: true }
   } catch (error) {
-    console.error('Error adding subject decision:', error)
     throw error
   }
 }
@@ -933,7 +887,6 @@ export const updateParliamentSummary = async (parliamentId, summary) => {
     
     return { success: true }
   } catch (error) {
-    console.error('Error updating parliament summary:', error)
     throw error
   }
 }
@@ -963,7 +916,6 @@ export const loadParliamentHistory = async (forceRefresh = false) => {
     
     return history
   } catch (error) {
-    console.error('Error loading parliament history:', error)
     const cached = getFromCache(cacheKey, false)
     return cached || []
   }
@@ -1000,7 +952,6 @@ export const deleteParliamentDate = async (dateId) => {
     
     return { success: true }
   } catch (error) {
-    console.error('Error deleting parliament date:', error)
     throw error
   }
 }
@@ -1025,7 +976,6 @@ export const loadParliamentSubjects = async (status = null, forceRefresh = false
   
   try {
     if (!db) {
-      // If no DB, return cached data if available
       const cached = getFromCache(cacheKey, false)
       return cached || []
     }
@@ -1043,8 +993,6 @@ export const loadParliamentSubjects = async (status = null, forceRefresh = false
     
     return subjects
   } catch (error) {
-    console.error('Error loading parliament subjects:', error)
-    // Return cached data if available, even if expired
     const cached = getFromCache(cacheKey, false)
     return cached || []
   }
@@ -1070,7 +1018,6 @@ export const subscribeToUserParliamentSubjects = (userUid, callback) => {
     const subjects = snap.docs.map(d => ({ id: d.id, ...d.data() }))
     callback(subjects)
   }, (error) => {
-    console.error('Error in parliament subjects subscription:', error)
     callback([])
   })
 }
@@ -1128,7 +1075,6 @@ export const createParliamentSubject = async (subjectData) => {
     
     return { success: true, id: docRef.id }
   } catch (error) {
-    console.error('Error creating parliament subject:', error)
     throw error
   }
 }
@@ -1172,7 +1118,6 @@ export const updateParliamentSubject = async (subjectId, updateData) => {
     
     return { success: true }
   } catch (error) {
-    console.error('Error updating parliament subject:', error)
     throw error
   }
 }
@@ -1227,7 +1172,6 @@ export const deleteParliamentSubject = async (subjectId) => {
     
     return { success: true, deletedNotes: notes.length }
   } catch (error) {
-    console.error('Error deleting parliament subject:', error)
     throw error
   }
 }
@@ -1261,7 +1205,6 @@ export const updateParliamentSubjectStatus = async (subjectId, status, statusRea
     
     return { success: true }
   } catch (error) {
-    console.error('Error updating parliament subject status:', error)
     throw error
   }
 }
@@ -1288,7 +1231,6 @@ export const loadParliamentNotes = async (subjectId, forceRefresh = false) => {
   
   try {
     if (!db) {
-      // If no DB, return cached data if available
       const cached = getFromCache(cacheKey, false)
       return cached || []
     }
@@ -1305,8 +1247,6 @@ export const loadParliamentNotes = async (subjectId, forceRefresh = false) => {
     
     return notes
   } catch (error) {
-    console.error('Error loading parliament notes:', error)
-    // Return cached data if available, even if expired
     const cached = getFromCache(cacheKey, false)
     return cached || []
   }
@@ -1338,7 +1278,6 @@ export const createParliamentNote = async (noteData) => {
     
     return { success: true, id: docRef.id }
   } catch (error) {
-    console.error('Error creating parliament note:', error)
     throw error
   }
 }
@@ -1367,7 +1306,6 @@ export const updateParliamentNote = async (noteId, text, subjectId = null) => {
     
     return { success: true }
   } catch (error) {
-    console.error('Error updating parliament note:', error)
     throw error
   }
 }
@@ -1392,7 +1330,6 @@ export const deleteParliamentNote = async (noteId, subjectId = null) => {
     
     return { success: true }
   } catch (error) {
-    console.error('Error deleting parliament note:', error)
     throw error
   }
 }
@@ -1420,7 +1357,6 @@ export const loadUsers = async (forceRefresh = false) => {
   
   try {
     if (!db) {
-      // If no DB, return cached data if available
       const cached = getFromCache(cacheKey, false)
       return cached || []
     }
@@ -1433,8 +1369,6 @@ export const loadUsers = async (forceRefresh = false) => {
     
     return users
   } catch (error) {
-    console.error('Error loading users:', error)
-    // Return cached data if available, even if expired
     const cached = getFromCache(cacheKey, false)
     return cached || []
   }
@@ -1461,7 +1395,6 @@ export const findUserByUsername = async (usernameLower) => {
     const doc = snap.docs[0]
     return { id: doc.id, data: doc.data() }
   } catch (error) {
-    console.error('Error finding user by username:', error)
     return null
   }
 }
@@ -1491,7 +1424,6 @@ export const checkUsernameExists = async (usernameLower, excludeId = null) => {
     
     return true
   } catch (error) {
-    console.error('Error checking username exists:', error)
     return false
   }
 }
@@ -1523,7 +1455,6 @@ export const createUser = async (userData) => {
     
     return { success: true, id: docRef.id }
   } catch (error) {
-    console.error('Error creating user:', error)
     throw error
   }
 }
@@ -1546,7 +1477,6 @@ export const updateUser = async (userId, updateData) => {
     
     return { success: true }
   } catch (error) {
-    console.error('Error updating user:', error)
     throw error
   }
 }
@@ -1568,7 +1498,6 @@ export const deleteUser = async (userId) => {
     
     return { success: true }
   } catch (error) {
-    console.error('Error deleting user:', error)
     throw error
   }
 }
@@ -1600,7 +1529,6 @@ export const getRoleByDocId = async (collectionName, docId) => {
     
     return ''
   } catch (error) {
-    console.error('Error getting role by doc ID:', error)
     return ''
   }
 }
@@ -1635,7 +1563,6 @@ export const getRoleByField = async (collectionName, fieldName, fieldValue) => {
     
     return ''
   } catch (error) {
-    console.error('Error getting role by field:', error)
     return ''
   }
 }
