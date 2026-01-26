@@ -114,7 +114,6 @@ const AdminDashboard = () => {
   const handlePublish = async () => {
     // Prevent multiple clicks
     if (publishing) {
-      console.warn('Publish already in progress, ignoring click')
       return
     }
 
@@ -129,10 +128,8 @@ const AdminDashboard = () => {
       const commitMessage = prompt('Enter commit message (optional):') || 
         `Update site texts - ${new Date().toISOString()}`
       
-      console.log('[AdminDashboard] Publishing to GitHub with message:', commitMessage)
       const result = await publishTexts(commitMessage)
       
-      console.log('[AdminDashboard] Publish result:', result)
       setMessage(`✅ Published successfully! Commit: ${result.commit?.sha?.substring(0, 7) || result.files?.[0]?.sha?.substring(0, 7) || 'N/A'}`)
       setTimeout(() => setMessage(''), 5000)
       

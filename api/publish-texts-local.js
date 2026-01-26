@@ -128,10 +128,6 @@ export default async function handler(req, res) {
       // Also write to content/texts.json (for git)
       fs.writeFileSync(contentPath, jsonContent, 'utf-8')
 
-      console.log(`[LOCAL TEST] Wrote texts to: ${filePath}`)
-      console.log(`[LOCAL TEST] Also wrote to: ${contentPath}`)
-      console.log(`[LOCAL TEST] Commit message: ${commitMessage}`)
-
       return res.status(200).json({
         success: true,
         message: 'Texts saved locally (TEST MODE)',

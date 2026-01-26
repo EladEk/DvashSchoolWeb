@@ -47,13 +47,13 @@ const ImageEditor = ({ imageKey, currentPath, onSave, onClose }) => {
         throw new Error('Upload succeeded but no file path returned')
       }
 
-      // Construct full ImageKit URL
+      // Construct full ImageKit URL for preview
       const imageUrl = `https://ik.imagekit.io/fzv0y7xbu${imagePath}`
       const imageUrlWithCache = `${imageUrl}?t=${Date.now()}`
       setPreview(imageUrlWithCache)
 
-      // Save full URL to Firebase (as per user requirement)
-      await saveImagePathToDB(imageKey, imageUrl)
+      // Save path only to Firebase (not full URL)
+      await saveImagePathToDB(imageKey, imagePath)
 
       // Save path to localStorage (for backward compatibility)
       localStorage.setItem(`image_${imageKey}`, imagePath)

@@ -397,31 +397,64 @@ export const submitContactFormToDB = async (formData) => {
  * @param {string|null} imagePath - ImageKit path/URL or null to delete
  * @returns {Promise<{success: boolean}>}
  */
+/**
+ * Normalize image path: extract path from full URL if needed
+ * Always returns just the path (e.g., "/school-website/image.jpg")
+ * @param {string} imagePathOrUrl - Full URL or path
+ * @returns {string|null} Normalized path or null
+ */
+const normalizeImagePath = (imagePathOrUrl) => {
+  if (!imagePathOrUrl) return null
+  
+  // If it's already a path (starts with /), return as-is
+  if (imagePathOrUrl.startsWith('/')) {
+    return imagePathOrUrl
+  }
+  
+  // If it's a full URL, extract the path
+  if (imagePathOrUrl.startsWith('http')) {
+    try {
+      const url = new URL(imagePathOrUrl)
+      return url.pathname
+    } catch {
+      // If URL parsing fails, try to extract path manually
+      const match = imagePathOrUrl.match(/\/school-website\/.+$/)
+      return match ? match[0] : imagePathOrUrl
+    }
+  }
+  
+  // Otherwise return as-is (might be a relative path)
+  return imagePathOrUrl
+}
+
 export const saveImagePathToDB = async (imageKey, imagePath) => {
   try {
     if (!db) {
       throw new Error('Firebase not configured')
     }
     
+    // Normalize path: always save path only, not full URL
+    const normalizedPath = normalizeImagePath(imagePath)
+    
     const imageDocRef = doc(db, 'images', imageKey)
     
-    if (imagePath === null) {
+    if (normalizedPath === null) {
       // Delete the image reference
       await updateDoc(imageDocRef, {
         path: null,
         updatedAt: serverTimestamp(),
       })
     } else {
-      // Save or update the ImageKit path/URL
+      // Save or update the ImageKit path (path only, not full URL)
       await setDoc(imageDocRef, {
-        path: imagePath, // ImageKit path/URL
+        path: normalizedPath, // Always save path only
         updatedAt: serverTimestamp(),
       }, { merge: true })
     }
     
-    // Update cache immediately
+    // Update cache immediately (with normalized path)
     const cacheKey = `${CACHE_KEYS.IMAGES}${imageKey}`
-    saveToCache(cacheKey, imagePath)
+    saveToCache(cacheKey, normalizedPath)
     
     return { success: true }
   } catch (error) {
@@ -440,7 +473,6 @@ export const saveImagePathToDB = async (imageKey, imagePath) => {
  */
 export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
   if (!imageKey) {
-    console.warn('[firebaseDB] loadImagePathFromDB called with empty imageKey')
     return null
   }
   
@@ -460,7 +492,6 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
   if (!forceRefresh) {
     const cached = getFromCache(cacheKey)
     if (cached !== null) {
-      console.log(`[firebaseDB] Using cached image path for ${imageKey}`)
       return cached
     }
   }
@@ -468,8 +499,6 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
   // In production mode, load from GitHub JSON file
   if (!isEditMode()) {
     try {
-      console.log(`[firebaseDB] 🌐 PRODUCTION MODE: Loading image path for ${imageKey} from GitHub (/content/texts.json)`)
-      
       // Load texts.json with cache-busting to ensure fresh fetch from GitHub
       const cacheBuster = `?t=${Date.now()}`
       const response = await fetch(`/content/texts.json${cacheBuster}`, {
@@ -492,22 +521,14 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
       // Images are at root level for easy access
       const images = texts.images || texts.he?.images || {}
       
-      // Log for debugging
-      console.log(`[firebaseDB] Looking for image key: ${imageKey}`)
-      console.log(`[firebaseDB] Has images key at root:`, 'images' in texts)
-      console.log(`[firebaseDB] Images object keys:`, Object.keys(images))
-      console.log(`[firebaseDB] Total images in JSON:`, Object.keys(images).length)
-      
       const imagePath = images[imageKey] || null
       
       if (imagePath) {
-        console.log(`[firebaseDB] ✅ Found image path for ${imageKey} in GitHub texts.json:`, imagePath)
-        saveToCache(cacheKey, imagePath)
-        return imagePath
+        // Normalize path: extract path from full URL if needed
+        const normalizedPath = normalizeImagePath(imagePath)
+        saveToCache(cacheKey, normalizedPath)
+        return normalizedPath
       } else {
-        console.log(`[firebaseDB] ⚠️ No image path found for ${imageKey} in GitHub texts.json`)
-        console.log(`[firebaseDB] ⚠️ Available image keys:`, Object.keys(images))
-        console.log(`[firebaseDB] ⚠️ This image may not have been published yet. Publish from admin dashboard to include it.`)
         // Images should be in GitHub JSON - if not found, return null (no fallback)
         saveToCache(cacheKey, null)
         return null
@@ -522,21 +543,20 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
   // In edit mode only, load from Firebase
   try {
     if (!db) {
-      console.warn('[firebaseDB] Firebase db not initialized, checking cache')
       const cached = getFromCache(cacheKey, false)
       return cached || null
     }
     
-    console.log(`[firebaseDB] 📝 EDIT MODE: Loading image path from Firestore for key: ${imageKey}`)
     const imageDoc = await getDoc(doc(db, 'images', imageKey))
     
     let imagePath = null
     if (imageDoc.exists()) {
       const data = imageDoc.data()
       imagePath = data.path || null
-      console.log(`[firebaseDB] Found image path for ${imageKey}:`, imagePath)
-    } else {
-      console.log(`[firebaseDB] No image document found for key: ${imageKey}`)
+      // Normalize path: extract path from full URL if needed (for backward compatibility)
+      if (imagePath) {
+        imagePath = normalizeImagePath(imagePath)
+      }
     }
     
     // Save to cache (even null values to avoid repeated queries)
@@ -547,9 +567,6 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
     console.error(`[firebaseDB] Error loading image path for ${imageKey}:`, error)
     // Return cached data if available, even if expired
     const cached = getFromCache(cacheKey, false)
-    if (cached) {
-      console.log(`[firebaseDB] Using expired cache for ${imageKey}:`, cached)
-    }
     return cached || null
   }
 }

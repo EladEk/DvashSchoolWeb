@@ -26,8 +26,6 @@ const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = ''
     // Load image path - in production mode loads from GitHub, in edit mode from Firebase
     const loadImage = async () => {
       try {
-        console.log(`[EditableImage] Loading image for key: ${imageKey}`)
-        
         // Check cache first (short duration to minimize stale data)
         const cached = imagePathCache.get(imageKey)
         const cacheTime = imagePathCacheTime.get(imageKey)
@@ -35,7 +33,6 @@ const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = ''
         
         if (cached && cacheTime && (now - cacheTime) < CACHE_DURATION) {
           // Use cached value
-          console.log(`[EditableImage] Using cached image path for ${imageKey} (age: ${Math.round((now - cacheTime) / 1000)}s)`)
           setImagePath(cached)
           setLoading(false)
           return
@@ -45,7 +42,6 @@ const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = ''
         const stored = localStorage.getItem(`image_${imageKey}`)
         if (stored && !cached) {
           // Only use localStorage if cache expired and we don't have fresh data yet
-          console.log(`[EditableImage] Found image path in localStorage for ${imageKey}:`, stored)
           setImagePath(stored)
           imagePathCache.set(imageKey, stored)
           imagePathCacheTime.set(imageKey, now)
@@ -54,28 +50,22 @@ const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = ''
         }
         
         // Load from source (GitHub in production, Firebase in edit mode)
-        console.log(`[EditableImage] Loading image path from source (GitHub in production, Firebase in edit mode) for ${imageKey}...`)
         const dbPath = await loadImagePathFromDB(imageKey)
-        console.log(`[EditableImage] Source returned path for ${imageKey}:`, dbPath)
         
         if (dbPath) {
-          console.log(`[EditableImage] Setting image path for ${imageKey}:`, dbPath)
           setImagePath(dbPath)
           localStorage.setItem(`image_${imageKey}`, dbPath)
           // Update cache
           imagePathCache.set(imageKey, dbPath)
           imagePathCacheTime.set(imageKey, now)
         } else {
-          console.log(`[EditableImage] No image path found in Firebase for ${imageKey}`)
           // Cache null result too to avoid repeated queries
           imagePathCache.set(imageKey, null)
           imagePathCacheTime.set(imageKey, now)
           // If we had localStorage value, keep it
           if (stored) {
-            console.log(`[EditableImage] Using localStorage fallback for ${imageKey}:`, stored)
             setImagePath(stored)
           } else {
-            console.log(`[EditableImage] No image path found anywhere for ${imageKey}`)
             setImagePath(null)
           }
         }
@@ -84,7 +74,6 @@ const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = ''
         // Fallback to localStorage if available
         const stored = localStorage.getItem(`image_${imageKey}`)
         if (stored) {
-          console.log(`[EditableImage] Using localStorage fallback for ${imageKey}:`, stored)
           setImagePath(stored)
         }
       } finally {
@@ -149,7 +138,13 @@ const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = ''
     <div className={`editable-image-container ${className}`}>
       <img
         key={imagePath} // Force re-render when imagePath changes
-        src={`https://ik.imagekit.io/fzv0y7xbu${imagePath}?t=${Date.now()}`}
+        src={(() => {
+          // Normalize path: if it's already a full URL, use it; otherwise prepend base URL
+          if (imagePath && imagePath.startsWith('http')) {
+            return `${imagePath}?t=${Date.now()}`
+          }
+          return `https://ik.imagekit.io/fzv0y7xbu${imagePath}?t=${Date.now()}`
+        })()}
         alt={alt || imageKey}
         className="editable-image"
         onError={(e) => {

@@ -131,28 +131,6 @@ const ImageKitUpload = ({
         throw new Error('Authentication failed: missing token, signature, or expire')
       }
       
-      // IMPORTANT: ImageKit signature validation is very strict
-      // The signature must match exactly what ImageKit calculates on their end
-      // Signature = HMAC-SHA1(privateKey, token + expire) where expire is a string
-      
-      // Use the exact expire string from server (if available) to match signature calculation
-      // Otherwise, convert the number to string (should match server's expire.toString())
-      const expireStr = window._imageKitExpireStr || expire.toString()
-      
-      // Verify expire is valid
-      if (isNaN(expire)) {
-        throw new Error(`Invalid expire value: ${expire} (${typeof expire})`)
-      }
-      
-      // Verify the expire string matches what was used for signature
-      if (expireStr !== String(expire) && expireStr !== expire.toString()) {
-        console.warn('⚠️ Expire string might not match signature calculation:', {
-          expireStr,
-          expireNum: expire,
-          expireNumToString: expire.toString()
-        })
-      }
-      
       formData.append('token', token)
       formData.append('signature', signature)
       // expire must be a number (not string) for ImageKit
