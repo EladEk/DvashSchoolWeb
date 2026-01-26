@@ -74,12 +74,20 @@ const ImageKitUpload = ({
             const authData = await authResponse.json()
             token = authData.token
             signature = authData.signature
-            // Ensure expire is a number
-            expire = typeof authData.expire === 'number' ? authData.expire : parseInt(authData.expire, 10)
+            // CRITICAL: Use expire exactly as received from server (as string or number)
+            // The signature was calculated with expire.toString(), so we must use the same value
+            // Store both the number and string representation to ensure consistency
+            const expireNum = typeof authData.expire === 'number' ? authData.expire : parseInt(authData.expire, 10)
+            const expireStrFromServer = String(authData.expire) // Use exact string from server
             
-            if (!token || !signature || !expire || isNaN(expire)) {
+            if (!token || !signature || !expireNum || isNaN(expireNum)) {
               throw new Error('Invalid authentication response: missing or invalid fields')
             }
+            
+            // Store expire as number for validation, but use the string from server for upload
+            expire = expireNum
+            // Store the exact string that was used for signature calculation
+            window._imageKitExpireStr = expireStrFromServer
           } else {
             const errorText = await authResponse.text()
             throw new Error(`Authentication endpoint returned error: ${authResponse.status} - ${errorText}`)
@@ -131,22 +139,57 @@ const ImageKitUpload = ({
         throw new Error('Authentication failed: missing token, signature, or expire')
       }
       
+      // IMPORTANT: ImageKit signature validation is very strict
+      // The signature must match exactly what ImageKit calculates on their end
+      // Signature = HMAC-SHA1(privateKey, token + expire) where expire is a string
+      
+      // Use the exact expire string from server (if available) to match signature calculation
+      // Otherwise, convert the number to string (should match server's expire.toString())
+      const expireStr = window._imageKitExpireStr || expire.toString()
+      
+      // Verify expire is valid
+      if (isNaN(expire)) {
+        throw new Error(`Invalid expire value: ${expire} (${typeof expire})`)
+      }
+      
+      // Verify the expire string matches what was used for signature
+      if (expireStr !== String(expire) && expireStr !== expire.toString()) {
+        console.warn('⚠️ Expire string might not match signature calculation:', {
+          expireStr,
+          expireNum: expire,
+          expireNumToString: expire.toString()
+        })
+      }
+      
       formData.append('token', token)
       formData.append('signature', signature)
-      // expire must be sent as a string to match signature calculation exactly
-      // ImageKit is very strict about signature matching - must use same string format
-      const expireStr = expire.toString()
-      formData.append('expire', expireStr)
+      // CRITICAL: Send expire as the exact value from server (number)
+      // FormData will convert it to string, but ImageKit might validate the type
+      // The signature was calculated with expire.toString(), so we must ensure consistency
+      formData.append('expire', expire) // Send as number, FormData converts to string
       
       // Debug: Log what we're sending (for troubleshooting)
       console.log('ImageKit upload params:', {
         token: token.substring(0, 8) + '...',
+        tokenLength: token.length,
         signature: signature.substring(0, 16) + '...',
+        signatureLength: signature.length,
         expire: expire,
+        expireType: typeof expire,
         expireStr: expireStr,
+        expireStrType: typeof expireStr,
+        signatureInput: (token + expireStr).substring(0, 20) + '...', // What was used for signature
         fileName: fileName || `upload-${Date.now()}`,
         folder: folder
       })
+      
+      // Verify signature format (should be 40 hex characters for HMAC-SHA1)
+      if (signature.length !== 40 || !/^[0-9a-f]{40}$/i.test(signature)) {
+        console.error('⚠️ Signature format is invalid:', {
+          length: signature.length,
+          format: /^[0-9a-f]{40}$/i.test(signature) ? 'valid hex' : 'invalid format'
+        })
+      }
 
       // Upload with progress tracking
       const xhr = new XMLHttpRequest()
