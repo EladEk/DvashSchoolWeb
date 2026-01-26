@@ -163,10 +163,11 @@ const ImageKitUpload = ({
       
       formData.append('token', token)
       formData.append('signature', signature)
-      // CRITICAL: Send expire as the exact value from server (number)
-      // FormData will convert it to string, but ImageKit might validate the type
-      // The signature was calculated with expire.toString(), so we must ensure consistency
-      formData.append('expire', expire) // Send as number, FormData converts to string
+      // CRITICAL: Use the exact expire string from server to match signature calculation
+      // The signature was calculated with expire.toString() on the server
+      // We must use the exact same string representation that was used for the signature
+      const expireStrToSend = window._imageKitExpireStr || expire.toString()
+      formData.append('expire', expireStrToSend) // Send as string to match signature exactly
       
       // Debug: Log what we're sending (for troubleshooting)
       console.log('ImageKit upload params:', {
@@ -176,9 +177,10 @@ const ImageKitUpload = ({
         signatureLength: signature.length,
         expire: expire,
         expireType: typeof expire,
-        expireStr: expireStr,
-        expireStrType: typeof expireStr,
-        signatureInput: (token + expireStr).substring(0, 20) + '...', // What was used for signature
+        expireStrToSend: expireStrToSend,
+        expireStrToSendType: typeof expireStrToSend,
+        usingStoredString: !!window._imageKitExpireStr,
+        signatureInput: (token + expireStrToSend).substring(0, 20) + '...', // What should match server calculation
         fileName: fileName || `upload-${Date.now()}`,
         folder: folder
       })
