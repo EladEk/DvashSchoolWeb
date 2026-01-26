@@ -194,7 +194,9 @@ export default async function handler(req, res) {
       
       // Test connection by checking if we can access Firestore
       console.log('Attempting to fetch translations from Firestore...')
-      console.log('Database project:', db.app.options.projectId)
+      if (admin.apps && admin.apps.length > 0) {
+        console.log('Database project:', admin.apps[0].options?.projectId || 'unknown')
+      }
       
       // Try a simple read operation first to test authentication
       try {
@@ -303,6 +305,10 @@ export default async function handler(req, res) {
     console.log('Fetching images from Firebase...')
     let images = {}
     try {
+      if (!db) {
+        throw new Error('Firestore db instance is not available')
+      }
+      
       const imagesRef = db.collection('images')
       const imagesSnapshot = await imagesRef.get()
       
@@ -315,7 +321,9 @@ export default async function handler(req, res) {
       console.log(`Fetched ${Object.keys(images).length} images from Firebase`)
     } catch (imagesError) {
       console.error('Error fetching images from Firebase:', imagesError)
+      console.error('Images error details:', imagesError.message)
       // Continue without images - they'll be loaded from Firebase in production
+      // Images will be empty object, which is fine
     }
     
     // Add images to the JSON structure
