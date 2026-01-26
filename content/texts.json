@@ -273,9 +273,9 @@
     },
     "sections": [
       {
-        "imageKey": "section.image1",
-        "title": "רקע",
         "position": 0,
+        "title": "רקע",
+        "imageKey": "section.image1",
         "text": "בית ספר הדמוקרטי הוקם בתשפ\"ה לאחר 4 שנים בהן היה מסלול.\nבית הספר הינו מוכר ורשמי תחת פיקוח משרד החינוך ותמיכת הרשות, ומהווה חלק ממערכת החינוך הדמוקרטית בארץ ובעולם. בשנת תשפ״ה יש כתה אחת בכל שכבה (א-ה), ובשנת תשפ״ו ביה\"ס יכלול כיתות א - ו"
       },
       {
@@ -285,21 +285,22 @@
         "position": 1
       },
       {
-        "position": 2,
+        "imageKey": "section.image3",
         "text": "ההורים והמשפחות הם חלק אינטגרלי מקהילת בית-הספר, מקבלת ההחלטות בו, ומהכח המניע אותו. ההורים פעילים בהתנדבות במגוון אפיקים, ושותפים בעשייה ובתמיכה.",
         "title": "קהילה",
-        "imageKey": "section.image3"
+        "position": 2
       },
       {
-        "imageKey": "section.image4",
-        "position": 3,
         "title": "למידה",
-        "text": "בבית הספר מערכת שעות עשירה המציעה מגוון פעילויות בכל שעה נתונה. כל ילד מרכיב לעצמו מערכת שעות אישית ביחד עם החונכ/ת ובהתאם למטרות שהגדירו ביחד בתחילת השנה."
+        "text": "בבית הספר מערכת שעות עשירה המציעה מגוון פעילויות בכל שעה נתונה. כל ילד מרכיב לעצמו מערכת שעות אישית ביחד עם החונכ/ת ובהתאם למטרות שהגדירו ביחד בתחילת השנה.",
+        "position": 3,
+        "imageKey": "section.image4"
       },
       {
         "title": "בדיקה",
         "text": "בדיקה",
-        "position": 4
+        "position": 4,
+        "imageKey": "section.image5"
       }
     ]
   },
@@ -576,33 +577,34 @@
     },
     "sections": [
       {
-        "position": 0,
-        "title": "Background",
         "imageKey": "section.image1",
+        "title": "Background",
+        "position": 0,
         "text": "The Democratic School was established in תשפ\"ה after 4 years of being a track.\nThe school is recognized and official under the supervision of the Ministry of Education and the support of the Authority, and is part of the democratic education system in Israel and around the world. In 1975 there is one class in each grade (1-5), and in תשפ\"ו the school will include grades 1-6."
       },
       {
-        "imageKey": "section.image2",
+        "title": "Authorities",
         "text": "The school is run democratically, in the 3-branch model (legislative, judicial, and executive), with the belief in the children's ability to be partners in shaping their lives, while caring for their needs and the needs of others.",
         "position": 1,
-        "title": "Authorities"
+        "imageKey": "section.image2"
       },
       {
+        "title": "Community",
         "text": "Parents and families are an integral part of the school community, its decision-makers, and its driving force. Parents are active volunteers in a variety of ways, and are partners in action and support.",
         "imageKey": "section.image3",
-        "title": "Community",
         "position": 2
       },
       {
-        "position": 3,
         "imageKey": "section.image4",
         "title": "Learning",
-        "text": "The school has a rich schedule that offers a variety of activities at any given time. Each child creates their own personal schedule together with their tutor and according to the goals they defined together at the beginning of the year."
+        "text": "The school has a rich schedule that offers a variety of activities at any given time. Each child creates their own personal schedule together with their tutor and according to the goals they defined together at the beginning of the year.",
+        "position": 3
       },
       {
         "title": "Test",
         "text": "Test",
-        "position": 4
+        "position": 4,
+        "imageKey": "section.image5"
       }
     ]
   },
