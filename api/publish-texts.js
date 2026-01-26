@@ -312,12 +312,18 @@ export default async function handler(req, res) {
     console.log(`[${requestId}] 📸 Fetching images from Firebase images collection...`)
     let images = {}
     try {
-      if (!db) {
-        throw new Error('Firestore db instance is not available for images')
+      // Ensure db is available - recreate if needed
+      let imagesDb = db
+      if (!imagesDb) {
+        console.log(`[${requestId}] db not available, creating new Firestore instance...`)
+        imagesDb = admin.firestore()
+        console.log(`[${requestId}] New Firestore instance created for images`)
       }
       
       console.log(`[${requestId}] Querying images collection from Firestore...`)
-      const imagesRef = db.collection('images')
+      console.log(`[${requestId}] Firestore instance available:`, !!imagesDb)
+      const imagesRef = imagesDb.collection('images')
+      console.log(`[${requestId}] Collection reference created, fetching documents...`)
       const imagesSnapshot = await imagesRef.get()
       
       console.log(`[${requestId}] Images snapshot size: ${imagesSnapshot.size}`)
@@ -375,12 +381,23 @@ export default async function handler(req, res) {
       }
     } catch (imagesError) {
       console.error(`[${requestId}] ❌ Error fetching images from Firebase:`, imagesError)
-      console.error(`[${requestId}] Images error details:`, imagesError.message)
+      console.error(`[${requestId}] Images error code:`, imagesError.code)
+      console.error(`[${requestId}] Images error message:`, imagesError.message)
+      console.error(`[${requestId}] Images error details:`, imagesError.details || 'No details')
       console.error(`[${requestId}] Images error stack:`, imagesError.stack)
+      
+      // Try to provide helpful error message
+      if (imagesError.code === 16 || imagesError.message.includes('UNAUTHENTICATED')) {
+        console.error(`[${requestId}] ⚠️ Authentication error when fetching images. Check Firebase service account permissions.`)
+      } else if (imagesError.code === 7 || imagesError.message.includes('PERMISSION_DENIED')) {
+        console.error(`[${requestId}] ⚠️ Permission denied when fetching images. Service account needs Firestore read permissions.`)
+      }
+      
       // Don't throw error - allow publishing texts even if images fail
       // Images will be empty, but texts will still be published
       console.warn(`[${requestId}] ⚠️ Continuing without images - texts will be published but images object will be empty`)
       console.warn(`[${requestId}] ⚠️ Production mode will not be able to load images until this is fixed.`)
+      console.warn(`[${requestId}] ⚠️ Check Vercel logs for detailed error information.`)
     }
     
     // Add images to the JSON structure
@@ -404,7 +421,25 @@ export default async function handler(req, res) {
     const jsonContent = JSON.stringify(finalContent, null, 2)
     
     // Log file size for debugging
-    console.log('Generated JSON size:', jsonContent.length, 'bytes')
+    console.log(`[${requestId}] Generated JSON size:`, jsonContent.length, 'bytes')
+    
+    // CRITICAL: Verify images are in the final JSON
+    const parsedCheck = JSON.parse(jsonContent)
+    console.log(`[${requestId}] ✅ Final JSON verification:`)
+    console.log(`[${requestId}]   - Has 'images' key:`, 'images' in parsedCheck)
+    console.log(`[${requestId}]   - Images object keys:`, Object.keys(parsedCheck.images || {}))
+    console.log(`[${requestId}]   - Images count:`, Object.keys(parsedCheck.images || {}).length)
+    console.log(`[${requestId}]   - Images with values:`, Object.values(parsedCheck.images || {}).filter(v => v !== null && v !== undefined).length)
+    
+    if (!('images' in parsedCheck)) {
+      console.error(`[${requestId}] ❌ CRITICAL: 'images' key is missing from final JSON!`)
+    } else if (Object.keys(parsedCheck.images || {}).length === 0) {
+      console.warn(`[${requestId}] ⚠️ WARNING: 'images' object is empty in final JSON!`)
+      console.warn(`[${requestId}] ⚠️ This means no images were found in Firebase or they don't have valid path/location/url fields.`)
+    } else {
+      console.log(`[${requestId}] ✅ Images successfully included in JSON:`, Object.keys(parsedCheck.images).slice(0, 5).join(', '), 
+        Object.keys(parsedCheck.images).length > 5 ? '...' : '')
+    }
 
     // Determine GitHub API auth header (fine-grained tokens use Bearer, classic use token)
     const authHeader = GITHUB_TOKEN.startsWith('ghp_') 
