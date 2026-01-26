@@ -268,28 +268,46 @@ export default async function handler(req, res) {
     
     // Helper function to normalize image path: extract path from full URL if needed
     // Always returns just the path (e.g., "/school-website/image.jpg")
+    // Removes ImageKit endpoint ID if present (extracts path after endpoint)
     const normalizeImagePath = (imagePathOrUrl) => {
       if (!imagePathOrUrl) return null
       
-      // If it's already a path (starts with /), return as-is
-      if (imagePathOrUrl.startsWith('/')) {
-        return imagePathOrUrl
-      }
+      let path = imagePathOrUrl
       
       // If it's a full URL, extract the path
-      if (imagePathOrUrl.startsWith('http')) {
+      if (path.startsWith('http')) {
         try {
-          const url = new URL(imagePathOrUrl)
-          return url.pathname
+          const url = new URL(path)
+          path = url.pathname
         } catch {
           // If URL parsing fails, try to extract path manually
-          const match = imagePathOrUrl.match(/\/school-website\/.+$/)
-          return match ? match[0] : imagePathOrUrl
+          const match = path.match(/\/school-website\/.+$/)
+          if (match) {
+            path = match[0]
+          }
         }
       }
       
-      // Otherwise return as-is (might be a relative path)
-      return imagePathOrUrl
+      // Extract the actual path after any endpoint ID
+      // ImageKit paths typically have structure: /{endpoint_id}/school-website/...
+      // We want to extract: /school-website/...
+      if (path.includes('/school-website/')) {
+        const match = path.match(/\/school-website\/.+$/)
+        if (match) {
+          path = match[0]
+        }
+      }
+      
+      // Ensure path starts with / (if it's a valid path)
+      if (path && !path.startsWith('/') && path.includes('/')) {
+        // If path doesn't start with / but contains /, it might be missing the leading slash
+        // Only add it if it looks like a path (contains /school-website/)
+        if (path.includes('/school-website/')) {
+          path = '/' + path
+        }
+      }
+      
+      return path || null
     }
     
     // Fetch images from Firebase and add to JSON
