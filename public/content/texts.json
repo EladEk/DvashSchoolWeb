@@ -296,14 +296,7 @@
         }
       ]
     },
-    "parentsAssociationSections": [
-      {
-        "title": "בדיקה וועד",
-        "text": "בדיקה וועד",
-        "position": 0,
-        "imageKey": "parentsAssociationSections.image1"
-      }
-    ]
+    "parentsAssociationSections": []
   },
   "en": {
     "image": {
@@ -601,19 +594,12 @@
         }
       ]
     },
-    "parentsAssociationSections": [
-      {
-        "title": "Test Vaad",
-        "text": "Test Vaar1",
-        "position": 0,
-        "imageKey": "parentsAssociationSections.image1"
-      }
-    ]
+    "parentsAssociationSections": []
   },
   "images": {
     "about.image1": "/school-website/about.image1-1769010772982_WDQS6aeXP",
     "hero.image": "/school-website/hero.image-1769082919567_JbbNNzQI6",
-    "parentsAssociationHero.image": "/school-website/parentsAssociationHero.image-1769082962106_TDx1CdYhs",
+    "parentsAssociationHero.image": null,
     "parentsAssociationSections.image1": "/school-website/parentsAssociationSections.image1-1769428924234_oAUHOXwKm",
     "section.image1": "/school-website/section.image1-1769035047257_kqAcL_lg3",
     "section.image2": "/school-website/section.image2-1769034896114_hEZVgfwR7",
