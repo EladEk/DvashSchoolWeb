@@ -308,72 +308,97 @@ export default async function handler(req, res) {
     }
     
     // Fetch images from Firebase and add to JSON
-    console.log('Fetching images from Firebase...')
+    // CRITICAL: Images MUST be included in the published JSON for production mode to work
+    console.log(`[${requestId}] 📸 Fetching images from Firebase images collection...`)
     let images = {}
     try {
       if (!db) {
-        throw new Error('Firestore db instance is not available')
+        throw new Error('Firestore db instance is not available for images')
       }
       
-      console.log('Querying images collection from Firestore...')
+      console.log(`[${requestId}] Querying images collection from Firestore...`)
       const imagesRef = db.collection('images')
       const imagesSnapshot = await imagesRef.get()
       
-      console.log(`Images snapshot size: ${imagesSnapshot.size}`)
-      console.log(`Images snapshot empty: ${imagesSnapshot.empty}`)
+      console.log(`[${requestId}] Images snapshot size: ${imagesSnapshot.size}`)
+      console.log(`[${requestId}] Images snapshot empty: ${imagesSnapshot.empty}`)
       
       if (imagesSnapshot.empty) {
-        console.warn('⚠️ Images collection is empty in Firebase!')
-        console.warn('⚠️ This means no images have been uploaded yet, or they are in a different collection.')
-        console.warn('⚠️ Images will be empty in GitHub JSON. Upload images in edit mode first, then publish.')
+        console.warn(`[${requestId}] ⚠️ Images collection is empty in Firebase!`)
+        console.warn(`[${requestId}] ⚠️ This means no images have been uploaded yet, or they are in a different collection.`)
+        console.warn(`[${requestId}] ⚠️ Images will be empty in GitHub JSON. Upload images in edit mode first, then publish.`)
       } else {
-        console.log(`Found ${imagesSnapshot.size} image documents in Firebase`)
+        console.log(`[${requestId}] Found ${imagesSnapshot.size} image documents in Firebase`)
         imagesSnapshot.forEach((doc) => {
           const data = doc.data()
-          console.log(`Image doc ${doc.id}:`, { 
-            path: data.path, 
-            hasPath: !!data.path,
-            allFields: Object.keys(data)
+          const imageKey = doc.id
+          
+          // Try multiple possible field names for image location/path
+          // Common field names: path, location, url, imageUrl, imagePath
+          const imagePath = data.path || data.location || data.url || data.imageUrl || data.imagePath || null
+          
+          console.log(`[${requestId}] Image doc ${imageKey}:`, { 
+            path: data.path,
+            location: data.location,
+            url: data.url,
+            imageUrl: data.imageUrl,
+            imagePath: data.imagePath,
+            allFields: Object.keys(data),
+            resolvedPath: imagePath
           })
-          if (data.path) {
-            images[doc.id] = data.path
-            console.log(`✅ Added image ${doc.id}: ${data.path}`)
+          
+          if (imagePath) {
+            images[imageKey] = imagePath
+            console.log(`[${requestId}] ✅ Added image ${imageKey}: ${imagePath}`)
           } else {
-            console.warn(`⚠️ Image doc ${doc.id} has no path field. Available fields:`, Object.keys(data))
+            console.warn(`[${requestId}] ⚠️ Image doc ${imageKey} has no path/location/url field. Available fields:`, Object.keys(data))
+            console.warn(`[${requestId}] ⚠️ Expected fields: path, location, url, imageUrl, or imagePath`)
+            // Still add the document ID to images object with null, so we know it exists
+            // This helps with debugging
+            images[imageKey] = null
           }
         })
       }
       
-      console.log(`✅ Fetched ${Object.keys(images).length} images from Firebase`)
-      console.log('Image keys:', Object.keys(images))
+      console.log(`[${requestId}] ✅ Fetched ${Object.keys(images).length} images from Firebase`)
+      console.log(`[${requestId}] Image keys:`, Object.keys(images))
+      console.log(`[${requestId}] Images with valid paths:`, Object.values(images).filter(v => v !== null).length)
       
       // If no images found, log warning but continue (don't throw error)
       // This allows publishing texts even if images haven't been uploaded yet
       if (Object.keys(images).length === 0) {
-        console.warn('⚠️ No images found in Firebase. The images object will be empty in GitHub JSON.')
-        console.warn('⚠️ To fix: Upload images in edit mode first, then publish again.')
+        console.warn(`[${requestId}] ⚠️ No images found in Firebase. The images object will be empty in GitHub JSON.`)
+        console.warn(`[${requestId}] ⚠️ To fix: Upload images in edit mode first, then publish again.`)
+      } else if (Object.values(images).filter(v => v !== null).length === 0) {
+        console.warn(`[${requestId}] ⚠️ Images found but none have valid path/location/url fields!`)
+        console.warn(`[${requestId}] ⚠️ Check that images in Firebase have 'path', 'location', or 'url' field set.`)
       }
     } catch (imagesError) {
-      console.error('❌ Error fetching images from Firebase:', imagesError)
-      console.error('Images error details:', imagesError.message)
-      console.error('Images error stack:', imagesError.stack)
+      console.error(`[${requestId}] ❌ Error fetching images from Firebase:`, imagesError)
+      console.error(`[${requestId}] Images error details:`, imagesError.message)
+      console.error(`[${requestId}] Images error stack:`, imagesError.stack)
       // Don't throw error - allow publishing texts even if images fail
       // Images will be empty, but texts will still be published
-      console.warn('⚠️ Continuing without images - texts will be published but images object will be empty')
+      console.warn(`[${requestId}] ⚠️ Continuing without images - texts will be published but images object will be empty`)
+      console.warn(`[${requestId}] ⚠️ Production mode will not be able to load images until this is fixed.`)
     }
     
     // Add images to the JSON structure
+    // CRITICAL: images MUST be at root level for production mode to load them
     const finalContent = {
       ...cleanedTranslations,
-      images: images // Add images at root level for easy access
+      images: images // Add images at root level for easy access in production mode
     }
     
     // Log what's being published (for debugging)
-    console.log('Keys after Parliament exclusion in he:', Object.keys(cleanedTranslations.he || {}))
-    console.log('Keys after Parliament exclusion in en:', Object.keys(cleanedTranslations.en || {}))
-    console.log('Has sections after exclusion in he:', 'sections' in (cleanedTranslations.he || {}))
-    console.log('Has sections after exclusion in en:', 'sections' in (cleanedTranslations.en || {}))
-    console.log('Images count:', Object.keys(images).length)
+    console.log(`[${requestId}] Keys after Parliament exclusion in he:`, Object.keys(cleanedTranslations.he || {}))
+    console.log(`[${requestId}] Keys after Parliament exclusion in en:`, Object.keys(cleanedTranslations.en || {}))
+    console.log(`[${requestId}] Has sections after exclusion in he:`, 'sections' in (cleanedTranslations.he || {}))
+    console.log(`[${requestId}] Has sections after exclusion in en:`, 'sections' in (cleanedTranslations.en || {}))
+    console.log(`[${requestId}] Images count:`, Object.keys(images).length)
+    console.log(`[${requestId}] Images with valid paths:`, Object.values(images).filter(v => v !== null).length)
+    console.log(`[${requestId}] Final JSON structure keys:`, Object.keys(finalContent))
+    console.log(`[${requestId}] Has images key in finalContent:`, 'images' in finalContent)
 
     // Format as JSON string
     const jsonContent = JSON.stringify(finalContent, null, 2)
@@ -386,7 +411,7 @@ export default async function handler(req, res) {
       ? `token ${GITHUB_TOKEN}`
       : `Bearer ${GITHUB_TOKEN}`
 
-    // Helper function to get file SHA
+    // Helper function to get file SHA (for reference, not used in single-commit approach)
     const getFileSha = async (filePath) => {
       try {
         const response = await fetch(
@@ -420,16 +445,19 @@ export default async function handler(req, res) {
       }
     }
 
-    // Helper function to update a file in GitHub
-    const updateFile = async (filePath, sha) => {
-      const contentBase64 = Buffer.from(jsonContent, 'utf-8').toString('base64')
-      const commitMessage = req.body.commitMessage || 
-        `Update site texts from Firebase - ${new Date().toISOString()}`
+    // Helper function to create a tree with multiple files
+    const createTree = async (baseTreeSha, files) => {
+      const tree = files.map(file => ({
+        path: file.path,
+        mode: '100644', // Regular file
+        type: 'blob',
+        sha: file.sha
+      }))
 
-      const updateResponse = await fetch(
-        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`,
+      const treeResponse = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/trees`,
         {
-          method: 'PUT',
+          method: 'POST',
           headers: {
             'Authorization': authHeader,
             'Accept': 'application/vnd.github.v3+json',
@@ -437,79 +465,194 @@ export default async function handler(req, res) {
             'User-Agent': 'SchoolWebsite-Publish'
           },
           body: JSON.stringify({
-            message: commitMessage,
-            content: contentBase64,
-            sha: sha, // Required for updates, null for new files
-            branch: 'main'
+            base_tree: baseTreeSha,
+            tree: tree
           })
         }
       )
 
-      if (!updateResponse.ok) {
-        const errorText = await updateResponse.text()
-        let errorData
-        try {
-          errorData = JSON.parse(errorText)
-        } catch {
-          errorData = { message: errorText }
-        }
-        throw new Error(`Failed to update ${filePath}: ${errorData.message || errorText}`)
+      if (!treeResponse.ok) {
+        const errorText = await treeResponse.text()
+        throw new Error(`Failed to create tree: ${treeResponse.status} - ${errorText}`)
       }
 
-      return await updateResponse.json()
+      return await treeResponse.json()
     }
 
-    // Update both files: content/texts.json (version control) and public/content/texts.json (served by Vite)
+    // Helper function to create a blob (file content)
+    const createBlob = async (content) => {
+      const blobResponse = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/blobs`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': authHeader,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'SchoolWebsite-Publish'
+          },
+          body: JSON.stringify({
+            content: content,
+            encoding: 'utf-8'
+          })
+        }
+      )
+
+      if (!blobResponse.ok) {
+        const errorText = await blobResponse.text()
+        throw new Error(`Failed to create blob: ${blobResponse.status} - ${errorText}`)
+      }
+
+      return await blobResponse.json()
+    }
+
+    // Helper function to create a commit
+    const createCommit = async (treeSha, parentSha, message) => {
+      const commitResponse = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/commits`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': authHeader,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'SchoolWebsite-Publish'
+          },
+          body: JSON.stringify({
+            message: message,
+            tree: treeSha,
+            parents: [parentSha]
+          })
+        }
+      )
+
+      if (!commitResponse.ok) {
+        const errorText = await commitResponse.text()
+        throw new Error(`Failed to create commit: ${commitResponse.status} - ${errorText}`)
+      }
+
+      return await commitResponse.json()
+    }
+
+    // Helper function to update ref (branch)
+    const updateRef = async (commitSha) => {
+      const refResponse = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/refs/heads/main`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': authHeader,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'SchoolWebsite-Publish'
+          },
+          body: JSON.stringify({
+            sha: commitSha
+          })
+        }
+      )
+
+      if (!refResponse.ok) {
+        const errorText = await refResponse.text()
+        throw new Error(`Failed to update ref: ${refResponse.status} - ${errorText}`)
+      }
+
+      return await refResponse.json()
+    }
+
+    // Update both files in a SINGLE commit using Git Data API
+    // This ensures only ONE commit is created, not two separate commits
     const filePaths = [
       GITHUB_FILE_PATH,  // content/texts.json (version control)
       'public/content/texts.json'  // public/content/texts.json (served by Vite)
     ]
 
-    const results = []
-    const errors = []
+    console.log(`[${requestId}] Updating ${filePaths.length} files in a single commit...`)
 
-    for (const filePath of filePaths) {
-      try {
-        console.log(`Updating ${filePath}...`)
-        const sha = await getFileSha(filePath)
-        const updateData = await updateFile(filePath, sha)
-        results.push({
-          path: filePath,
-          sha: updateData.content.sha,
-          url: updateData.content.html_url
-        })
-        console.log(`Successfully updated ${filePath}`)
-      } catch (error) {
-        console.error(`Error updating ${filePath}:`, error)
-        errors.push({ path: filePath, error: error.message })
+    try {
+      // Step 1: Get current commit SHA and tree SHA
+      const refResponse = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/refs/heads/main`,
+        {
+          headers: {
+            'Authorization': authHeader,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'SchoolWebsite-Publish'
+          }
+        }
+      )
+
+      if (!refResponse.ok) {
+        throw new Error(`Failed to get ref: ${refResponse.status}`)
       }
-    }
 
-    // If all updates failed, return error
-    if (results.length === 0) {
-      return res.status(500).json({
-        error: 'Failed to update GitHub files',
-        errors: errors,
-        hint: 'Check GITHUB_TOKEN permissions and file paths'
+      const refData = await refResponse.json()
+      const currentCommitSha = refData.object.sha
+
+      // Step 2: Get current commit to get tree SHA
+      const commitResponse = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/commits/${currentCommitSha}`,
+        {
+          headers: {
+            'Authorization': authHeader,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'SchoolWebsite-Publish'
+          }
+        }
+      )
+
+      if (!commitResponse.ok) {
+        throw new Error(`Failed to get commit: ${commitResponse.status}`)
+      }
+
+      const commitData = await commitResponse.json()
+      const baseTreeSha = commitData.tree.sha
+
+      // Step 3: Create blobs for both files
+      console.log(`[${requestId}] Creating blobs for ${filePaths.length} files...`)
+      const blobPromises = filePaths.map(async (filePath) => {
+        const blob = await createBlob(jsonContent)
+        return { path: filePath, sha: blob.sha }
       })
-    }
+      const fileBlobs = await Promise.all(blobPromises)
 
-    // If some succeeded, return success with warnings
-    const commitMessage = req.body.commitMessage || 
-      `Update site texts from Firebase - ${new Date().toISOString()}`
+      // Step 4: Create tree with both files
+      console.log(`[${requestId}] Creating tree with ${filePaths.length} files...`)
+      const tree = await createTree(baseTreeSha, fileBlobs)
 
-    console.log(`[${requestId}] ✅ Publish completed successfully. Files updated: ${results.length}`)
+      // Step 5: Create commit with the new tree
+      const commitMessage = req.body.commitMessage || 
+        `Update site texts from Firebase - ${new Date().toISOString()}`
+      console.log(`[${requestId}] Creating commit: ${commitMessage}`)
+      const commit = await createCommit(tree.sha, currentCommitSha, commitMessage)
 
-    return res.status(200).json({
-      success: true,
-      message: `Texts published successfully (${results.length}/${filePaths.length} files updated)`,
-      files: results,
-      requestId: requestId, // Include request ID for tracking
-      ...(errors.length > 0 && {
-        warnings: errors,
-        message: `Texts published with warnings. ${results.length} files updated, ${errors.length} failed.`
+      // Step 6: Update ref to point to new commit
+      console.log(`[${requestId}] Updating ref to new commit...`)
+      await updateRef(commit.sha)
+
+      console.log(`[${requestId}] ✅ Successfully updated ${filePaths.length} files in a single commit: ${commit.sha.substring(0, 7)}`)
+
+      return res.status(200).json({
+        success: true,
+        message: `Texts published successfully - ${filePaths.length} files updated in a single commit`,
+        commit: {
+          sha: commit.sha,
+          message: commitMessage,
+          url: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${commit.sha}`
+        },
+        files: filePaths.map(path => ({ path })),
+        requestId: requestId
       })
-    })
+
+    } catch (error) {
+      console.error(`[${requestId}] ❌ Error updating files in single commit:`, error)
+      console.error(`[${requestId}] Error details:`, error.message)
+      console.error(`[${requestId}] Error stack:`, error.stack)
+      
+      // Fallback: If Git Data API fails, throw error (don't create multiple commits)
+      // The single-commit approach should work, so if it fails, it's a real error
+      throw error
+    }
 
   } catch (error) {
     console.error(`[${requestId}] ❌ Publish error:`, error)

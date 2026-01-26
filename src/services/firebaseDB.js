@@ -488,8 +488,16 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
       const texts = await response.json()
       
       // Check if images are stored in texts.json
-      // Structure: { he: { images: { "hero.image": "/path/to/image.jpg" } }, en: { images: {...} } }
+      // Structure: { he: {...}, en: {...}, images: { "hero.image": "/path/to/image.jpg", "section.image1": "/path/to/image2.jpg" } }
+      // Images are at root level for easy access
       const images = texts.images || texts.he?.images || {}
+      
+      // Log for debugging
+      console.log(`[firebaseDB] Looking for image key: ${imageKey}`)
+      console.log(`[firebaseDB] Has images key at root:`, 'images' in texts)
+      console.log(`[firebaseDB] Images object keys:`, Object.keys(images))
+      console.log(`[firebaseDB] Total images in JSON:`, Object.keys(images).length)
+      
       const imagePath = images[imageKey] || null
       
       if (imagePath) {
@@ -498,6 +506,8 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
         return imagePath
       } else {
         console.log(`[firebaseDB] ⚠️ No image path found for ${imageKey} in GitHub texts.json`)
+        console.log(`[firebaseDB] ⚠️ Available image keys:`, Object.keys(images))
+        console.log(`[firebaseDB] ⚠️ This image may not have been published yet. Publish from admin dashboard to include it.`)
         // Images should be in GitHub JSON - if not found, return null (no fallback)
         saveToCache(cacheKey, null)
         return null
