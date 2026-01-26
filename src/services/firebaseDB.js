@@ -493,22 +493,23 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
       const imagePath = images[imageKey] || null
       
       if (imagePath) {
-        console.log(`[firebaseDB] Found image path for ${imageKey} in texts.json:`, imagePath)
+        console.log(`[firebaseDB] ✅ Found image path for ${imageKey} in GitHub texts.json:`, imagePath)
         saveToCache(cacheKey, imagePath)
         return imagePath
       } else {
-        console.log(`[firebaseDB] No image path found for ${imageKey} in texts.json`)
+        console.log(`[firebaseDB] ⚠️ No image path found for ${imageKey} in GitHub texts.json`)
+        // Images should be in GitHub JSON - if not found, return null (no fallback)
         saveToCache(cacheKey, null)
         return null
       }
     } catch (error) {
-      console.error(`[firebaseDB] Error loading image path from texts.json for ${imageKey}:`, error)
-      // Fall back to Firebase if JSON loading fails
-      console.log(`[firebaseDB] Falling back to Firebase for ${imageKey}`)
+      console.error(`[firebaseDB] ❌ Error loading image path from GitHub texts.json for ${imageKey}:`, error)
+      // Return null if JSON loading fails (no Firebase fallback in production)
+      return null
     }
   }
   
-  // In edit mode (or if JSON loading failed), load from Firebase
+  // In edit mode only, load from Firebase
   try {
     if (!db) {
       console.warn('[firebaseDB] Firebase db not initialized, checking cache')
@@ -516,7 +517,7 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
       return cached || null
     }
     
-    console.log(`[firebaseDB] Edit mode: Loading image path from Firestore for key: ${imageKey}`)
+    console.log(`[firebaseDB] 📝 EDIT MODE: Loading image path from Firestore for key: ${imageKey}`)
     const imageDoc = await getDoc(doc(db, 'images', imageKey))
     
     let imagePath = null

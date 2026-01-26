@@ -112,25 +112,35 @@ const AdminDashboard = () => {
   }
 
   const handlePublish = async () => {
+    // Prevent multiple clicks
+    if (publishing) {
+      console.warn('Publish already in progress, ignoring click')
+      return
+    }
+
     if (!confirm('Publish texts to GitHub? This will update the production site texts.')) {
       return
     }
 
     setPublishing(true)
     setMessage('')
+    
     try {
       const commitMessage = prompt('Enter commit message (optional):') || 
         `Update site texts - ${new Date().toISOString()}`
       
+      console.log('[AdminDashboard] Publishing to GitHub with message:', commitMessage)
       const result = await publishTexts(commitMessage)
-      setMessage(`✅ Published successfully! Commit: ${result.commit?.sha?.substring(0, 7)}`)
+      
+      console.log('[AdminDashboard] Publish result:', result)
+      setMessage(`✅ Published successfully! Commit: ${result.commit?.sha?.substring(0, 7) || result.files?.[0]?.sha?.substring(0, 7) || 'N/A'}`)
       setTimeout(() => setMessage(''), 5000)
       
       // Reload translations to get fresh data from GitHub
       await reloadTranslations(true)
       await loadTranslations()
     } catch (error) {
-      console.error('Error publishing texts:', error)
+      console.error('[AdminDashboard] Error publishing texts:', error)
       const errorMsg = error.message || 'Unknown error'
       const errorDetails = error.details ? `\nDetails: ${JSON.stringify(error.details, null, 2)}` : ''
       const errorHint = error.details?.hint ? `\nHint: ${error.details.hint}` : ''

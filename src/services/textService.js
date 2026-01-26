@@ -401,13 +401,25 @@ export const saveTranslation = async (translationKey, hebrewValue, englishValue)
  * @param {string} commitMessage - Optional commit message
  * @returns {Promise<{success: boolean, commit?: object}>}
  */
+// Track if publish is in progress to prevent multiple simultaneous publishes
+let isPublishing = false
+
 export const publishTexts = async (commitMessage) => {
   // Only allow publishing in edit mode
   if (!isEditMode()) {
     throw new Error('Cannot publish texts outside of edit mode')
   }
 
+  // Prevent multiple simultaneous publishes
+  if (isPublishing) {
+    throw new Error('Publish already in progress. Please wait for the current publish to complete.')
+  }
+
+  isPublishing = true
+  
   try {
+    console.log('[textService] 🚀 Starting publish to GitHub...')
+    
     // Get Firebase Auth token (if available)
     const authToken = localStorage.getItem('firebaseAuthToken') || 
                      sessionStorage.getItem('firebaseAuthToken')
@@ -418,6 +430,7 @@ export const publishTexts = async (commitMessage) => {
       ? '/api/publish-texts-local'  // Local testing
       : '/api/publish-texts'        // Production
     
+    console.log('[textService] Calling publish API:', apiEndpoint)
     const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
@@ -445,6 +458,7 @@ export const publishTexts = async (commitMessage) => {
     }
 
     const result = await response.json()
+    console.log('[textService] ✅ Publish completed successfully')
 
     // Clear production cache so next load gets fresh data
     productionTextsCache = null
@@ -452,8 +466,11 @@ export const publishTexts = async (commitMessage) => {
 
     return result
   } catch (error) {
-    console.error('Error publishing texts:', error)
+    console.error('[textService] ❌ Error publishing texts:', error)
     throw error
+  } finally {
+    // Always reset the publishing flag, even on error
+    isPublishing = false
   }
 }
 

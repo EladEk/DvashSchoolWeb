@@ -18,6 +18,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  // Prevent duplicate requests - check if this is a duplicate call
+  // Note: In serverless functions, each invocation is separate, so we can't track state
+  // But we can add request ID logging to help identify duplicates
+  const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  console.log(`[${requestId}] Publish request received at ${new Date().toISOString()}`)
+
   try {
     // Get environment variables
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN
@@ -309,21 +315,51 @@ export default async function handler(req, res) {
         throw new Error('Firestore db instance is not available')
       }
       
+      console.log('Querying images collection from Firestore...')
       const imagesRef = db.collection('images')
       const imagesSnapshot = await imagesRef.get()
       
-      imagesSnapshot.forEach((doc) => {
-        const data = doc.data()
-        if (data.path) {
-          images[doc.id] = data.path
-        }
-      })
-      console.log(`Fetched ${Object.keys(images).length} images from Firebase`)
+      console.log(`Images snapshot size: ${imagesSnapshot.size}`)
+      console.log(`Images snapshot empty: ${imagesSnapshot.empty}`)
+      
+      if (imagesSnapshot.empty) {
+        console.warn('⚠️ Images collection is empty in Firebase!')
+        console.warn('⚠️ This means no images have been uploaded yet, or they are in a different collection.')
+        console.warn('⚠️ Images will be empty in GitHub JSON. Upload images in edit mode first, then publish.')
+      } else {
+        console.log(`Found ${imagesSnapshot.size} image documents in Firebase`)
+        imagesSnapshot.forEach((doc) => {
+          const data = doc.data()
+          console.log(`Image doc ${doc.id}:`, { 
+            path: data.path, 
+            hasPath: !!data.path,
+            allFields: Object.keys(data)
+          })
+          if (data.path) {
+            images[doc.id] = data.path
+            console.log(`✅ Added image ${doc.id}: ${data.path}`)
+          } else {
+            console.warn(`⚠️ Image doc ${doc.id} has no path field. Available fields:`, Object.keys(data))
+          }
+        })
+      }
+      
+      console.log(`✅ Fetched ${Object.keys(images).length} images from Firebase`)
+      console.log('Image keys:', Object.keys(images))
+      
+      // If no images found, log warning but continue (don't throw error)
+      // This allows publishing texts even if images haven't been uploaded yet
+      if (Object.keys(images).length === 0) {
+        console.warn('⚠️ No images found in Firebase. The images object will be empty in GitHub JSON.')
+        console.warn('⚠️ To fix: Upload images in edit mode first, then publish again.')
+      }
     } catch (imagesError) {
-      console.error('Error fetching images from Firebase:', imagesError)
+      console.error('❌ Error fetching images from Firebase:', imagesError)
       console.error('Images error details:', imagesError.message)
-      // Continue without images - they'll be loaded from Firebase in production
-      // Images will be empty object, which is fine
+      console.error('Images error stack:', imagesError.stack)
+      // Don't throw error - allow publishing texts even if images fail
+      // Images will be empty, but texts will still be published
+      console.warn('⚠️ Continuing without images - texts will be published but images object will be empty')
     }
     
     // Add images to the JSON structure
@@ -462,10 +498,13 @@ export default async function handler(req, res) {
     const commitMessage = req.body.commitMessage || 
       `Update site texts from Firebase - ${new Date().toISOString()}`
 
+    console.log(`[${requestId}] ✅ Publish completed successfully. Files updated: ${results.length}`)
+
     return res.status(200).json({
       success: true,
       message: `Texts published successfully (${results.length}/${filePaths.length} files updated)`,
       files: results,
+      requestId: requestId, // Include request ID for tracking
       ...(errors.length > 0 && {
         warnings: errors,
         message: `Texts published with warnings. ${results.length} files updated, ${errors.length} failed.`
@@ -473,10 +512,11 @@ export default async function handler(req, res) {
     })
 
   } catch (error) {
-    console.error('Publish error:', error)
+    console.error(`[${requestId}] ❌ Publish error:`, error)
     return res.status(500).json({ 
       error: 'Internal server error',
       message: error.message,
+      requestId: requestId,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     })
   }
