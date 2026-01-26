@@ -27,6 +27,7 @@
     "usersManagement": "Users Management",
     "parliamentAdmin": "Parliament Admin",
     "exportJsonFiles": "Export JSON Files",
+    "saveJsonFiles": "Save JSON Files",
     "saveToFirebase": "Save to Firebase",
     "unsavedChanges": "You have unsaved changes",
     "goToAdminDashboard": "Go to Admin Dashboard",

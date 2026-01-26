@@ -27,6 +27,7 @@
     "usersManagement": "ניהול משתמשים",
     "parliamentAdmin": "ניהול פרלמנט",
     "exportJsonFiles": "ייצא קבצי JSON",
+    "saveJsonFiles": "שמור קבצי JSON",
     "saveToFirebase": "שמור ל-Firebase",
     "unsavedChanges": "יש לך שינויים שלא נשמרו",
     "goToAdminDashboard": "עבור ללוח בקרה מנהל",

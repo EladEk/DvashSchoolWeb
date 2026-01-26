@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useEffectiveRole } from '../utils/requireRole'
@@ -35,6 +35,8 @@ const AdminDashboard = () => {
   const [savingJson, setSavingJson] = useState(false)
   const [message, setMessage] = useState('')
   const [activeTab, setActiveTab] = useState('translations')
+  const [isTranslationEditorOpen, setIsTranslationEditorOpen] = useState(false)
+  const translationsLoadedRef = useRef(false)
   
   // Check if user has permission (editor or admin can edit translations, only admin can manage users)
   // Use sessionRole immediately if effectiveRole is not yet loaded
@@ -54,8 +56,13 @@ const AdminDashboard = () => {
   }
 
   useEffect(() => {
-    loadTranslations()
-  }, [])
+    // Only load translations when editor is opened (not on every toggle)
+    if (isTranslationEditorOpen && activeTab === 'translations' && !translationsLoadedRef.current) {
+      loadTranslations().then(() => {
+        translationsLoadedRef.current = true
+      })
+    }
+  }, [isTranslationEditorOpen, activeTab])
   
   // Show loading while checking role (after all hooks)
   if (phase === 'checking' && !sessionRole) {
@@ -101,6 +108,14 @@ const AdminDashboard = () => {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleCancel = () => {
+    // Revert changes by resetting editedTranslations to the original translations
+    setEditedTranslations(translations)
+    setHasChanges(false)
+    setMessage('Changes reverted')
+    setTimeout(() => setMessage(''), 3000)
   }
 
   const handleExport = async () => {
@@ -292,13 +307,6 @@ const AdminDashboard = () => {
           {hasChanges && (
             <span className="unsaved-indicator">{t('admin.unsavedChanges')}</span>
           )}
-          <button
-            onClick={handleSave}
-            disabled={!hasChanges || saving}
-            className="save-btn"
-          >
-            {saving ? t('common.saving') : t('admin.saveToFirebase')}
-          </button>
           <button 
             onClick={handlePublish} 
             disabled={publishing || hasChanges}
@@ -311,7 +319,7 @@ const AdminDashboard = () => {
                 Publishing...
               </>
             ) : (
-              'Publish to GitHub'
+              'publish only'
             )}
           </button>
           <button 
@@ -340,9 +348,49 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          <div className="translation-editor">
-            {editedTranslations[currentLang] && renderEditor(editedTranslations[currentLang])}
+          <div className="translation-editor-header">
+            <button
+              onClick={() => setIsTranslationEditorOpen(!isTranslationEditorOpen)}
+              className="toggle-editor-btn"
+            >
+              {isTranslationEditorOpen ? '▼ Close Translation Editor' : '▶ Open Translation Editor'}
+            </button>
           </div>
+
+          {isTranslationEditorOpen && (
+            <div className="translation-editor">
+              {editedTranslations[currentLang] && renderEditor(editedTranslations[currentLang])}
+            </div>
+          )}
+
+          {/* Floating Save/Cancel Buttons - Only shows when there are unsaved changes */}
+          {hasChanges && isTranslationEditorOpen && (
+            <div className="floating-action-buttons">
+              <button
+                onClick={handleCancel}
+                disabled={saving}
+                className="floating-cancel-btn"
+                title={t('common.cancel')}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="floating-save-btn"
+                title={t('admin.saveToFirebase')}
+              >
+                {saving ? (
+                  <>
+                    <span className="spinner"></span>
+                    {t('common.saving')}
+                  </>
+                ) : (
+                  t('admin.saveToFirebase')
+                )}
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>
