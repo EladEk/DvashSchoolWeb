@@ -151,7 +151,7 @@ export default function SubjectSubmitForm({ dates, currentUser }) {
           >
             <option value="">{t('parliament.select') || 'בחר...'}</option>
             {openDates.map(d => {
-              const dateStr = d.date ? formatParliamentDate(d.date) : ''
+              const dateStr = formatParliamentDate(d.date)
               return (
                 <option key={d.id} value={d.id}>
                   {d.title}{dateStr ? ` - ${dateStr}` : ''}

@@ -99,7 +99,8 @@ export default function Parliament() {
     
     const loadDates = async () => {
       try {
-        const list = await loadParliamentDates()
+        // Use 10-second cache for more live updates
+        const list = await loadParliamentDates(false, 10000)
         // Ensure isOpen is a boolean
         const processedList = list.map(d => ({
           ...d,
@@ -114,7 +115,8 @@ export default function Parliament() {
     
     loadDates()
     
-    const interval = setInterval(loadDates, 30000)
+    // Reduced interval from 30s to 10s for more responsive updates
+    const interval = setInterval(loadDates, 10000)
     return () => {
       clearInterval(interval)
       datesLoadedRef.current = false
@@ -128,7 +130,8 @@ export default function Parliament() {
     
     const loadSubjects = async () => {
       try {
-        const list = await loadParliamentSubjects('approved')
+        // Use 10-second cache for more live updates
+        const list = await loadParliamentSubjects('approved', false, 10000)
         list.sort((a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt))
         setSubjects(list)
       } catch (error) {
@@ -138,7 +141,8 @@ export default function Parliament() {
     
     loadSubjects()
     
-    const interval = setInterval(loadSubjects, 30000)
+    // Reduced interval from 30s to 10s for more responsive updates
+    const interval = setInterval(loadSubjects, 10000)
     return () => {
       clearInterval(interval)
       subjectsLoadedRef.current = false
@@ -177,7 +181,8 @@ export default function Parliament() {
 
     const loadNotes = async () => {
       try {
-        const list = await loadParliamentNotes(current.id)
+        // Use 10-second cache for more live updates
+        const list = await loadParliamentNotes(current.id, false, 10000)
         list.sort((a, b) => tsMillis(a.createdAt) - tsMillis(b.createdAt))
         setNotes(list)
         notesLoadedRef.current = true
@@ -187,7 +192,8 @@ export default function Parliament() {
     
     loadNotes()
     
-    const interval = setInterval(loadNotes, 10000)
+    // Reduced interval from 10s to 5s for notes (more frequent updates)
+    const interval = setInterval(loadNotes, 5000)
     return () => clearInterval(interval)
   }, [current?.id])
 

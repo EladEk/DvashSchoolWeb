@@ -70,7 +70,20 @@ export default function ParliamentLogin() {
       }
 
       // Search for user
-      const userResult = await findUserByUsername(usernameLower)
+      let userResult
+      try {
+        userResult = await findUserByUsername(usernameLower)
+      } catch (connectionError) {
+        // Handle connection/timeout errors separately
+        console.error('Firestore connection error:', connectionError)
+        setError(
+          connectionError.message || 
+          t('parliamentLogin.connectionError') || 
+          'שגיאת חיבור - אנא בדוק את חיבור האינטרנט ונסה שוב'
+        )
+        setLoading(false)
+        return
+      }
 
       if (!userResult) {
         setError(t('parliamentLogin.userNotFound') || 'משתמש לא נמצא')
@@ -133,6 +146,13 @@ export default function ParliamentLogin() {
       return
     }
 
+    // Only allow student or parent registration
+    const allowedRoles = ['student', 'parent']
+    if (!allowedRoles.includes(registerForm.role)) {
+      setError(t('parliamentLogin.invalidRole') || 'ניתן להירשם רק כתלמיד או הורה')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -140,7 +160,20 @@ export default function ParliamentLogin() {
       const usernameLower = username.toLowerCase()
 
       // Check if username exists
-      const usernameExists = await checkUsernameExists(usernameLower)
+      let usernameExists
+      try {
+        usernameExists = await checkUsernameExists(usernameLower)
+      } catch (connectionError) {
+        // Handle connection/timeout errors separately
+        console.error('Firestore connection error:', connectionError)
+        setError(
+          connectionError.message || 
+          t('parliamentLogin.connectionError') || 
+          'שגיאת חיבור - אנא בדוק את חיבור האינטרנט ונסה שוב'
+        )
+        setLoading(false)
+        return
+      }
 
       if (usernameExists) {
         setError(t('parliamentLogin.usernameExists') || 'שם משתמש כבר קיים')
@@ -175,15 +208,7 @@ export default function ParliamentLogin() {
 
       localStorage.setItem('session', JSON.stringify(session))
       
-      // If admin/editor/committee registration, also set adminAuthenticated and redirect to admin dashboard
-      if (registerForm.role === 'admin' || registerForm.role === 'editor' || registerForm.role === 'committee') {
-        sessionStorage.setItem('adminAuthenticated', 'true')
-        sessionStorage.removeItem('justExitedAdminMode') // Remove flag when entering admin mode
-        // Auto-redirect admin/editor/committee to admin dashboard
-        navigate('/admin/dashboard', { replace: true })
-        return
-      }
-      
+      // Student and parent users go to parliament page
       navigate(from, { replace: true })
     } catch (err) {
       console.error('Registration error:', err)
@@ -317,9 +342,8 @@ export default function ParliamentLogin() {
                 >
                   <option value="student">{t('users.role.student') || 'תלמיד'}</option>
                   <option value="parent">{t('users.role.parent') || 'הורה'}</option>
-                  <option value="committee">{t('users.role.committee') || 'וועד'}</option>
-                  <option value="editor">{t('users.role.editor') || 'עורך'}</option>
-                  {/* Admin role is hidden - only system admin (admin/Panda123) exists */}
+                  {/* Only student and parent roles available for registration */}
+                  {/* Managers/admins can change user roles later */}
                 </select>
               </div>
             </div>

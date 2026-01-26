@@ -1051,11 +1051,14 @@ export default function ParliamentAdmin() {
                 style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
               >
                 <option value="">{t('parliament.select') || 'בחר...'}</option>
-                {dates.map(d => (
-                  <option key={d.id} value={d.id}>
-                    {d.title}{d.date ? (' - ' + formatParliamentDate(d.date)) : ''}
-                  </option>
-                ))}
+                {dates.map(d => {
+                  const dateStr = formatParliamentDate(d.date)
+                  return (
+                    <option key={d.id} value={d.id}>
+                      {d.title}{dateStr ? ` - ${dateStr}` : ''}
+                    </option>
+                  )
+                })}
               </select>
             </div>
             <div className="parliament-form-group" style={{ marginTop: '1rem' }}>

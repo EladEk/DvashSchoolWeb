@@ -43,15 +43,16 @@ const memoryCacheTime = new Map()
  * Get data from cache (localStorage + memory)
  * @param {string} cacheKey - Cache key
  * @param {boolean} checkMemory - Whether to check memory cache first
+ * @param {number} cacheDuration - Custom cache duration in milliseconds (defaults to CACHE_DURATION)
  * @returns {any|null} Cached data or null
  */
-const getFromCache = (cacheKey, checkMemory = true) => {
+const getFromCache = (cacheKey, checkMemory = true, cacheDuration = CACHE_DURATION) => {
   if (checkMemory) {
     const cached = memoryCache.get(cacheKey)
     const cacheTime = memoryCacheTime.get(cacheKey)
     if (cached !== undefined && cacheTime) {
       const age = Date.now() - cacheTime
-      if (age < CACHE_DURATION) {
+      if (age < cacheDuration) {
         return cached
       } else {
         memoryCache.delete(cacheKey)
@@ -67,7 +68,7 @@ const getFromCache = (cacheKey, checkMemory = true) => {
       const parsed = JSON.parse(stored)
       if (parsed && parsed.data !== undefined && parsed.timestamp) {
         const age = Date.now() - parsed.timestamp
-        if (age < CACHE_DURATION) {
+        if (age < cacheDuration) {
           memoryCache.set(cacheKey, parsed.data)
           memoryCacheTime.set(cacheKey, parsed.timestamp)
           return parsed.data
@@ -559,14 +560,15 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
  * Load all parliament dates
  * Checks cache first before going to Firebase
  * @param {boolean} forceRefresh - If true, bypass cache and fetch from Firebase
+ * @param {number} cacheDuration - Custom cache duration in milliseconds (defaults to CACHE_DURATION)
  * @returns {Promise<Array>} Array of date objects with id
  */
-export const loadParliamentDates = async (forceRefresh = false) => {
+export const loadParliamentDates = async (forceRefresh = false, cacheDuration = CACHE_DURATION) => {
   const cacheKey = CACHE_KEYS.PARLIAMENT_DATES
   
   // Check cache first (unless force refresh)
   if (!forceRefresh) {
-    const cached = getFromCache(cacheKey)
+    const cached = getFromCache(cacheKey, true, cacheDuration)
     if (cached !== null) {
       return cached
     }
@@ -574,7 +576,7 @@ export const loadParliamentDates = async (forceRefresh = false) => {
   
   try {
     if (!db) {
-      const cached = getFromCache(cacheKey, false)
+      const cached = getFromCache(cacheKey, false, cacheDuration)
       return cached || []
     }
     
@@ -586,7 +588,7 @@ export const loadParliamentDates = async (forceRefresh = false) => {
     
     return dates
   } catch (error) {
-    const cached = getFromCache(cacheKey, false)
+    const cached = getFromCache(cacheKey, false, cacheDuration)
     return cached || []
   }
 }
@@ -961,14 +963,15 @@ export const deleteParliamentDate = async (dateId) => {
  * Checks cache first before going to Firebase
  * @param {string|null} status - Filter by status ('pending', 'approved', 'rejected') or null for all
  * @param {boolean} forceRefresh - If true, bypass cache and fetch from Firebase
+ * @param {number} cacheDuration - Custom cache duration in milliseconds (defaults to CACHE_DURATION)
  * @returns {Promise<Array>} Array of subject objects with id
  */
-export const loadParliamentSubjects = async (status = null, forceRefresh = false) => {
+export const loadParliamentSubjects = async (status = null, forceRefresh = false, cacheDuration = CACHE_DURATION) => {
   const cacheKey = `${CACHE_KEYS.PARLIAMENT_SUBJECTS}${status ? `_${status}` : '_all'}`
   
   // Check cache first (unless force refresh)
   if (!forceRefresh) {
-    const cached = getFromCache(cacheKey)
+    const cached = getFromCache(cacheKey, true, cacheDuration)
     if (cached !== null) {
       return cached
     }
@@ -976,7 +979,7 @@ export const loadParliamentSubjects = async (status = null, forceRefresh = false
   
   try {
     if (!db) {
-      const cached = getFromCache(cacheKey, false)
+      const cached = getFromCache(cacheKey, false, cacheDuration)
       return cached || []
     }
     
@@ -993,7 +996,7 @@ export const loadParliamentSubjects = async (status = null, forceRefresh = false
     
     return subjects
   } catch (error) {
-    const cached = getFromCache(cacheKey, false)
+    const cached = getFromCache(cacheKey, false, cacheDuration)
     return cached || []
   }
 }
@@ -1014,12 +1017,34 @@ export const subscribeToUserParliamentSubjects = (userUid, callback) => {
     where('createdByUid', '==', userUid)
   )
   
-  return onSnapshot(q, (snap) => {
-    const subjects = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-    callback(subjects)
-  }, (error) => {
-    callback([])
-  })
+  // Add timeout to detect connection issues
+  let timeoutId = setTimeout(() => {
+    console.warn('Firestore real-time subscription timeout - connection may be slow or unavailable')
+  }, 20000) // 20 second warning
+  
+  const unsubscribe = onSnapshot(
+    q, 
+    (snap) => {
+      clearTimeout(timeoutId)
+      const subjects = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      callback(subjects)
+    }, 
+    (error) => {
+      clearTimeout(timeoutId)
+      console.error('Firestore subscription error:', error)
+      // If it's a connection error, return empty array but log it
+      if (error.code === 'unavailable' || error.code === 'deadline-exceeded' || 
+          error.message?.includes('CONNECTION') || error.message?.includes('timeout')) {
+        console.warn('Firestore connection unavailable - using cached data or empty array')
+      }
+      callback([])
+    }
+  )
+  
+  return () => {
+    clearTimeout(timeoutId)
+    unsubscribe()
+  }
 }
 
 /**
@@ -1214,16 +1239,17 @@ export const updateParliamentSubjectStatus = async (subjectId, status, statusRea
  * Checks cache first before going to Firebase
  * @param {string} subjectId - Subject document ID
  * @param {boolean} forceRefresh - If true, bypass cache and fetch from Firebase
+ * @param {number} cacheDuration - Custom cache duration in milliseconds (defaults to CACHE_DURATION)
  * @returns {Promise<Array>} Array of note objects with id
  */
-export const loadParliamentNotes = async (subjectId, forceRefresh = false) => {
+export const loadParliamentNotes = async (subjectId, forceRefresh = false, cacheDuration = CACHE_DURATION) => {
   if (!subjectId) return []
   
   const cacheKey = `${CACHE_KEYS.PARLIAMENT_NOTES}${subjectId}`
   
   // Check cache first (unless force refresh)
   if (!forceRefresh) {
-    const cached = getFromCache(cacheKey)
+    const cached = getFromCache(cacheKey, true, cacheDuration)
     if (cached !== null) {
       return cached
     }
@@ -1231,7 +1257,7 @@ export const loadParliamentNotes = async (subjectId, forceRefresh = false) => {
   
   try {
     if (!db) {
-      const cached = getFromCache(cacheKey, false)
+      const cached = getFromCache(cacheKey, false, cacheDuration)
       return cached || []
     }
     
@@ -1247,7 +1273,7 @@ export const loadParliamentNotes = async (subjectId, forceRefresh = false) => {
     
     return notes
   } catch (error) {
-    const cached = getFromCache(cacheKey, false)
+    const cached = getFromCache(cacheKey, false, cacheDuration)
     return cached || []
   }
 }
@@ -1378,6 +1404,7 @@ export const loadUsers = async (forceRefresh = false) => {
  * Find user by username (lowercase)
  * @param {string} usernameLower - Username in lowercase
  * @returns {Promise<{id: string, data: object}|null>}
+ * @throws {Error} If connection error occurs (timeout, network error, etc.)
  */
 export const findUserByUsername = async (usernameLower) => {
   try {
@@ -1388,13 +1415,34 @@ export const findUserByUsername = async (usernameLower) => {
       where('usernameLower', '==', usernameLower),
       limit(1)
     )
-    const snap = await getDocs(q)
+    
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Connection timeout - Firestore is not responding. Please check your internet connection and try again.'))
+      }, 15000) // 15 second timeout
+    })
+    
+    const queryPromise = getDocs(q)
+    const snap = await Promise.race([queryPromise, timeoutPromise])
     
     if (snap.empty) return null
     
     const doc = snap.docs[0]
     return { id: doc.id, data: doc.data() }
   } catch (error) {
+    // Re-throw connection/timeout errors so they can be handled appropriately
+    if (error.message && (
+      error.message.includes('timeout') || 
+      error.message.includes('network') ||
+      error.message.includes('CONNECTION') ||
+      error.code === 'unavailable' ||
+      error.code === 'deadline-exceeded'
+    )) {
+      throw error
+    }
+    // For other errors (permission denied, etc.), return null
+    console.error('Error finding user:', error)
     return null
   }
 }
@@ -1404,6 +1452,7 @@ export const findUserByUsername = async (usernameLower) => {
  * @param {string} usernameLower - Username in lowercase
  * @param {string} excludeId - Optional document ID to exclude from check
  * @returns {Promise<boolean>}
+ * @throws {Error} If connection error occurs (timeout, network error, etc.)
  */
 export const checkUsernameExists = async (usernameLower, excludeId = null) => {
   try {
@@ -1413,7 +1462,16 @@ export const checkUsernameExists = async (usernameLower, excludeId = null) => {
       collection(db, 'appUsers'),
       where('usernameLower', '==', usernameLower)
     )
-    const snap = await getDocs(q)
+    
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Connection timeout - Firestore is not responding. Please check your internet connection and try again.'))
+      }, 15000) // 15 second timeout
+    })
+    
+    const queryPromise = getDocs(q)
+    const snap = await Promise.race([queryPromise, timeoutPromise])
     
     if (snap.empty) return false
     
@@ -1424,6 +1482,18 @@ export const checkUsernameExists = async (usernameLower, excludeId = null) => {
     
     return true
   } catch (error) {
+    // Re-throw connection/timeout errors so they can be handled appropriately
+    if (error.message && (
+      error.message.includes('timeout') || 
+      error.message.includes('network') ||
+      error.message.includes('CONNECTION') ||
+      error.code === 'unavailable' ||
+      error.code === 'deadline-exceeded'
+    )) {
+      throw error
+    }
+    // For other errors, return false
+    console.error('Error checking username:', error)
     return false
   }
 }
