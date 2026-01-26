@@ -133,7 +133,8 @@ const ImageKitUpload = ({
       
       formData.append('token', token)
       formData.append('signature', signature)
-      // expire must be a number (not string) for ImageKit
+      // expire must be sent as a number for ImageKit (FormData will convert it to string)
+      // But we need to ensure it matches the signature calculation (which uses expire.toString())
       formData.append('expire', expire)
 
       // Upload with progress tracking
