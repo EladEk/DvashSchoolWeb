@@ -390,10 +390,11 @@ export const submitContactFormToDB = async (formData) => {
 // ============================================
 
 /**
- * Save image path to Firebase
+ * Save image path (ImageKit URL) to Firebase Firestore
+ * Images are stored in ImageKit, only the path/URL is saved in Firebase
  * Updates cache after save
  * @param {string} imageKey - Image key (e.g., 'hero.image', 'about.image1')
- * @param {string|null} imagePath - ImageKit path or null to delete
+ * @param {string|null} imagePath - ImageKit path/URL or null to delete
  * @returns {Promise<{success: boolean}>}
  */
 export const saveImagePathToDB = async (imageKey, imagePath) => {
@@ -405,15 +406,15 @@ export const saveImagePathToDB = async (imageKey, imagePath) => {
     const imageDocRef = doc(db, 'images', imageKey)
     
     if (imagePath === null) {
-      // Delete the image
+      // Delete the image reference
       await updateDoc(imageDocRef, {
         path: null,
         updatedAt: serverTimestamp(),
       })
     } else {
-      // Save or update the image path
+      // Save or update the ImageKit path/URL
       await setDoc(imageDocRef, {
-        path: imagePath,
+        path: imagePath, // ImageKit path/URL
         updatedAt: serverTimestamp(),
       }, { merge: true })
     }
@@ -430,14 +431,28 @@ export const saveImagePathToDB = async (imageKey, imagePath) => {
 }
 
 /**
- * Load image path from Firebase
- * Checks cache first before going to Firebase
+ * Load image path (ImageKit URL) from Firebase or GitHub JSON
+ * In production mode: loads from /content/texts.json
+ * In edit mode: loads from Firebase
  * @param {string} imageKey - Image key
- * @param {boolean} forceRefresh - If true, bypass cache and fetch from Firebase
- * @returns {Promise<string|null>}
+ * @param {boolean} forceRefresh - If true, bypass cache and fetch from source
+ * @returns {Promise<string|null>} ImageKit path/URL or null
  */
 export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
-  if (!imageKey) return null
+  if (!imageKey) {
+    console.warn('[firebaseDB] loadImagePathFromDB called with empty imageKey')
+    return null
+  }
+  
+  // Check if we're in edit mode
+  const isEditMode = () => {
+    if (typeof window === 'undefined') return false
+    try {
+      return sessionStorage.getItem('adminAuthenticated') === 'true'
+    } catch {
+      return false
+    }
+  }
   
   const cacheKey = `${CACHE_KEYS.IMAGES}${imageKey}`
   
@@ -445,23 +460,69 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
   if (!forceRefresh) {
     const cached = getFromCache(cacheKey)
     if (cached !== null) {
+      console.log(`[firebaseDB] Using cached image path for ${imageKey}`)
       return cached
     }
   }
   
+  // In production mode, load from GitHub JSON file
+  if (!isEditMode()) {
+    try {
+      console.log(`[firebaseDB] Production mode: Loading image path for ${imageKey} from /content/texts.json`)
+      
+      // Load texts.json
+      const response = await fetch('/content/texts.json', {
+        cache: 'no-cache',
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load texts.json: ${response.status}`)
+      }
+      
+      const texts = await response.json()
+      
+      // Check if images are stored in texts.json
+      // Structure: { he: { images: { "hero.image": "/path/to/image.jpg" } }, en: { images: {...} } }
+      const images = texts.images || texts.he?.images || {}
+      const imagePath = images[imageKey] || null
+      
+      if (imagePath) {
+        console.log(`[firebaseDB] Found image path for ${imageKey} in texts.json:`, imagePath)
+        saveToCache(cacheKey, imagePath)
+        return imagePath
+      } else {
+        console.log(`[firebaseDB] No image path found for ${imageKey} in texts.json`)
+        saveToCache(cacheKey, null)
+        return null
+      }
+    } catch (error) {
+      console.error(`[firebaseDB] Error loading image path from texts.json for ${imageKey}:`, error)
+      // Fall back to Firebase if JSON loading fails
+      console.log(`[firebaseDB] Falling back to Firebase for ${imageKey}`)
+    }
+  }
+  
+  // In edit mode (or if JSON loading failed), load from Firebase
   try {
     if (!db) {
-      // If no DB, return cached data if available
+      console.warn('[firebaseDB] Firebase db not initialized, checking cache')
       const cached = getFromCache(cacheKey, false)
       return cached || null
     }
     
+    console.log(`[firebaseDB] Edit mode: Loading image path from Firestore for key: ${imageKey}`)
     const imageDoc = await getDoc(doc(db, 'images', imageKey))
     
     let imagePath = null
     if (imageDoc.exists()) {
       const data = imageDoc.data()
       imagePath = data.path || null
+      console.log(`[firebaseDB] Found image path for ${imageKey}:`, imagePath)
+    } else {
+      console.log(`[firebaseDB] No image document found for key: ${imageKey}`)
     }
     
     // Save to cache (even null values to avoid repeated queries)
@@ -469,8 +530,12 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
     
     return imagePath
   } catch (error) {
+    console.error(`[firebaseDB] Error loading image path for ${imageKey}:`, error)
     // Return cached data if available, even if expired
     const cached = getFromCache(cacheKey, false)
+    if (cached) {
+      console.log(`[firebaseDB] Using expired cache for ${imageKey}:`, cached)
+    }
     return cached || null
   }
 }

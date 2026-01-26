@@ -181,15 +181,12 @@ export default async function handler(req, res) {
       // Verify we can get a Firestore instance
       let db
       try {
-        // Explicitly specify the database (default database)
-        // If you have multiple databases, you might need to specify: admin.firestore('your-database-id')
+        // Get Firestore instance
+        // Note: In serverless functions, Firestore might be reused across invocations
+        // Don't call settings() - it can only be called once and will fail if already initialized
+        // Settings are optional anyway, so we can skip them
         db = admin.firestore()
         console.log('Firestore instance created successfully')
-        
-        // Set Firestore settings to avoid connection issues
-        db.settings({
-          ignoreUndefinedProperties: true
-        })
       } catch (dbError) {
         console.error('Failed to create Firestore instance:', dbError.message)
         throw new Error(`Failed to create Firestore instance: ${dbError.message}`)
@@ -302,14 +299,40 @@ export default async function handler(req, res) {
       en: excludeParliament(translations.en)
     }
     
+    // Fetch images from Firebase and add to JSON
+    console.log('Fetching images from Firebase...')
+    let images = {}
+    try {
+      const imagesRef = db.collection('images')
+      const imagesSnapshot = await imagesRef.get()
+      
+      imagesSnapshot.forEach((doc) => {
+        const data = doc.data()
+        if (data.path) {
+          images[doc.id] = data.path
+        }
+      })
+      console.log(`Fetched ${Object.keys(images).length} images from Firebase`)
+    } catch (imagesError) {
+      console.error('Error fetching images from Firebase:', imagesError)
+      // Continue without images - they'll be loaded from Firebase in production
+    }
+    
+    // Add images to the JSON structure
+    const finalContent = {
+      ...cleanedTranslations,
+      images: images // Add images at root level for easy access
+    }
+    
     // Log what's being published (for debugging)
     console.log('Keys after Parliament exclusion in he:', Object.keys(cleanedTranslations.he || {}))
     console.log('Keys after Parliament exclusion in en:', Object.keys(cleanedTranslations.en || {}))
     console.log('Has sections after exclusion in he:', 'sections' in (cleanedTranslations.he || {}))
     console.log('Has sections after exclusion in en:', 'sections' in (cleanedTranslations.en || {}))
+    console.log('Images count:', Object.keys(images).length)
 
     // Format as JSON string
-    const jsonContent = JSON.stringify(cleanedTranslations, null, 2)
+    const jsonContent = JSON.stringify(finalContent, null, 2)
     
     // Log file size for debugging
     console.log('Generated JSON size:', jsonContent.length, 'bytes')

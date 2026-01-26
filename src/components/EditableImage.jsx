@@ -25,6 +25,8 @@ const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = ''
     // Load from Firebase on mount with caching to reduce DB calls
     const loadImage = async () => {
       try {
+        console.log(`[EditableImage] Loading image for key: ${imageKey}`)
+        
         // Check cache first
         const cached = imagePathCache.get(imageKey)
         const cacheTime = imagePathCacheTime.get(imageKey)
@@ -32,26 +34,57 @@ const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = ''
         
         if (cached && cacheTime && (now - cacheTime) < CACHE_DURATION) {
           // Use cached value
+          console.log(`[EditableImage] Using cached image path for ${imageKey}:`, cached)
           setImagePath(cached)
           setLoading(false)
           return
         }
         
+        // Check localStorage as fallback
+        const stored = localStorage.getItem(`image_${imageKey}`)
+        if (stored) {
+          console.log(`[EditableImage] Found image path in localStorage for ${imageKey}:`, stored)
+          setImagePath(stored)
+          imagePathCache.set(imageKey, stored)
+          imagePathCacheTime.set(imageKey, now)
+          setLoading(false)
+          // Still try to load from DB to update cache
+        }
+        
         // Load from DB
+        console.log(`[EditableImage] Loading from Firebase for ${imageKey}...`)
         const dbPath = await loadImagePathFromDB(imageKey)
+        console.log(`[EditableImage] Firebase returned path for ${imageKey}:`, dbPath)
+        
         if (dbPath) {
+          console.log(`[EditableImage] Setting image path for ${imageKey}:`, dbPath)
           setImagePath(dbPath)
           localStorage.setItem(`image_${imageKey}`, dbPath)
           // Update cache
           imagePathCache.set(imageKey, dbPath)
           imagePathCacheTime.set(imageKey, now)
         } else {
+          console.log(`[EditableImage] No image path found in Firebase for ${imageKey}`)
           // Cache null result too to avoid repeated queries
           imagePathCache.set(imageKey, null)
           imagePathCacheTime.set(imageKey, now)
+          // If we had localStorage value, keep it
+          if (stored) {
+            console.log(`[EditableImage] Using localStorage fallback for ${imageKey}:`, stored)
+            setImagePath(stored)
+          } else {
+            console.log(`[EditableImage] No image path found anywhere for ${imageKey}`)
+            setImagePath(null)
+          }
         }
       } catch (error) {
-        console.error('Error loading image from DB:', error)
+        console.error(`[EditableImage] Error loading image ${imageKey} from DB:`, error)
+        // Fallback to localStorage if available
+        const stored = localStorage.getItem(`image_${imageKey}`)
+        if (stored) {
+          console.log(`[EditableImage] Using localStorage fallback for ${imageKey}:`, stored)
+          setImagePath(stored)
+        }
       } finally {
         setLoading(false)
       }
