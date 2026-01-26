@@ -6,9 +6,10 @@ import ImageEditor from './ImageEditor'
 import './EditableImage.css'
 
 // Cache for image paths to avoid repeated DB calls
+// NOTE: Cache duration is short to ensure fresh data in production mode
 const imagePathCache = new Map()
 const imagePathCacheTime = new Map()
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+const CACHE_DURATION = 30 * 1000 // 30 seconds (short to minimize cache issues in production)
 
 const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = '' }) => {
   const { isAdminMode } = useAdmin()
@@ -22,39 +23,40 @@ const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = ''
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Load from Firebase on mount with caching to reduce DB calls
+    // Load image path - in production mode loads from GitHub, in edit mode from Firebase
     const loadImage = async () => {
       try {
         console.log(`[EditableImage] Loading image for key: ${imageKey}`)
         
-        // Check cache first
+        // Check cache first (short duration to minimize stale data)
         const cached = imagePathCache.get(imageKey)
         const cacheTime = imagePathCacheTime.get(imageKey)
         const now = Date.now()
         
         if (cached && cacheTime && (now - cacheTime) < CACHE_DURATION) {
           // Use cached value
-          console.log(`[EditableImage] Using cached image path for ${imageKey}:`, cached)
+          console.log(`[EditableImage] Using cached image path for ${imageKey} (age: ${Math.round((now - cacheTime) / 1000)}s)`)
           setImagePath(cached)
           setLoading(false)
           return
         }
         
-        // Check localStorage as fallback
+        // Check localStorage as fallback (but prefer fresh data from source)
         const stored = localStorage.getItem(`image_${imageKey}`)
-        if (stored) {
+        if (stored && !cached) {
+          // Only use localStorage if cache expired and we don't have fresh data yet
           console.log(`[EditableImage] Found image path in localStorage for ${imageKey}:`, stored)
           setImagePath(stored)
           imagePathCache.set(imageKey, stored)
           imagePathCacheTime.set(imageKey, now)
           setLoading(false)
-          // Still try to load from DB to update cache
+          // Still try to load from source to update cache
         }
         
-        // Load from DB
-        console.log(`[EditableImage] Loading from Firebase for ${imageKey}...`)
+        // Load from source (GitHub in production, Firebase in edit mode)
+        console.log(`[EditableImage] Loading image path from source (GitHub in production, Firebase in edit mode) for ${imageKey}...`)
         const dbPath = await loadImagePathFromDB(imageKey)
-        console.log(`[EditableImage] Firebase returned path for ${imageKey}:`, dbPath)
+        console.log(`[EditableImage] Source returned path for ${imageKey}:`, dbPath)
         
         if (dbPath) {
           console.log(`[EditableImage] Setting image path for ${imageKey}:`, dbPath)

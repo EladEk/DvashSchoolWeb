@@ -13,9 +13,11 @@
  */
 
 // Cache for production texts
+// NOTE: Cache duration is very short (30 seconds) to ensure fresh data from GitHub
+// In production mode, we want to load from GitHub, not cache
 let productionTextsCache = null
 let productionTextsCacheTime = null
-const PRODUCTION_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+const PRODUCTION_CACHE_DURATION = 30 * 1000 // 30 seconds (very short to minimize cache issues)
 
 /**
  * Check if we're in edit mode (admin mode)
@@ -182,21 +184,29 @@ const loadParliamentFromFirebase = async () => {
  * @returns {Promise<{he: object, en: object}>}
  */
 const loadFromProduction = async () => {
-  // Check cache first
+  // In production mode, we want to load from GitHub, not cache
+  // Cache check is minimal (30 seconds) to reduce repeated fetches during same session
+  // but ensure fresh data from GitHub
   if (productionTextsCache && productionTextsCacheTime) {
     const age = Date.now() - productionTextsCacheTime
     if (age < PRODUCTION_CACHE_DURATION) {
+      console.log('[textService] Using cached production texts (age:', Math.round(age / 1000), 'seconds) - will refresh from GitHub after', Math.round((PRODUCTION_CACHE_DURATION - age) / 1000), 'seconds')
       return productionTextsCache
     }
+    console.log('[textService] Cache expired, loading fresh from GitHub')
   }
 
   try {
-    // Load from /content/texts.json (GitHub)
-    console.log('[textService] Loading from /content/texts.json')
-    const response = await fetch('/content/texts.json', {
-      cache: 'no-cache', // Always fetch fresh in production
+    // Load from /content/texts.json (GitHub) - NOT from Firebase cache
+    // Add cache-busting query parameter to ensure fresh fetch from GitHub
+    const cacheBuster = `?t=${Date.now()}`
+    console.log('[textService] ⬇️ PRODUCTION MODE: Loading texts from GitHub (/content/texts.json' + cacheBuster + ')')
+    const response = await fetch(`/content/texts.json${cacheBuster}`, {
+      cache: 'no-store', // Don't cache - always fetch fresh from GitHub
       headers: {
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
       }
     })
 
@@ -205,7 +215,7 @@ const loadFromProduction = async () => {
     }
 
     const texts = await response.json()
-    console.log('[textService] Loaded texts.json, keys:', Object.keys(texts))
+    console.log('[textService] ✅ Loaded texts.json from GitHub, keys:', Object.keys(texts))
     console.log('[textService] Has sections in he:', 'sections' in (texts.he || {}))
     console.log('[textService] Has sections in en:', 'sections' in (texts.en || {}))
     if (texts.he?.sections) {
@@ -213,22 +223,27 @@ const loadFromProduction = async () => {
     }
 
     // IMPORTANT: Exclude Parliament data from GitHub (defensive check)
+    // Parliament should ONLY come from Firebase, never from GitHub
     const cleaned = {
       he: excludeParliament(texts.he || {}),
       en: excludeParliament(texts.en || {})
     }
+    console.log('[textService] ✅ Excluded Parliament from GitHub data')
     console.log('[textService] After excluding Parliament, has sections in he:', 'sections' in (cleaned.he || {}))
     console.log('[textService] After excluding Parliament, sections count in he:', cleaned.he?.sections?.length || 0)
 
     // Load Parliament translations from Firebase and merge
-    console.log('[textService] Loading Parliament from Firebase...')
+    // Parliament is the ONLY data that comes from Firebase in production mode
+    console.log('[textService] 🔄 Loading Parliament translations from Firebase (only Firebase data in production mode)...')
     const parliamentTranslations = await loadParliamentFromFirebase()
-    console.log('[textService] Parliament translations loaded, keys in he:', Object.keys(parliamentTranslations.he || {}))
+    console.log('[textService] ✅ Parliament translations loaded from Firebase, keys in he:', Object.keys(parliamentTranslations.he || {}))
     
+    // Merge: GitHub texts (non-Parliament) + Firebase Parliament
     const merged = {
       he: mergeTranslations(cleaned.he, parliamentTranslations.he),
       en: mergeTranslations(cleaned.en, parliamentTranslations.en)
     }
+    console.log('[textService] ✅ Merged: GitHub texts (non-Parliament) + Firebase Parliament')
     console.log('[textService] After merge, has sections in he:', 'sections' in (merged.he || {}))
     console.log('[textService] After merge, sections count in he:', merged.he?.sections?.length || 0)
     console.log('[textService] Final merged keys in he:', Object.keys(merged.he || {}))
@@ -315,12 +330,14 @@ export const loadTexts = async (forceRefresh = false) => {
     productionTextsCacheTime = null
   }
 
-  // In edit mode, load from Firebase
+  // In edit mode, load from Firebase (drafts)
   if (isEditMode()) {
+    console.log('[textService] 📝 EDIT MODE: Loading from Firebase (drafts)')
     return await loadFromFirebase()
   }
 
-  // In production mode, load from GitHub JSON
+  // In production mode, load from GitHub JSON (NOT Firebase, except Parliament)
+  console.log('[textService] 🌐 PRODUCTION MODE: Loading from GitHub (/content/texts.json) + Parliament from Firebase')
   return await loadFromProduction()
 }
 

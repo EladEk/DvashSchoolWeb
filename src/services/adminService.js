@@ -35,21 +35,28 @@ export const getDefaultTranslations = async () => {
 
 // Load translations using new textService
 // This maintains backward compatibility while using the new architecture
+// NOTE: In production mode, translations come from GitHub, not Firebase (except Parliament)
 export const getTranslations = async (skipFirebase = false) => {
   try {
     // Use new textService which handles production vs edit mode automatically
     // skipFirebase parameter is ignored - textService handles caching internally
-    const { loadTexts } = await import('./textService')
-    const translations = await loadTexts(!skipFirebase) // forceRefresh = !skipFirebase
+    const { loadTexts, isEditMode } = await import('./textService')
     
-    // Update cache for backward compatibility
+    // In production mode, always load fresh from GitHub (not Firebase cache)
+    const forceRefresh = !isEditMode() // Force refresh in production mode to get fresh GitHub data
+    const translations = await loadTexts(forceRefresh)
+    
+    // Update cache for backward compatibility (but don't rely on it in production)
     translationsCache = translations
     
-    // Also update localStorage for backward compatibility
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(translations))
-    } catch (e) {
-      // localStorage might be full, ignore
+    // Only save to localStorage in edit mode (for performance)
+    // In production mode, we want fresh data from GitHub, not localStorage
+    if (isEditMode()) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(translations))
+      } catch (e) {
+        // localStorage might be full, ignore
+      }
     }
     
     return translations

@@ -468,13 +468,16 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
   // In production mode, load from GitHub JSON file
   if (!isEditMode()) {
     try {
-      console.log(`[firebaseDB] Production mode: Loading image path for ${imageKey} from /content/texts.json`)
+      console.log(`[firebaseDB] 🌐 PRODUCTION MODE: Loading image path for ${imageKey} from GitHub (/content/texts.json)`)
       
-      // Load texts.json
-      const response = await fetch('/content/texts.json', {
-        cache: 'no-cache',
+      // Load texts.json with cache-busting to ensure fresh fetch from GitHub
+      const cacheBuster = `?t=${Date.now()}`
+      const response = await fetch(`/content/texts.json${cacheBuster}`, {
+        cache: 'no-store', // Don't cache - always fetch fresh from GitHub
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         }
       })
       
