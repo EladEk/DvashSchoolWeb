@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAdmin } from '../contexts/AdminContext'
 import { useTranslation } from '../contexts/TranslationContext'
+import * as cacheService from '../services/cacheService'
 import './AdminIndicator.css'
 
 const AdminIndicator = () => {
@@ -10,32 +11,35 @@ const AdminIndicator = () => {
   const navigate = useNavigate()
   const [showEnterButton, setShowEnterButton] = useState(false)
   const [hasParliamentAccess, setHasParliamentAccess] = useState(false)
+  const [hasEditAccess, setHasEditAccess] = useState(false)
 
-  // Check if user has admin or committee role for Parliament Admin access
+  // Check Parliament access (admin/committee) and edit access (admin/editor) for site content
   useEffect(() => {
-    const checkParliamentAccess = () => {
+    const checkAccess = () => {
       try {
         const session = JSON.parse(localStorage.getItem('session') || 'null')
         if (session) {
           const role = (session.role || '').trim().toLowerCase()
-          const hasAccess = role === 'admin' || role === 'committee' || session.mode === 'system-admin'
-          setHasParliamentAccess(hasAccess)
+          setHasParliamentAccess(role === 'admin' || role === 'committee' || session.mode === 'system-admin')
+          setHasEditAccess(role === 'admin' || role === 'editor' || session.mode === 'system-admin')
         } else {
           setHasParliamentAccess(false)
+          setHasEditAccess(false)
         }
       } catch (e) {
         setHasParliamentAccess(false)
+        setHasEditAccess(false)
       }
     }
 
-    checkParliamentAccess()
+    checkAccess()
     // Check periodically for session changes
-    const interval = setInterval(checkParliamentAccess, 1000)
+    const interval = setInterval(checkAccess, 1000)
     
     // Listen to storage events (for cross-tab updates and logout)
     const handleStorageChange = (e) => {
       if (e.key === 'session') {
-        checkParliamentAccess()
+        checkAccess()
       }
     }
     window.addEventListener('storage', handleStorageChange)
@@ -51,6 +55,11 @@ const AdminIndicator = () => {
     const justExited = sessionStorage.getItem('justExitedAdminMode') === 'true'
     setShowEnterButton(justExited)
   }, [isAdminMode])
+
+  const handleClearSiteCache = () => {
+    cacheService.clearAll()
+    window.location.reload()
+  }
 
   const handleExit = () => {
     // Just exit admin mode, don't logout (keep session)
@@ -113,6 +122,11 @@ const AdminIndicator = () => {
             <Link to="/admin/parliament" className="admin-btn parliament-btn" title={t('admin.parliamentAdmin')}>
               {t('admin.parliamentAdmin')}
             </Link>
+          )}
+          {hasEditAccess && (
+            <button type="button" className="admin-btn" onClick={handleClearSiteCache} title={t('admin.clearSiteCache')}>
+              {t('admin.clearSiteCache')}
+            </button>
           )}
           <button className="admin-btn exit-btn" onClick={handleExit} title={t('admin.exitAdminMode')}>
             {t('common.exit')}

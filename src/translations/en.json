@@ -8,7 +8,8 @@
   "admin": {
     "parliamentAdmin": "Parliament Admin",
     "publish": "Publish",
-    "saveJsonFiles": "Save JSON Files"
+    "saveJsonFiles": "Save JSON Files",
+    "clearSiteCache": "Clear site cache"
   },
   "nav": {
     "parliament": "Parliament"

@@ -8,7 +8,8 @@
   "admin": {
     "parliamentAdmin": "ניהול פרלמנט",
     "publish": "פרסם",
-    "saveJsonFiles": "שמור קבצי JSON"
+    "saveJsonFiles": "שמור קבצי JSON",
+    "clearSiteCache": "נקה מטמון האתר"
   },
   "nav": {
     "parliament": "פרלמנט"

@@ -1,6 +1,7 @@
 // Centralized Firebase Database Operations
 
 import { db } from './firebase'
+import * as websiteCache from './cacheService'
 import { 
   doc, 
   getDoc, 
@@ -177,6 +178,8 @@ export const clearAllCache = () => {
  * Clear all image caches (used when entering/exiting edit mode so images reload from correct source).
  */
 export const clearAllImageCaches = () => {
+  websiteCache.clearKeysByPrefix('image_', 'public')
+  websiteCache.clearKeysByPrefix('image_', 'edit')
   const prefix = CACHE_KEYS.IMAGES
   const keysToRemove = []
   for (const key of memoryCache.keys()) {
@@ -437,35 +440,37 @@ const normalizeImagePath = (imagePathOrUrl) => {
   return path || null
 }
 
+const IMAGE_CACHE_TTL_PUBLIC_MS = 5 * 60 * 1000
+const IMAGE_CACHE_TTL_EDIT_MS = 2 * 60 * 1000
+
+const isEditModeForImages = () => {
+  if (typeof window === 'undefined') return false
+  try {
+    return sessionStorage.getItem('adminAuthenticated') === 'true'
+  } catch {
+    return false
+  }
+}
+
 export const saveImagePathToDB = async (imageKey, imagePath) => {
   try {
     if (!db) {
       throw new Error('Firebase not configured')
     }
-    
-    // Normalize path: always save path only, not full URL
     const normalizedPath = normalizeImagePath(imagePath)
-    
     const imageDocRef = doc(db, 'images', imageKey)
-    
     if (normalizedPath === null) {
-      // Delete the image reference
       await updateDoc(imageDocRef, {
         path: null,
         updatedAt: serverTimestamp(),
       })
     } else {
-      // Save or update the ImageKit path (path only, not full URL)
       await setDoc(imageDocRef, {
-        path: normalizedPath, // Always save path only
+        path: normalizedPath,
         updatedAt: serverTimestamp(),
       }, { merge: true })
     }
-    
-    // Update cache immediately (with normalized path)
-    const cacheKey = `${CACHE_KEYS.IMAGES}${imageKey}`
-    saveToCache(cacheKey, normalizedPath)
-    
+    websiteCache.set(`image_${imageKey}`, normalizedPath, 'edit', IMAGE_CACHE_TTL_EDIT_MS)
     return { success: true }
   } catch (error) {
     throw error
@@ -473,106 +478,58 @@ export const saveImagePathToDB = async (imageKey, imagePath) => {
 }
 
 /**
- * Load image path (ImageKit URL) from Firebase or GitHub JSON
- * In production mode: loads from /content/texts.json
- * In edit mode: loads from Firebase
+ * Load image path (ImageKit URL) from Firebase or GitHub JSON.
+ * Uses website cache (public/edit) so switching modes does not hit DB/Git every time.
  * @param {string} imageKey - Image key
  * @param {boolean} forceRefresh - If true, bypass cache and fetch from source
  * @returns {Promise<string|null>} ImageKit path/URL or null
  */
 export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
-  if (!imageKey) {
-    return null
-  }
-  
-  // Check if we're in edit mode
-  const isEditMode = () => {
-    if (typeof window === 'undefined') return false
-    try {
-      return sessionStorage.getItem('adminAuthenticated') === 'true'
-    } catch {
-      return false
-    }
-  }
-  
-  const cacheKey = `${CACHE_KEYS.IMAGES}${imageKey}`
-  
-  // Check cache first (unless force refresh)
+  if (!imageKey) return null
+
+  const mode = isEditModeForImages() ? 'edit' : 'public'
+  const cacheKey = `image_${imageKey}`
+
   if (!forceRefresh) {
-    const cached = getFromCache(cacheKey)
-    if (cached !== null) {
-      return cached
-    }
+    const cached = websiteCache.get(cacheKey, mode)
+    if (cached !== null && cached !== undefined) return cached
   }
-  
-  // In production mode, load from GitHub JSON file
-  if (!isEditMode()) {
+
+  if (!isEditModeForImages()) {
     try {
-      // Load texts.json with cache-busting to ensure fresh fetch from GitHub
       const cacheBuster = `?t=${Date.now()}`
       const response = await fetch(`/content/texts.json${cacheBuster}`, {
-        cache: 'no-store', // Don't cache - always fetch fresh from GitHub
+        cache: 'no-store',
         headers: {
           'Accept': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache'
         }
       })
-      
-      if (!response.ok) {
-        throw new Error(`Failed to load texts.json: ${response.status}`)
-      }
-      
+      if (!response.ok) return null
       const texts = await response.json()
-      
-      // Check if images are stored in texts.json
-      // Structure: { he: {...}, en: {...}, images: { "hero.image": "/path/to/image.jpg", "section.image1": "/path/to/image2.jpg" } }
-      // Images are at root level for easy access
       const images = texts.images || texts.he?.images || {}
-      
       const imagePath = images[imageKey] || null
-      
-      if (imagePath) {
-        // Normalize path: extract path from full URL if needed
-        const normalizedPath = normalizeImagePath(imagePath)
-        saveToCache(cacheKey, normalizedPath)
-        return normalizedPath
-      } else {
-        // Images should be in GitHub JSON - if not found, return null (no fallback)
-        saveToCache(cacheKey, null)
-        return null
-      }
+      const normalizedPath = imagePath ? normalizeImagePath(imagePath) : null
+      websiteCache.set(cacheKey, normalizedPath, 'public', IMAGE_CACHE_TTL_PUBLIC_MS)
+      return normalizedPath
     } catch (error) {
-      return null
+      return websiteCache.get(cacheKey, 'public') ?? null
     }
   }
-  
-  // In edit mode only, load from Firebase
+
   try {
-    if (!db) {
-      const cached = getFromCache(cacheKey, false)
-      return cached || null
-    }
-    
+    if (!db) return websiteCache.get(cacheKey, 'edit') ?? null
     const imageDoc = await getDoc(doc(db, 'images', imageKey))
-    
     let imagePath = null
     if (imageDoc.exists()) {
       const data = imageDoc.data()
-      imagePath = data.path || null
-      // Normalize path: extract path from full URL if needed (for backward compatibility)
-      if (imagePath) {
-        imagePath = normalizeImagePath(imagePath)
-      }
+      imagePath = data.path ? normalizeImagePath(data.path) : null
     }
-    
-    // Save to cache (even null values to avoid repeated queries)
-    saveToCache(cacheKey, imagePath)
-    
+    websiteCache.set(cacheKey, imagePath, 'edit', IMAGE_CACHE_TTL_EDIT_MS)
     return imagePath
   } catch (error) {
-    const cached = getFromCache(cacheKey, false)
-    return cached || null
+    return websiteCache.get(cacheKey, 'edit') ?? null
   }
 }
 

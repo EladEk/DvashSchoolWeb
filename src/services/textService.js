@@ -14,9 +14,14 @@
 
 import heTranslations from '../translations/he.json'
 import enTranslations from '../translations/en.json'
+import * as cache from './cacheService'
 
 /** Fallback translations (keys not in content/texts.json). Loaded content wins. */
 const DEFAULTS = { he: heTranslations, en: enTranslations }
+
+/** TTL: public (Git) 5 min, edit (DB) 2 min */
+const CACHE_TTL_PUBLIC_MS = 5 * 60 * 1000
+const CACHE_TTL_EDIT_MS = 2 * 60 * 1000
 
 /** Deep merge: source wins. Used to merge defaults (target) + loaded (source). */
 function deepMerge(target, source) {
@@ -35,13 +40,6 @@ function deepMerge(target, source) {
   }
   return result
 }
-
-// Cache for production texts
-// NOTE: Cache duration is very short (30 seconds) to ensure fresh data from GitHub
-// In production mode, we want to load from GitHub, not cache
-let productionTextsCache = null
-let productionTextsCacheTime = null
-const PRODUCTION_CACHE_DURATION = 30 * 1000 // 30 seconds (very short to minimize cache issues)
 
 /**
  * Check if we're in edit mode (admin mode)
@@ -203,26 +201,19 @@ const loadParliamentFromFirebase = async () => {
 
 /**
  * Load texts from production source (GitHub JSON file)
- * Parliament translations are loaded from Firebase and merged
- * @returns {Promise<{he: object, en: object}>}
+ * Parliament translations are loaded from Firebase and merged.
+ * Uses website cache (public mode) to avoid repeated Git/DB calls.
  */
 const loadFromProduction = async () => {
-  // In production mode, we want to load from GitHub, not cache
-  // Cache check is minimal (30 seconds) to reduce repeated fetches during same session
-  // but ensure fresh data from GitHub
-  if (productionTextsCache && productionTextsCacheTime) {
-    const age = Date.now() - productionTextsCacheTime
-    if (age < PRODUCTION_CACHE_DURATION) {
-      return productionTextsCache
-    }
+  const cached = cache.get('texts', 'public')
+  if (cached != null && typeof cached === 'object' && (cached.he != null || cached.en != null)) {
+    return cached
   }
 
   try {
-    // Load from /content/texts.json (GitHub) - NOT from Firebase cache
-    // Add cache-busting query parameter to ensure fresh fetch from GitHub
     const cacheBuster = `?t=${Date.now()}`
     const response = await fetch(`/content/texts.json${cacheBuster}`, {
-      cache: 'no-store', // Don't cache - always fetch fresh from GitHub
+      cache: 'no-store',
       headers: {
         'Accept': 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -235,37 +226,21 @@ const loadFromProduction = async () => {
     }
 
     const texts = await response.json()
-
-    // IMPORTANT: Exclude Parliament data from GitHub (defensive check)
-    // Parliament should ONLY come from Firebase, never from GitHub
     const cleaned = {
       he: excludeParliament(texts.he || {}),
       en: excludeParliament(texts.en || {})
     }
-
-    // Load Parliament translations from Firebase and merge
-    // Parliament is the ONLY data that comes from Firebase in production mode
     const parliamentTranslations = await loadParliamentFromFirebase()
-    
-    // Merge: GitHub texts (non-Parliament) + Firebase Parliament
     const merged = {
       he: mergeTranslations(cleaned.he, parliamentTranslations.he),
       en: mergeTranslations(cleaned.en, parliamentTranslations.en)
     }
 
-    // Cache the result
-    productionTextsCache = merged
-    productionTextsCacheTime = Date.now()
-
+    cache.set('texts', merged, 'public', CACHE_TTL_PUBLIC_MS)
     return merged
   } catch (error) {
-    
-    // Return cached data if available (even if expired)
-    if (productionTextsCache) {
-      return productionTextsCache
-    }
-
-    // Fallback to default translations
+    const fallback = cache.get('texts', 'public')
+    if (fallback != null && typeof fallback === 'object') return fallback
     return await getDefaultTranslations()
   }
 }
@@ -274,40 +249,38 @@ const loadFromProduction = async () => {
 export const getDefaultTranslations = async () => DEFAULTS
 
 /**
- * Load texts from Firebase (edit mode)
- * In edit mode, includes everything including Parliament
- * @returns {Promise<{he: object, en: object}>}
+ * Load texts from Firebase (edit mode).
+ * Uses website cache (edit mode) to avoid repeated DB calls when re-entering edit mode.
  */
 const loadFromFirebase = async () => {
+  const cached = cache.get('texts', 'edit')
+  if (cached != null && typeof cached === 'object' && (cached.he != null || cached.en != null)) {
+    return { he: cached.he || {}, en: cached.en || {} }
+  }
+
   try {
     const { loadTranslationsFromDB } = await import('./firebaseDB')
     const firebaseData = await loadTranslationsFromDB()
-
-    if (!firebaseData) {
-      // Edit mode: if no DB data, use only defaults (translation). Do not fall back to Git.
-      return { he: {}, en: {} }
-    }
-
-    return {
-      he: firebaseData.he || {},
-      en: firebaseData.en || {}
-    }
+    const data = firebaseData
+      ? { he: firebaseData.he || {}, en: firebaseData.en || {} }
+      : { he: {}, en: {} }
+    cache.set('texts', data, 'edit', CACHE_TTL_EDIT_MS)
+    return data
   } catch (error) {
-    // Edit mode: on error, use only defaults (translation). Do not fall back to Git.
     return { he: {}, en: {} }
   }
 }
 
 /**
  * Load texts: content/texts.json wins in publish, Firebase wins in edit.
- * Result is always defaults + loaded (loaded wins). Never throws.
- * @param {boolean} forceRefresh - Force refresh from source (bypass cache)
+ * Uses website cache per mode so switching edit on/off does not hit DB/Git every time.
+ * @param {boolean} forceRefresh - Bypass cache and load from source
  * @returns {Promise<{he: object, en: object}>} Merged { he, en }
  */
 export const loadTexts = async (forceRefresh = false) => {
+  const mode = isEditMode() ? 'edit' : 'public'
   if (forceRefresh) {
-    productionTextsCache = null
-    productionTextsCacheTime = null
+    cache.clearKey('texts', mode)
   }
 
   try {
@@ -342,6 +315,7 @@ export const saveTexts = async (translations) => {
   try {
     const { saveAllTranslationsToDB } = await import('./firebaseDB')
     await saveAllTranslationsToDB(cleaned)
+    cache.set('texts', { he: translations.he || {}, en: translations.en || {} }, 'edit', CACHE_TTL_EDIT_MS)
     return { success: true }
   } catch (error) {
     throw error
@@ -432,11 +406,7 @@ export const publishTexts = async (commitMessage) => {
     }
 
     const result = await response.json()
-
-    // Clear production cache so next load gets fresh data
-    productionTextsCache = null
-    productionTextsCacheTime = null
-
+    cache.clearMode('public')
     return result
   } catch (error) {
     throw error
@@ -446,12 +416,9 @@ export const publishTexts = async (commitMessage) => {
   }
 }
 
-/**
- * Clear all caches
- */
+/** Clear public (publish) cache so next load gets fresh Git data. Called after publish. */
 export const clearCache = () => {
-  productionTextsCache = null
-  productionTextsCacheTime = null
+  cache.clearMode('public')
 }
 
 /** Default/fallback translations. Use when load fails or for offline fallback. */
