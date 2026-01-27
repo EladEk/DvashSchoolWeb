@@ -173,6 +173,30 @@ export const clearAllCache = () => {
   }
 }
 
+/**
+ * Clear all image caches (used when entering/exiting edit mode so images reload from correct source).
+ */
+export const clearAllImageCaches = () => {
+  const prefix = CACHE_KEYS.IMAGES
+  const keysToRemove = []
+  for (const key of memoryCache.keys()) {
+    if (key.startsWith(prefix)) keysToRemove.push(key)
+  }
+  keysToRemove.forEach(key => {
+    memoryCache.delete(key)
+    memoryCacheTime.delete(key)
+  })
+  try {
+    const locKeys = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith(prefix)) locKeys.push(key)
+    }
+    locKeys.forEach(key => localStorage.removeItem(key))
+  } catch (error) {
+  }
+}
+
 // ============================================
 // TRANSLATIONS OPERATIONS
 // ============================================

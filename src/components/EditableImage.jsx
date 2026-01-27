@@ -1,87 +1,95 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAdmin } from '../contexts/AdminContext'
 import { useTranslation } from '../contexts/TranslationContext'
-import { loadImagePathFromDB } from '../services/firebaseDB'
+import { loadImagePathFromDB, clearAllImageCaches } from '../services/firebaseDB'
 import ImageEditor from './ImageEditor'
 import './EditableImage.css'
 
 // Cache for image paths to avoid repeated DB calls
-// NOTE: Cache duration is short to ensure fresh data in production mode
+// Cleared when entering/exiting edit mode so correct source (Git vs DB) is used
 const imagePathCache = new Map()
 const imagePathCacheTime = new Map()
 const CACHE_DURATION = 30 * 1000 // 30 seconds (short to minimize cache issues in production)
+
+/** Clear all image caches when edit mode changes (so images reload from Git or DB) */
+const clearEditableImageCachesForModeChange = () => {
+  imagePathCache.clear()
+  imagePathCacheTime.clear()
+  try {
+    const keys = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith('image_')) keys.push(k)
+    }
+    keys.forEach(k => localStorage.removeItem(k))
+  } catch (e) {}
+  clearAllImageCaches()
+}
 
 const EditableImage = ({ imageKey, defaultImage = null, className = '', alt = '' }) => {
   const { isAdminMode } = useAdmin()
   const { t } = useTranslation()
   const [showEditor, setShowEditor] = useState(false)
   const [imagePath, setImagePath] = useState(() => {
-    // Try to load from localStorage first
     const stored = localStorage.getItem(`image_${imageKey}`)
     return stored || defaultImage
   })
   const [loading, setLoading] = useState(true)
+  const prevAdminModeRef = useRef(undefined)
+
+  // When enter/exit edit mode (not on mount), clear all image caches so we load from correct source (Git vs DB)
+  useEffect(() => {
+    const prev = prevAdminModeRef.current
+    prevAdminModeRef.current = isAdminMode
+    if (prev !== undefined && prev !== isAdminMode) {
+      clearEditableImageCachesForModeChange()
+    }
+  }, [isAdminMode])
 
   useEffect(() => {
-    // Load image path - in production mode loads from GitHub, in edit mode from Firebase
     const loadImage = async () => {
       try {
-        // Check cache first (short duration to minimize stale data)
+        setLoading(true)
         const cached = imagePathCache.get(imageKey)
         const cacheTime = imagePathCacheTime.get(imageKey)
         const now = Date.now()
-        
-        if (cached && cacheTime && (now - cacheTime) < CACHE_DURATION) {
-          // Use cached value
-          setImagePath(cached)
+
+        if (cached !== undefined && cacheTime && (now - cacheTime) < CACHE_DURATION) {
+          setImagePath(cached || defaultImage)
           setLoading(false)
           return
         }
-        
-        // Check localStorage as fallback (but prefer fresh data from source)
+
         const stored = localStorage.getItem(`image_${imageKey}`)
-        if (stored && !cached) {
-          // Only use localStorage if cache expired and we don't have fresh data yet
+        if (stored && cached === undefined) {
           setImagePath(stored)
           imagePathCache.set(imageKey, stored)
           imagePathCacheTime.set(imageKey, now)
           setLoading(false)
-          // Still try to load from source to update cache
         }
-        
-        // Load from source (GitHub in production, Firebase in edit mode)
+
         const dbPath = await loadImagePathFromDB(imageKey)
-        
+
         if (dbPath) {
           setImagePath(dbPath)
           localStorage.setItem(`image_${imageKey}`, dbPath)
-          // Update cache
           imagePathCache.set(imageKey, dbPath)
           imagePathCacheTime.set(imageKey, now)
         } else {
-          // Cache null result too to avoid repeated queries
           imagePathCache.set(imageKey, null)
           imagePathCacheTime.set(imageKey, now)
-          // If we had localStorage value, keep it
-          if (stored) {
-            setImagePath(stored)
-          } else {
-            setImagePath(null)
-          }
+          setImagePath(stored || defaultImage || null)
         }
       } catch (error) {
-        console.error(`[EditableImage] Error loading image ${imageKey} from DB:`, error)
-        // Fallback to localStorage if available
+        console.error(`[EditableImage] Error loading image ${imageKey}:`, error)
         const stored = localStorage.getItem(`image_${imageKey}`)
-        if (stored) {
-          setImagePath(stored)
-        }
+        setImagePath(stored || defaultImage || null)
       } finally {
         setLoading(false)
       }
     }
     loadImage()
-  }, [imageKey])
+  }, [imageKey, isAdminMode])
 
   const handleImageUpdate = (newPath) => {
     // Update state immediately to trigger re-render

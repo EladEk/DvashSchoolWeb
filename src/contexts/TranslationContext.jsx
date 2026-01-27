@@ -24,17 +24,22 @@ export const TranslationProvider = ({ children }) => {
     loadTranslations()
   }, [])
 
-  // Reload translations when edit mode changes
+  // Reload translations and clear caches when edit mode changes (enter or exit)
   useEffect(() => {
-    const checkEditMode = () => {
+    const checkEditMode = async () => {
       const currentEditMode = isEditMode()
       if (currentEditMode !== editModeRef.current) {
         editModeRef.current = currentEditMode
-        loadTranslations(true) // Force refresh when mode changes
+        // Clear text cache so next load uses correct source (Git vs DB)
+        const { clearCache } = await import('../services/textService')
+        clearCache()
+        // Clear image caches so EditableImage reloads from correct source (Git vs DB)
+        const { clearAllImageCaches } = await import('../services/firebaseDB')
+        clearAllImageCaches()
+        loadTranslations(true)
       }
     }
 
-    // Check periodically for edit mode changes
     const interval = setInterval(checkEditMode, 1000)
     return () => clearInterval(interval)
   }, [])
