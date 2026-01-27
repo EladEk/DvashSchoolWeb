@@ -22,7 +22,7 @@ import './components/Loader.css'
 
 function AppContent() {
   const { isAdminMode } = useAdmin()
-  const { isLoading } = useTranslation()
+  const { isLoading, t } = useTranslation()
   useScrollToHash() // Now this is inside Router context
 
   // Show loader while translations are loading
@@ -45,9 +45,13 @@ function AppContent() {
 
   return (
     <div className={`App ${isAdminMode ? 'admin-mode' : ''}`}>
+      <a href="#main-content" className="skip-link">
+        {t('a11y.skipToMainContent')}
+      </a>
       <AdminIndicator />
       <Header />
-      <Routes>
+      <main id="main-content">
+        <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/שאלות-תשובות" element={<FAQ />} />
         <Route path="/contact-8" element={<ContactPage />} />
@@ -77,6 +81,7 @@ function AppContent() {
         />
         <Route path="*" element={<div style={{ padding: '2rem', textAlign: 'center' }}>Page not found</div>} />
       </Routes>
+      </main>
       <Footer />
     </div>
   )

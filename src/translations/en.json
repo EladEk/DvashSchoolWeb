@@ -36,6 +36,9 @@
     "importTranslations": "Import translations from JSON files",
     "exitAdminMode": "Exit admin mode"
   },
+  "a11y": {
+    "skipToMainContent": "Skip to main content"
+  },
   "nav": {
     "home": "Home",
     "about": "About Us",

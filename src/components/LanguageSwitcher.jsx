@@ -30,51 +30,51 @@ const LanguageSwitcher = () => {
   }, [isDropdownOpen])
 
   return (
-    <div className="language-switcher">
-      {/* Desktop view - buttons */}
-      <button
-        className={`lang-btn ${language === 'he' ? 'active' : ''}`}
-        onClick={() => changeLanguage('he')}
-        aria-label="עברית"
-        title="עברית"
-      >
-        HE
-      </button>
-      <button
-        className={`lang-btn ${language === 'en' ? 'active' : ''}`}
-        onClick={() => changeLanguage('en')}
-        aria-label="English"
-        title="English"
-      >
-        EN
-      </button>
-
-      {/* Mobile view - dropdown */}
-      <div className={`language-switcher-dropdown ${isDropdownOpen ? 'open' : ''}`} ref={dropdownRef}>
+    <div className="language-switcher" ref={dropdownRef}>
+      <div className={`language-switcher-dropdown ${isDropdownOpen ? 'open' : ''}`}>
         <button
+          type="button"
           className="lang-dropdown-btn"
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          aria-label="Change language"
+          aria-label={language === 'he' ? 'עברית' : 'English'}
+          aria-expanded={isDropdownOpen}
+          aria-haspopup="listbox"
+          aria-controls="lang-menu"
+          id="lang-trigger"
+          title={language === 'he' ? 'עברית' : 'English'}
         >
           {language === 'he' ? 'HE' : 'EN'}
-          <span className="dropdown-arrow">▼</span>
+          <span className="dropdown-arrow" aria-hidden>▼</span>
         </button>
-        {isDropdownOpen && (
-          <div className="lang-dropdown-menu">
-            <button
-              className={`lang-dropdown-item ${language === 'he' ? 'active' : ''}`}
-              onClick={() => handleLanguageChange('he')}
-            >
-              HE
-            </button>
-            <button
-              className={`lang-dropdown-item ${language === 'en' ? 'active' : ''}`}
-              onClick={() => handleLanguageChange('en')}
-            >
-              EN
-            </button>
-          </div>
-        )}
+        <div
+          id="lang-menu"
+          className="lang-dropdown-menu"
+          role="listbox"
+          aria-labelledby="lang-trigger"
+          aria-activedescendant={language === 'he' ? 'lang-he' : 'lang-en'}
+          hidden={!isDropdownOpen}
+        >
+          <button
+            type="button"
+            id="lang-he"
+            role="option"
+            aria-selected={language === 'he'}
+            className={`lang-dropdown-item ${language === 'he' ? 'active' : ''}`}
+            onClick={() => handleLanguageChange('he')}
+          >
+            HE
+          </button>
+          <button
+            type="button"
+            id="lang-en"
+            role="option"
+            aria-selected={language === 'en'}
+            className={`lang-dropdown-item ${language === 'en' ? 'active' : ''}`}
+            onClick={() => handleLanguageChange('en')}
+          >
+            EN
+          </button>
+        </div>
       </div>
     </div>
   )

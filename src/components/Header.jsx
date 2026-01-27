@@ -8,6 +8,7 @@ import './Header.css'
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [hasAdminAccess, setHasAdminAccess] = useState(false)
+  const navRef = useRef(null)
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -183,6 +184,30 @@ const Header = () => {
     scrollToSection(hash)
   }
 
+  // When mobile menu is closed: aria-hidden + inert so the nav is not focusable
+  // (ARIA hidden element must not contain focusable elements). Only on mobile (<=768px).
+  useEffect(() => {
+    const nav = navRef.current
+    if (!nav) return
+    const isMobile = () => window.innerWidth <= 768
+    const updateAriaAndInert = () => {
+      if (isMobile() && !isMenuOpen) {
+        nav.setAttribute('aria-hidden', 'true')
+        nav.setAttribute('inert', '')
+      } else {
+        nav.removeAttribute('aria-hidden')
+        nav.removeAttribute('inert')
+      }
+    }
+    updateAriaAndInert()
+    window.addEventListener('resize', updateAriaAndInert)
+    return () => {
+      window.removeEventListener('resize', updateAriaAndInert)
+      nav.removeAttribute('aria-hidden')
+      nav.removeAttribute('inert')
+    }
+  }, [isMenuOpen])
+
   return (
     <header className="header">
       <div className="header-main">
@@ -190,7 +215,11 @@ const Header = () => {
           <div className="header-left">
             <LanguageSwitcher />
           </div>
-          <nav className={`nav ${isMenuOpen ? 'nav-open' : ''}`}>
+          <nav
+            id="main-nav"
+            ref={navRef}
+            className={`nav ${isMenuOpen ? 'nav-open' : ''}`}
+          >
             <ul className="nav-list">
               {menuItems.map((item) => (
                 <li key={item.id}>
@@ -250,6 +279,8 @@ const Header = () => {
             className="menu-toggle"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label={t('nav.menu')}
+            aria-expanded={isMenuOpen}
+            aria-controls="main-nav"
           >
             <span></span>
             <span></span>

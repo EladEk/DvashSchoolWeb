@@ -36,6 +36,9 @@
     "importTranslations": "ייבא תרגומים מקבצי JSON",
     "exitAdminMode": "יציאה ממצב מנהל"
   },
+  "a11y": {
+    "skipToMainContent": "דלג לתוכן הראשי"
+  },
   "nav": {
     "home": "ראשי",
     "about": "עלינו",

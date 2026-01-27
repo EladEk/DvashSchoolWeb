@@ -4,53 +4,14 @@
 
 .language-switcher {
   display: flex;
-  gap: 0.5rem;
   align-items: center;
   flex-shrink: 0;
 }
 
-.lang-btn {
-  padding: 0.25rem 0.5rem;
-  border: 2px solid var(--text-on-primary);
-  background-color: transparent;
-  color: var(--text-on-primary) !important;
-  border-radius: 5px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: inherit;
-  min-width: 35px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.lang-btn:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: var(--text-on-primary) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.lang-btn.active {
-  background-color: var(--text-on-primary) !important;
-  color: var(--primary-color) !important;
-  font-weight: 700;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.lang-btn.active:hover {
-  background-color: var(--white) !important;
-  color: var(--primary-color) !important;
-}
-
-/* Mobile dropdown styles */
+/* Dropdown at all viewport sizes */
 .language-switcher-dropdown {
-  display: none;
   position: relative;
+  display: block;
 }
 
 .lang-dropdown-btn {
@@ -121,21 +82,4 @@
   background: var(--primary-color);
   color: var(--white);
   font-weight: 700;
-}
-
-@media (max-width: 768px) {
-  .language-switcher {
-    margin-top: 0;
-    justify-content: flex-start;
-  }
-
-  /* Hide desktop buttons on mobile */
-  .language-switcher > .lang-btn {
-    display: none;
-  }
-
-  /* Show dropdown on mobile */
-  .language-switcher-dropdown {
-    display: block;
-  }
 }
