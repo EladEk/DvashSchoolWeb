@@ -1,16 +1,40 @@
 /**
- * Text Service - Manages site texts with dual-source architecture
- * 
- * Architecture:
- * - Production mode: Reads from /content/texts.json (GitHub) + Parliament from Firebase
- * - Edit mode: Reads/writes from Firebase (drafts, including Parliament)
- * - Parliament translations: In production, loaded from Firebase; in edit mode, from Firebase
- * 
- * IMPORTANT: 
- * - Parliament translations are NEVER saved to GitHub (excluded during publish)
- * - In production mode, Parliament translations are loaded from Firebase and merged
- * - In edit mode, everything (including Parliament) comes from Firebase
+ * Text System - Single module that manages all site texts.
+ *
+ * Edit mode:  DB (Firebase) first; if a key is missing in DB → src/translations.
+ *             If DB is empty or errors → src/translations only (no Git).
+ *
+ * Publish mode (not edit): Git (content/texts.json) first; Parliament from Firebase.
+ *             If a key is missing in Git → src/translations.
+ *             If Git fetch fails → src/translations only.
+ *
+ * This module owns: load source (content vs Firebase), defaults merge, Parliament
+ * exclude/merge, and all public API.
  */
+
+import heTranslations from '../translations/he.json'
+import enTranslations from '../translations/en.json'
+
+/** Fallback translations (keys not in content/texts.json). Loaded content wins. */
+const DEFAULTS = { he: heTranslations, en: enTranslations }
+
+/** Deep merge: source wins. Used to merge defaults (target) + loaded (source). */
+function deepMerge(target, source) {
+  if (!source || typeof source !== 'object') return target || {}
+  if (!target || typeof target !== 'object') return source || {}
+  const result = { ...target }
+  for (const key in source) {
+    if (!Object.prototype.hasOwnProperty.call(source, key)) continue
+    const s = source[key]
+    const t = target[key]
+    if (s && typeof s === 'object' && !Array.isArray(s) && t && typeof t === 'object' && !Array.isArray(t)) {
+      result[key] = deepMerge(t, s)
+    } else {
+      result[key] = s
+    }
+  }
+  return result
+}
 
 // Cache for production texts
 // NOTE: Cache duration is very short (30 seconds) to ensure fresh data from GitHub
@@ -246,26 +270,8 @@ const loadFromProduction = async () => {
   }
 }
 
-/**
- * Load default translations from local JSON files
- * @returns {Promise<{he: object, en: object}>}
- */
-const getDefaultTranslations = async () => {
-  try {
-    const [heTranslations, enTranslations] = await Promise.all([
-      import('../translations/he.json'),
-      import('../translations/en.json')
-    ])
-
-    // Exclude Parliament from defaults too
-    return {
-      he: excludeParliament(heTranslations.default || heTranslations),
-      en: excludeParliament(enTranslations.default || enTranslations)
-    }
-  } catch (error) {
-    return { he: {}, en: {} }
-  }
-}
+/** Return default fallback translations (used when load fails). */
+export const getDefaultTranslations = async () => DEFAULTS
 
 /**
  * Load texts from Firebase (edit mode)
@@ -278,41 +284,42 @@ const loadFromFirebase = async () => {
     const firebaseData = await loadTranslationsFromDB()
 
     if (!firebaseData) {
-      // Fallback to production or defaults
-      return await loadFromProduction()
+      // Edit mode: if no DB data, use only defaults (translation). Do not fall back to Git.
+      return { he: {}, en: {} }
     }
 
-    // In edit mode, return everything including Parliament
     return {
       he: firebaseData.he || {},
       en: firebaseData.en || {}
     }
   } catch (error) {
-    // Fallback to production
-    return await loadFromProduction()
+    // Edit mode: on error, use only defaults (translation). Do not fall back to Git.
+    return { he: {}, en: {} }
   }
 }
 
 /**
- * Main function to load texts based on current mode
+ * Load texts: content/texts.json wins in publish, Firebase wins in edit.
+ * Result is always defaults + loaded (loaded wins). Never throws.
  * @param {boolean} forceRefresh - Force refresh from source (bypass cache)
- * @returns {Promise<{he: object, en: object}>}
+ * @returns {Promise<{he: object, en: object}>} Merged { he, en }
  */
 export const loadTexts = async (forceRefresh = false) => {
-  // Clear cache if forcing refresh
   if (forceRefresh) {
     productionTextsCache = null
     productionTextsCacheTime = null
   }
 
-  // In edit mode, load from Firebase (drafts)
-  if (isEditMode()) {
-    // In edit mode, load from Firebase (drafts)
-    return await loadFromFirebase()
+  try {
+    const raw = isEditMode() ? await loadFromFirebase() : await loadFromProduction()
+    return {
+      he: deepMerge(DEFAULTS.he, raw?.he || {}),
+      en: deepMerge(DEFAULTS.en, raw?.en || {})
+    }
+  } catch (error) {
+    console.error('Text system load error:', error)
+    return DEFAULTS
   }
-
-  // In production mode, load from GitHub JSON (NOT Firebase, except Parliament)
-  return await loadFromProduction()
 }
 
 /**
@@ -447,12 +454,16 @@ export const clearCache = () => {
   productionTextsCacheTime = null
 }
 
-// Export for backward compatibility
+/** Default/fallback translations. Use when load fails or for offline fallback. */
+export const getDefaults = () => DEFAULTS
+
 export default {
   loadTexts,
   saveTexts,
   saveTranslation,
   publishTexts,
   isEditMode,
-  clearCache
+  clearCache,
+  getDefaults,
+  getDefaultTranslations
 }

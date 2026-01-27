@@ -8,6 +8,28 @@
   flex-shrink: 0;
 }
 
+/* Compact when Admin is visible so it stays inside header-container */
+.language-switcher--compact .lang-dropdown-btn {
+  padding: 0.15rem 0.45rem;
+  font-size: 0.6rem;
+  min-width: 44px;
+  height: 22px;
+  border-width: 1px;
+}
+
+.language-switcher--compact .dropdown-arrow {
+  font-size: 0.5rem;
+}
+
+.language-switcher--compact .lang-dropdown-menu {
+  top: calc(100% + 0.25rem);
+}
+
+.language-switcher--compact .lang-dropdown-item {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.6rem;
+}
+
 /* Dropdown at all viewport sizes */
 .language-switcher-dropdown {
   position: relative;

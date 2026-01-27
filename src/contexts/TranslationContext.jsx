@@ -1,15 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { loadTexts, isEditMode } from '../services/textService'
-import heTranslations from '../translations/he.json'
-import enTranslations from '../translations/en.json'
 
 const TranslationContext = createContext()
-
-// Default translations (fallback) - Parliament excluded
-const defaultTranslations = {
-  he: heTranslations,
-  en: enTranslations
-}
 
 export const TranslationProvider = ({ children }) => {
   const [language, setLanguage] = useState(() => {
@@ -55,69 +47,15 @@ export const TranslationProvider = ({ children }) => {
     document.documentElement.lang = language
   }, [language])
 
-  // Deep merge function to properly merge nested objects
-  const deepMerge = (target, source) => {
-    if (!source || typeof source !== 'object') {
-      return target
-    }
-    
-    const result = { ...target }
-    
-    for (const key in source) {
-      if (source.hasOwnProperty(key)) {
-        if (
-          source[key] &&
-          typeof source[key] === 'object' &&
-          !Array.isArray(source[key]) &&
-          target[key] &&
-          typeof target[key] === 'object' &&
-          !Array.isArray(target[key])
-        ) {
-          // Recursively merge nested objects
-          result[key] = deepMerge(target[key], source[key])
-        } else {
-          // Overwrite with source value (or set if doesn't exist)
-          result[key] = source[key]
-        }
-      }
-    }
-    
-    return result
-  }
-
   const loadTranslations = async (forceRefresh = false) => {
     try {
       setIsLoading(true)
-      
-      // Use new text service which handles production vs edit mode automatically
-      // Parliament data is automatically excluded
-      const loadedTranslations = await loadTexts(forceRefresh)
-      
-      // Deep merge with defaults to ensure all keys exist and nested structures are preserved
-      const mergedTranslations = {
-        he: deepMerge(defaultTranslations.he, loadedTranslations?.he || {}),
-        en: deepMerge(defaultTranslations.en, loadedTranslations?.en || {})
-      }
-      
-      // Fix nav.parents translation if it has the wrong value
-      // Ensure it's "וועד ההורים" instead of "וועד הורים בית ספרי"
-      if (mergedTranslations.he?.nav?.parents === "וועד הורים בית ספרי") {
-        mergedTranslations.he.nav.parents = "וועד ההורים"
-        // Save the fix to Firebase if in edit mode (async, don't wait)
-        if (isEditMode()) {
-          import('../services/textService').then(({ saveTexts }) => {
-            saveTexts(mergedTranslations).catch(() => {
-              // Silently fail - translation fix is optional
-            })
-          })
-        }
-      }
-      
-      setTranslations(mergedTranslations)
+      const texts = await loadTexts(forceRefresh)
+      setTranslations(texts)
     } catch (error) {
       console.error('Error loading translations:', error)
-      // Fallback to default translations
-      setTranslations(defaultTranslations)
+      const { getDefaults } = await import('../services/textService')
+      setTranslations(getDefaults())
     } finally {
       setIsLoading(false)
     }

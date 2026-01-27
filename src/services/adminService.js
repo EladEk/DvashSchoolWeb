@@ -1,71 +1,33 @@
-// Admin service for managing translations
-// This service now delegates to textService for the new architecture:
-// - Production: Reads from /content/texts.json (GitHub)
-// - Edit mode: Reads/writes from Firebase (drafts)
-// - Parliament: Completely excluded
-
-// This file maintains backward compatibility for admin dashboard components
-// while using the new textService under the hood
+// Admin service – delegates all text logic to the text system (textService).
+// This file keeps the same API for admin components; the single text system owns
+// content/texts.json vs Firebase, defaults, and merge.
 
 const STORAGE_KEY = 'admin_translations'
-
-// Cache for translations to avoid repeated loads
 let translationsCache = null
 let defaultTranslationsCache = null
 
-// Load default translations (cached)
 export const getDefaultTranslations = async () => {
-  if (defaultTranslationsCache) {
-    return defaultTranslationsCache
-  }
-  
-  try {
-    const heTranslations = await import('../translations/he.json')
-    const enTranslations = await import('../translations/en.json')
-    defaultTranslationsCache = {
-      he: heTranslations.default,
-      en: enTranslations.default
-    }
-    return defaultTranslationsCache
-  } catch (error) {
-    console.error('Error loading default translations:', error)
-    return { he: {}, en: {} }
-  }
+  if (defaultTranslationsCache) return defaultTranslationsCache
+  const textSystem = await import('./textService')
+  defaultTranslationsCache = await textSystem.getDefaultTranslations()
+  return defaultTranslationsCache
 }
 
-// Load translations using new textService
-// This maintains backward compatibility while using the new architecture
-// NOTE: In production mode, translations come from GitHub, not Firebase (except Parliament)
 export const getTranslations = async (skipFirebase = false) => {
   try {
-    // Use new textService which handles production vs edit mode automatically
-    // skipFirebase parameter is ignored - textService handles caching internally
     const { loadTexts, isEditMode } = await import('./textService')
-    
-    // In production mode, always load fresh from GitHub (not Firebase cache)
-    const forceRefresh = !isEditMode() // Force refresh in production mode to get fresh GitHub data
+    const forceRefresh = !isEditMode()
     const translations = await loadTexts(forceRefresh)
-    
-    // Update cache for backward compatibility (but don't rely on it in production)
     translationsCache = translations
-    
-    // Only save to localStorage in edit mode (for performance)
-    // In production mode, we want fresh data from GitHub, not localStorage
     if (isEditMode()) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(translations))
-      } catch (e) {
-        // localStorage might be full, ignore
-      }
+      } catch (e) {}
     }
-    
     return translations
   } catch (error) {
     console.error('Error loading translations:', error)
-    // Fallback to cached or defaults
-    if (translationsCache) {
-      return translationsCache
-    }
+    if (translationsCache) return translationsCache
     return await getDefaultTranslations()
   }
 }
@@ -104,9 +66,10 @@ export const saveTranslations = async (translations, firebaseOnly = false) => {
   }
 }
 
-// Clear cache (useful when translations are updated externally)
 export const clearTranslationsCache = () => {
   translationsCache = null
+  defaultTranslationsCache = null
+  import('./textService').then((m) => { if (m.clearCache) m.clearCache() })
 }
 
 // Export translations as downloadable JSON files
@@ -131,59 +94,6 @@ export const exportTranslations = (translations) => {
   setTimeout(() => {
     downloadFile(enData, 'en.json')
   }, 100)
-}
-
-// Deep merge function to properly merge nested objects
-const deepMerge = (target, source) => {
-  if (!source || typeof source !== 'object') {
-    return target
-  }
-  
-  const result = { ...target }
-  
-  for (const key in source) {
-    if (source.hasOwnProperty(key)) {
-      if (
-        source[key] &&
-        typeof source[key] === 'object' &&
-        !Array.isArray(source[key]) &&
-        target[key] &&
-        typeof target[key] === 'object' &&
-        !Array.isArray(target[key])
-      ) {
-        // Recursively merge nested objects
-        result[key] = deepMerge(target[key], source[key])
-      } else {
-        // Overwrite with source value (or set if doesn't exist)
-        result[key] = source[key]
-      }
-    }
-  }
-  
-  return result
-}
-
-// Load translations from Firebase (when configured)
-export const loadFromFirebase = async () => {
-  try {
-    const { loadTranslationsFromDB } = await import('./firebaseDB')
-    const firebaseData = await loadTranslationsFromDB()
-    
-    if (firebaseData) {
-      // Deep merge with defaults to ensure all keys exist
-      const defaults = await getDefaultTranslations()
-      const merged = {
-        he: deepMerge(defaults.he || {}, firebaseData.he || {}),
-        en: deepMerge(defaults.en || {}, firebaseData.en || {})
-      }
-      return merged
-    }
-    
-    return null
-  } catch (error) {
-    // Firebase not configured or error - silently fail
-    return null
-  }
 }
 
 // Track changed translation keys

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from '../contexts/TranslationContext'
 import './LanguageSwitcher.css'
 
-const LanguageSwitcher = () => {
+const LanguageSwitcher = ({ compact = false }) => {
   const { language, changeLanguage } = useTranslation()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef(null)
@@ -30,7 +30,7 @@ const LanguageSwitcher = () => {
   }, [isDropdownOpen])
 
   return (
-    <div className="language-switcher" ref={dropdownRef}>
+    <div className={`language-switcher ${compact ? 'language-switcher--compact' : ''}`} ref={dropdownRef}>
       <div className={`language-switcher-dropdown ${isDropdownOpen ? 'open' : ''}`}>
         <button
           type="button"

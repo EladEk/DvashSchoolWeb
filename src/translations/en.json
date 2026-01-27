@@ -1,178 +1,21 @@
 {
-  "common": {
-    "schoolName": "Dvash School",
-    "schoolSubtitle": "The Democratic School in Be'er Sheva",
-    "create": "Create",
-    "save": "Save",
-    "cancel": "Cancel",
-    "saving": "Saving...",
-    "edit": "Edit",
-    "delete": "Delete",
-    "search": "Search",
-    "actions": "Actions",
-    "template": "Template",
-    "export": "Export",
-    "import": "Import",
-    "importing": "Importing...",
-    "show": "Show",
-    "hide": "Hide",
-    "close": "Close",
-    "logout": "Logout",
-    "exit": "Exit",
-    "dashboard": "Dashboard"
-  },
-  "admin": {
-    "dashboard": "Admin Dashboard",
-    "translationEditor": "Translation Editor",
-    "usersManagement": "Users Management",
-    "parliamentAdmin": "Parliament Admin",
-    "exportJsonFiles": "Export JSON Files",
-    "saveJsonFiles": "Save JSON Files",
-    "saveToFirebase": "Save to Firebase",
-    "publish": "Publish",
-    "unsavedChanges": "You have unsaved changes",
-    "goToAdminDashboard": "Go to Admin Dashboard",
-    "exportTranslations": "Export translations to JSON files",
-    "importTranslations": "Import translations from JSON files",
-    "exitAdminMode": "Exit admin mode"
-  },
   "a11y": {
     "skipToMainContent": "Skip to main content"
   },
+  "common": {
+    "add": "Add"
+  },
+  "admin": {
+    "parliamentAdmin": "Parliament Admin",
+    "publish": "Publish",
+    "saveJsonFiles": "Save JSON Files"
+  },
   "nav": {
-    "home": "Home",
-    "about": "About Us",
-    "authorities": "Authorities",
-    "learning": "Learning",
-    "community": "Community",
-    "faq": "FAQ",
-    "parents": "School Parent Committee",
-    "parentsAssociation": "Parents Association",
-    "parliament": "Parliament",
-    "contact": "Contact",
-    "menu": "Menu"
+    "parliament": "Parliament"
   },
-  "hero": {
-    "title": "Dvash School",
-    "subtitle": "The Democratic School in Be'er Sheva",
-    "image": "Main Image"
-  },
-  "parentsAssociationHero": {
-    "title": "Parents Association",
-    "subtitle": "Parents Association of the Democratic School in Be'er Sheva",
-    "image": "parentsAssociationHero.image",
-    "imageAlt": "Main Image - Parents Association"
-  },
-  "about": {
-    "title": "About Us",
-    "background": "Background",
-    "text1": "The Democratic School was established in 2024-2025 after 4 years as a track.\nThe school is recognized and official under the supervision of the Ministry of Education and with the support of the municipality, and is part of the democratic education system in Israel and around the world.",
-    "text2": "In the 2024-2025 school year, there is one class in each grade (1-5), and in the 2025-2026 school year, the school will include grades 1-6",
-    "image1": "Image 1",
-    "image2": "Image 2",
-    "image3": "Image 3"
-  },
-  "community": {
-    "title": "Community",
-    "text": "Parents and families are an integral part of the school community, decision-making, and the driving force. Parents volunteer in various ways and are partners in activities and support."
-  },
-  "learning": {
-    "title": "Learning",
-    "text": "The school has a rich schedule offering a variety of activities at any given time. Each child compiles a personal schedule together with their mentor and according to the goals they set together at the beginning of the year."
-  },
-  "authorities": {
-    "title": "Authorities",
-    "text": "The school operates democratically, in a model of 3 authorities (legislative, judicial, and executive), out of belief in children's ability to be partners in shaping their lives, while caring for their needs and the needs of others."
-  },
-  "contact": {
-    "title": "Contact Us",
-    "phone": "Phone",
-    "email": "Email",
-    "media": "Media",
-    "instagram": "Instagram",
-    "facebook": "Facebook",
-    "whatsapp": "WhatsApp",
-    "instagramUrl": "#",
-    "facebookUrl": "#",
-    "whatsappUrl": "#",
-    "lastName": "Last Name",
-    "firstName": "First Name",
-    "message": "Message",
-    "send": "Send",
-    "sending": "Sending...",
-    "success": "Thank you, we will get back to you soon",
-    "error": "An error occurred. Please try again later.",
-    "recipientEmail": "Dvashschool@gmail.com"
-  },
-  "faq": {
-    "title": "Frequently Asked Questions",
-    "questions": [
-      {
-        "question": "Are there core subjects that the child must learn, and if so, what are they?",
-        "answer": "There are several mandatory activities at the school. All include learning in various ways:\n\n• Language and math classes - 3 hours per week.\n• Meetings with the mentoring group at the beginning and end of each day\n• Involvement time - contribution to maintaining the school's way of life, once a week\n• Mandatory appearance at children's court - as a judge or defendant\n\nWe chose to maintain balance and not force children to learn English or sciences against their will. Simply because it's so much more fun to enter a class because you chose it, when everyone in it wants to be there and be part of the learning😊 In practice, about 80% of children chose to enter these classes this year. And the rest? They will enter when they feel ready for it."
-      },
-      {
-        "question": "What are the learning areas where the child has a choice and how is the choice made in practice? Together with parents. Together with the educational staff?",
-        "answer": "Wow... there's a lot of choice!\n\nIn September, children are asked to enter as many classes as possible at as many learning levels as possible to get to know all the options at the school. They also have personal conversations with all the mentors in their space.\n\nTowards October, each child chooses a personal mentor from 2-3 mentors in their space.\n\nThey sit together and fill out a personal goals form for the child - emotionally, socially, and academically.\n\nTopics that come up in these conversations include areas of interest the child wants to develop or deepen, ways to develop independence, dealing with challenges versus avoidance, social status and patterns of dealing with difficulty they want to work on, and more.\n\nThen, according to each child's personal goals, strengths and weaknesses - a personal schedule is compiled for the child for the upcoming semester, which will allow them to achieve their goals. The school offers many learning opportunities in each area.\n\nThen the parents are also invited to a conversation and the child presents the schedule they chose. Parents express their opinion in the conversation and a dialogue is created, at the end of which a joint agreement is reached."
-      },
-      {
-        "question": "After setting a schedule, is it dynamic and can it be changed?",
-        "answer": "Yes! The schedule is very dynamic. Children can join or leave classes during the year, according to their needs and desires. Changes are made in conversation with the personal mentor and according to personal goals."
-      },
-      {
-        "question": "How does the school operate democratically?",
-        "answer": "The school operates in a model of 3 authorities (legislative, judicial, and executive):\n\n• Parliament - the legislative authority, where every child and parent can propose laws and vote\n• Court - the judicial authority, dealing with law violations\n• Management and staff - the executive authority, implementing parliament decisions\n\nEvery decision is made through dialogue and consensus as much as possible, giving equal voice to all community members."
-      },
-      {
-        "question": "What is the role of parents in the school?",
-        "answer": "Parents and families are an integral part of the school community, decision-making, and the driving force. Parents volunteer in various ways and are partners in activities and support.\n\nTo maintain order, it's important to remember that the school is subject to municipal and Ministry of Education laws. In the pedagogical field - the school staff is the professional authority.\n\nIn matters related to lifestyle and priority order between leading values - the management's role is to conduct public participation through the committee and parliament and strive to make decisions through dialogue and consensus as much as possible, and thus matters like planning and executing events, trips and community meetings are conducted in partnership.\n\nThe school's initiative budget allocation is conducted through the parliament, where equal voice is given in decisions to every parent and child to promote matters important to them and create a lobby for them.\n\nThe mechanism for accepting new staff members and evaluating employees throughout the year is based on a \"staff committee\" that includes parents, management and children.\n\nThere are parents who conduct regular classes at the school in their area of expertise on a volunteer basis.\n\nThere are community work days where parents and children come to do projects at the school.\n\nThe staff and management are very attentive to parents' words and available to them in full cooperation and more."
-      },
-      {
-        "question": "Is there transportation?",
-        "answer": "Yes, through the initiative and organization of parents from the school with the transportation company. Private payment of approximately 430 NIS per direction per child per month. 800 NIS for both directions (or for siblings in one direction)"
-      },
-      {
-        "question": "Until what time does the school operate and is there an after-school program?",
-        "answer": "The school operates two days until 1:30 PM, three days until 2:30 PM, Fridays until 11:45 AM. There is an afternoon enrichment program open to all school children, operating Sunday-Thursday, from the end of classes until 4:00 PM, at the school. The program is for additional payment (similar to municipal after-school payment), operates through the initiative and management of the parents' association that accompanies the school, and includes many enrichment and enjoyment activities - art following an artist, scientific experiments, art and graphic design, and more. In practice, this year about 12 children from grades 1-2 chose to participate in the program, with the science teacher + student present at each meeting. If there is demand next year as well, we will strive to operate a program in a similar format."
-      }
-    ]
-  },
-  "footer": {
-    "text": "Dvash School - The Democratic School in Be'er Sheva",
-    "followUs": "Follow Us",
-    "contact": "Contact"
-  },
-  "parentCommittee": {
-    "title": "School Parent Committee",
-    "intro1": "The Parent Committee is the bridge between parents, staff and children.",
-    "intro2": "We are here to listen, initiate, help and collaborate on everything that will contribute to a good atmosphere and a strong community at the school.",
-    "intro3": "We would love to hear from you!",
-    "contactTitle": "Contact the Parent Committee",
-    "fullName": "Full Name",
-    "childClass": "Child's Class",
-    "email": "Email Address",
-    "message": "Message Content",
-    "send": "Send",
-    "sending": "Sending...",
-    "success": "Thank you for your message!",
-    "error": "An error occurred. Please try again later.",
-    "recipientEmail": "Dvashschool@gmail.com"
-  },
-  "parentsAssociation": {
-    "title": "Parents Association",
-    "intro1": "The Parents Association is the managing and organizing body for enrichment and community activities at the school.",
-    "intro2": "We are here to initiate, organize and manage various activities for the benefit of the community and students.",
-    "intro3": "We would love to hear from you!",
-    "contactTitle": "Contact the Parents Association",
-    "fullName": "Full Name",
-    "childClass": "Child's Class",
-    "email": "Email Address",
-    "message": "Message Content",
-    "send": "Send",
-    "sending": "Sending...",
-    "success": "Thank you for your message!",
-    "error": "An error occurred. Please try again later.",
-    "recipientEmail": "Dvashschool@gmail.com"
+  "meta": {
+    "parliamentTitle": "Parliament - Dvash School",
+    "parliamentDescription": "Submit, review and discuss school parliament topics"
   },
   "parliament": {
     "title": "Parliament",
@@ -211,7 +54,6 @@
     "addReply": "Add reply",
     "save": "Save",
     "cancel": "Cancel",
-    "sending": "Sending…",
     "edited": "edited",
     "deleteConfirmNote": "Delete this note?",
     "delete": "Delete",
@@ -252,7 +94,49 @@
     "deleteNote": "Delete note",
     "editNote": "Edit note",
     "noPermission": "You don't have permission to perform this action",
-    "dateNotOpen": "The selected date is no longer open for submissions"
+    "dateNotOpen": "The selected date is no longer open for submissions",
+    "parliaments": "Parliaments",
+    "createNewParliament": "Create new parliament",
+    "history": "Parliament history",
+    "loading": "Loading...",
+    "date": "Date",
+    "subject": "Subject",
+    "subjects": "Subjects",
+    "decisions": "Decisions",
+    "addDecision": "Add decision",
+    "decisionText": "Decision text",
+    "decisionTextPlaceholder": "Enter the decision text...",
+    "addDecisionError": "Error adding decision",
+    "adding": "Adding...",
+    "summary": "Parliament summary",
+    "summaryText": "Summary text",
+    "summaryPlaceholder": "Enter the parliament summary...",
+    "addSummary": "Add summary",
+    "editSummary": "Edit summary",
+    "saveSummaryError": "Error saving summary",
+    "saving": "Saving...",
+    "confirmArchiveDate": "Archive this date? All linked subjects and notes will be archived too.",
+    "archiveSuccess": "Date archived successfully",
+    "archiveDateError": "Error archiving date",
+    "confirmDeleteSubject": "Delete this subject? All linked notes will be deleted too.",
+    "deleteSubjectSuccess": "Subject deleted successfully",
+    "deleteSubjectError": "Error deleting subject",
+    "updateSubjectError": "Error updating subject",
+    "updateDateError": "Error updating date",
+    "editDate": "Edit parliament date",
+    "deleteDateSuccess": "Date deleted successfully",
+    "deleteDateError": "Error deleting date",
+    "approveError": "Error approving subject",
+    "rejectError": "Error rejecting subject",
+    "approving": "Approving...",
+    "rejecting": "Rejecting...",
+    "processing": "Processing...",
+    "creating": "Creating...",
+    "updating": "Updating...",
+    "archiving": "Archiving...",
+    "deleting": "Deleting...",
+    "archive": "Archive",
+    "toggleDateError": "Error toggling date status"
   },
   "parliamentLogin": {
     "loginTitle": "Login to Parliament",
@@ -286,99 +170,6 @@
     "noPermissionToSubmit": "Only students and parents can submit subjects to parliament",
     "adminLoginTitle": "Login as Admin",
     "adminRegisterTitle": "Register as Admin"
-  },
-  "users": {
-    "new": "Create User",
-    "list": "All Users",
-    "username": "Username",
-    "firstName": "First name",
-    "lastName": "Last name",
-    "role": "Role",
-    "birthday": "Birthday",
-    "classId": "Class ID",
-    "password": "Password",
-    "newPassword": "New password (optional)",
-    "editTitle": "Edit User",
-    "role": {
-      "student": "Student",
-      "parent": "Parent",
-      "committee": "Committee",
-      "editor": "Editor",
-      "admin": "Admin"
-    },
-    "filter": {
-      "all": "All",
-      "student": "Students",
-      "parent": "Parents",
-      "committee": "Committee",
-      "editor": "Editors",
-      "admin": "Admins"
-    },
-    "table": {
-      "username": "Username",
-      "name": "Name",
-      "role": "Role",
-      "birthday": "Birthday",
-      "classId": "Class"
-    },
-    "noPermission": "You don't have permission to manage users. Only admins can.",
-    "adminNote": "Only admins can assign new admins",
-    "toasts": {
-      "created": "Created user: {username}",
-      "updated": "Updated user: {username}",
-      "deleted": "Deleted user",
-      "createFail": "Error creating user: {msg}",
-      "updateFail": "Error updating user: {msg}",
-      "deleteFail": "Error deleting user: {msg}",
-      "dup": "Username already exists: {username}",
-      "exported": "Exported successfully",
-      "templateDownloaded": "Template downloaded",
-      "importing": "Importing...",
-      "importDone": "Import done: {created} created, {updated} updated, {skipped} skipped",
-      "importFail": "Error importing: {msg}",
-      "loadFail": "Error loading users: {msg}"
-    }
-  },
-  "meta": {
-    "homeTitle": "Dvash School - The Democratic School in Be'er Sheva",
-    "homeDescription": "The Democratic School in Be'er Sheva - recognized and official democratic education under the supervision of the Ministry of Education",
-    "faqTitle": "FAQ - Dvash School",
-    "faqDescription": "Frequently asked questions about the Democratic School in Be'er Sheva",
-    "contactTitle": "Contact Us - Dvash School",
-    "contactDescription": "Contact the Democratic School in Be'er Sheva",
-    "parentCommitteeTitle": "School Parent Committee - Dvash School",
-    "parentCommitteeDescription": "Contact the Parent Committee of the Democratic School in Be'er Sheva",
-    "parentsAssociationTitle": "Parents Association - Dvash School",
-    "parentsAssociationDescription": "Contact the Parents Association of the Democratic School in Be'er Sheva",
-    "parliamentTitle": "Parliament - Dvash School",
-    "parliamentDescription": "Submit, review and discuss school parliament topics"
-  },
-  "inlineEditor": {
-    "title": "Edit Translation",
-    "resetToDefault": "Reset to Default",
-    "resetBoth": "Reset Both to Default",
-    "confirmReset": "Reset to default values?"
-  },
-  "image": {
-    "uploadImage": "Upload Image",
-    "noImage": "No Image",
-    "loadError": "Error loading image",
-    "edit": "Edit Image",
-    "editImage": "Edit Image",
-    "selectFile": "Select File",
-    "upload": "Upload",
-    "uploading": "Uploading...",
-    "delete": "Delete",
-    "confirmDelete": "Are you sure you want to delete this image?",
-    "invalidFile": "Invalid file. Please select an image.",
-    "fileTooLarge": "File is too large. Maximum 10MB.",
-    "noFileSelected": "Please select a file to upload",
-    "uploadError": "Error uploading image",
-    "deleteError": "Error deleting image",
-    "checkConnection": "Please check your internet connection or configure authentication endpoint",
-    "authError": "Authentication error. Please configure authentication endpoint",
-    "parseError": "Error parsing response",
-    "saveError": "Error saving image path"
   },
   "unauthorized": {
     "title": "You don't have permission to access this page",

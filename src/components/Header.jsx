@@ -213,7 +213,7 @@ const Header = () => {
       <div className="header-main">
         <div className="header-container">
           <div className="header-left">
-            <LanguageSwitcher />
+            <LanguageSwitcher compact={hasAdminAccess} />
           </div>
           <nav
             id="main-nav"
