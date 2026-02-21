@@ -152,7 +152,18 @@ export default async function handler(req, res) {
     // Format as JSON
     const jsonContent = JSON.stringify(finalContent, null, 2)
 
-    // Write to both locations (same as publish)
+    // On Vercel (production) the filesystem is read-only; we cannot write to content/ or public/
+    const isVercel = process.env.VERCEL === '1'
+    if (isVercel) {
+      return res.status(200).json({
+        success: true,
+        message: 'In production, files cannot be written to the server. Download the JSON below.',
+        download: true,
+        jsonContent
+      })
+    }
+
+    // Local development: write to both locations (same as publish)
     const filePath = path.join(process.cwd(), 'public', GITHUB_FILE_PATH)
     const contentPath = path.join(process.cwd(), GITHUB_FILE_PATH)
 

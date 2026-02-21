@@ -9,6 +9,7 @@
     "parliamentAdmin": "Parliament Admin",
     "publish": "Publish",
     "saveJsonFiles": "Save JSON Files",
+    "exportAll": "Download all (Git + DB)",
     "clearSiteCache": "Clear cache"
   },
   "nav": {

@@ -9,6 +9,7 @@
     "parliamentAdmin": "ניהול פרלמנט",
     "publish": "פרסם",
     "saveJsonFiles": "שמור קבצי JSON",
+    "exportAll": "הורד הכל (Git + DB)",
     "clearSiteCache": "נקה מטמון"
   },
   "nav": {

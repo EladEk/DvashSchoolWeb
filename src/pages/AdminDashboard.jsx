@@ -33,6 +33,7 @@ const AdminDashboard = () => {
   const [saving, setSaving] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [savingJson, setSavingJson] = useState(false)
+  const [exportingAll, setExportingAll] = useState(false)
   const [message, setMessage] = useState('')
   const [activeTab, setActiveTab] = useState('translations')
   const [isTranslationEditorOpen, setIsTranslationEditorOpen] = useState(false)
@@ -147,13 +148,52 @@ const AdminDashboard = () => {
       }
 
       const result = await response.json()
-      setMessage('✅ JSON files saved successfully to content/texts.json and public/content/texts.json')
+      if (result.download && result.jsonContent) {
+        const blob = new Blob([result.jsonContent], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'texts.json'
+        a.click()
+        URL.revokeObjectURL(url)
+        setMessage('✅ הורדת הקובץ texts.json הושלמה (בפרודקשן לא ניתן לשמור לשרת)')
+      } else {
+        setMessage('✅ JSON files saved successfully to content/texts.json and public/content/texts.json')
+      }
       setTimeout(() => setMessage(''), 5000)
     } catch (error) {
       setMessage(`❌ Error saving JSON files: ${error.message || 'Unknown error'}`)
       setTimeout(() => setMessage(''), 5000)
     } finally {
       setSavingJson(false)
+    }
+  }
+
+  const handleExportAll = async () => {
+    setExportingAll(true)
+    setMessage('')
+    try {
+      const res = await fetch('/api/export-all', { method: 'GET' })
+      const result = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(result.message || result.error || 'Export failed')
+      if (result.download && result.jsonContent) {
+        const blob = new Blob([result.jsonContent], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `export-all-${new Date().toISOString().slice(0, 10)}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+        setMessage('✅ הורדת הקובץ (Git + כל טבלאות DB) הושלמה')
+      } else {
+        setMessage('✅ Export completed')
+      }
+      setTimeout(() => setMessage(''), 5000)
+    } catch (err) {
+      setMessage(`❌ ${err.message || 'Export failed'}`)
+      setTimeout(() => setMessage(''), 5000)
+    } finally {
+      setExportingAll(false)
     }
   }
 
@@ -335,6 +375,21 @@ const AdminDashboard = () => {
               </>
             ) : (
               t('admin.saveJsonFiles') || 'Save JSON Files'
+            )}
+          </button>
+          <button
+            onClick={handleExportAll}
+            disabled={exportingAll}
+            className="export-btn"
+            title="Download JSON: Git content + all DB tables (translations, images, contacts, parliament, appUsers)"
+          >
+            {exportingAll ? (
+              <>
+                <span className="spinner"></span>
+                Exporting...
+              </>
+            ) : (
+              (t('admin.exportAll') || 'הורד הכל (Git + DB)')
             )}
           </button>
         </div>
