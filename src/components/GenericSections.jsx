@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useAdmin } from '../contexts/AdminContext'
 import EditableText from './EditableText'
@@ -6,8 +6,34 @@ import EditableImage from './EditableImage'
 import GenericSectionEditor from './GenericSectionEditor'
 import { getTranslations, saveTranslations, clearTranslationsCache } from '../services/adminService'
 import { saveAllTranslationsToDB, saveImagePathToDB } from '../services/firebaseDB'
+import { ensureSectionsArray, getSectionsArrays } from '../utils/sectionsUtils'
 import './About.css' // Reuse About styles for now
 import './GenericSections.css'
+
+async function migrateSectionsToNumericIndices(getTranslations, saveTranslations, saveAllTranslationsToDB, clearTranslationsCache, reloadTranslations) {
+  const translations = await getTranslations(true)
+  const heSections = translations.he?.sections
+  const enSections = translations.en?.sections
+  if (!heSections || typeof heSections !== 'object') return false
+  const keys = Object.keys(heSections)
+  const hasNonNumeric = keys.some((k) => !/^\d+$/.test(k))
+  if (!hasNonNumeric) return false
+
+  const order = [...keys].sort((a, b) => {
+    const posA = heSections[a]?.position ?? 999
+    const posB = heSections[b]?.position ?? 999
+    return posA - posB
+  })
+  const newHe = order.map((k, i) => ({ ...heSections[k], position: i }))
+  const newEn = order.map((k, i) => ({ ...(enSections?.[k] || {}), position: i }))
+  translations.he.sections = newHe
+  translations.en.sections = newEn
+  await saveTranslations(translations, false)
+  await saveAllTranslationsToDB(translations)
+  clearTranslationsCache()
+  await reloadTranslations(true)
+  return true
+}
 
 const GenericSections = () => {
   const { t, reloadTranslations } = useTranslation()
@@ -15,17 +41,16 @@ const GenericSections = () => {
   const [editingIndex, setEditingIndex] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [deletingIndex, setDeletingIndex] = useState(null)
+  const migratedRef = useRef(false)
 
-  // Get generic sections
-  const sections = t('sections')
-  const displaySections = Array.isArray(sections) && sections.length > 0 ? sections : []
+  const rawSections = t('sections')
+  const sortedSections = ensureSectionsArray(rawSections)
 
-  // Sort by position
-  const sortedSections = [...displaySections].sort((a, b) => {
-    const posA = a.position !== undefined ? a.position : 999
-    const posB = b.position !== undefined ? b.position : 999
-    return posA - posB
-  })
+  useEffect(() => {
+    if (migratedRef.current) return
+    migratedRef.current = true
+    migrateSectionsToNumericIndices(getTranslations, saveTranslations, saveAllTranslationsToDB, clearTranslationsCache, reloadTranslations).catch(() => {})
+  }, [])
 
   const handleDelete = async (index) => {
     if (!confirm('האם אתה בטוח שברצונך למחוק סעיף זה?')) {
@@ -35,33 +60,13 @@ const GenericSections = () => {
 
     try {
       const translations = await getTranslations(true)
-      const ensureArray = (v) => {
-        if (Array.isArray(v)) return [...v]
-        if (v && typeof v === 'object') {
-          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
-          if (keys.length) return keys.map((k) => v[k])
-        }
-        return []
-      }
-      let sections = ensureArray(translations.he?.sections)
-      let sectionsEn = ensureArray(translations.en?.sections)
-
-      // Find the actual index in unsorted array
-      const sorted = [...sections].sort((a, b) => {
-        const posA = a.position !== undefined ? a.position : 999
-        const posB = b.position !== undefined ? b.position : 999
-        return posA - posB
-      })
-      const sectionToDelete = sorted[index]
-      const actualIndex = sections.findIndex(s => s === sectionToDelete)
-
-      if (actualIndex < 0 || actualIndex >= sections.length) {
-        console.error('Invalid index for deletion:', index, 'sections length:', sections.length)
+      const { sectionsHe, sectionsEn } = getSectionsArrays(translations)
+      if (index < 0 || index >= sectionsHe.length) {
         alert('שגיאה: אינדקס לא תקין')
         return
       }
 
-      // If the section had an image, remove it from storage so a new section won't show it
+      const sectionToDelete = sectionsHe[index]
       const imageKey = sectionToDelete?.imageKey
       if (imageKey) {
         try {
@@ -74,19 +79,15 @@ const GenericSections = () => {
         }
       }
 
-      // Remove the section
-      sections.splice(actualIndex, 1)
-      sectionsEn.splice(actualIndex, 1)
+      sectionsHe.splice(index, 1)
+      sectionsEn.splice(index, 1)
+      sectionsHe.forEach((s, i) => { s.position = i })
+      sectionsEn.forEach((s, i) => { s.position = i })
 
-      // Update translations
-      translations.he.sections = sections
+      translations.he.sections = sectionsHe
       translations.en.sections = sectionsEn
-
-      // Save to localStorage and Firebase
       await saveTranslations(translations, false)
       await saveAllTranslationsToDB(translations)
-
-      // Clear cache and reload
       clearTranslationsCache()
       await reloadTranslations(true)
     } catch (error) {
@@ -99,46 +100,21 @@ const GenericSections = () => {
 
   const handleMoveUp = async (index) => {
     if (index === 0) return
-
     try {
       const translations = await getTranslations(true)
-      const ensureArray = (v) => {
-        if (Array.isArray(v)) return v
-        if (v && typeof v === 'object') {
-          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
-          if (keys.length) return keys.map((k) => v[k])
-        }
-        return []
-      }
-      const sections = ensureArray(translations.he?.sections)
-      const sectionsEn = ensureArray(translations.en?.sections)
-
-      // Sort to get current order
-      const sorted = [...sections].map((s, i) => ({ ...s, originalIndex: i }))
-        .sort((a, b) => {
-          const posA = a.position !== undefined ? a.position : 999
-          const posB = b.position !== undefined ? b.position : 999
-          return posA - posB
-        })
-
-      const temp = sorted[index]
-      sorted[index] = sorted[index - 1]
-      sorted[index - 1] = temp
-
-      // Update positions
-      sorted.forEach((s, i) => {
-        sections[s.originalIndex].position = i
-        if (sectionsEn[s.originalIndex]) {
-          sectionsEn[s.originalIndex].position = i
-        }
-      })
-
-      translations.he.sections = sections
+      const { sectionsHe, sectionsEn } = getSectionsArrays(translations)
+      const tempHe = sectionsHe[index]
+      const tempEn = sectionsEn[index]
+      sectionsHe[index] = sectionsHe[index - 1]
+      sectionsHe[index - 1] = tempHe
+      sectionsEn[index] = sectionsEn[index - 1]
+      sectionsEn[index - 1] = tempEn
+      sectionsHe.forEach((s, i) => { s.position = i })
+      sectionsEn.forEach((s, i) => { s.position = i })
+      translations.he.sections = sectionsHe
       translations.en.sections = sectionsEn
-
       await saveTranslations(translations, false)
       await saveAllTranslationsToDB(translations)
-
       clearTranslationsCache()
       await reloadTranslations(true)
     } catch (error) {
@@ -148,47 +124,22 @@ const GenericSections = () => {
   }
 
   const handleMoveDown = async (index) => {
-    if (index === sortedSections.length - 1) return
-
+    if (index >= sortedSections.length - 1) return
     try {
       const translations = await getTranslations(true)
-      const ensureArray = (v) => {
-        if (Array.isArray(v)) return v
-        if (v && typeof v === 'object') {
-          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
-          if (keys.length) return keys.map((k) => v[k])
-        }
-        return []
-      }
-      const sections = ensureArray(translations.he?.sections)
-      const sectionsEn = ensureArray(translations.en?.sections)
-
-      // Sort to get current order
-      const sorted = [...sections].map((s, i) => ({ ...s, originalIndex: i }))
-        .sort((a, b) => {
-          const posA = a.position !== undefined ? a.position : 999
-          const posB = b.position !== undefined ? b.position : 999
-          return posA - posB
-        })
-
-      const temp = sorted[index]
-      sorted[index] = sorted[index + 1]
-      sorted[index + 1] = temp
-
-      // Update positions
-      sorted.forEach((s, i) => {
-        sections[s.originalIndex].position = i
-        if (sectionsEn[s.originalIndex]) {
-          sectionsEn[s.originalIndex].position = i
-        }
-      })
-
-      translations.he.sections = sections
+      const { sectionsHe, sectionsEn } = getSectionsArrays(translations)
+      const tempHe = sectionsHe[index]
+      const tempEn = sectionsEn[index]
+      sectionsHe[index] = sectionsHe[index + 1]
+      sectionsHe[index + 1] = tempHe
+      sectionsEn[index] = sectionsEn[index + 1]
+      sectionsEn[index + 1] = tempEn
+      sectionsHe.forEach((s, i) => { s.position = i })
+      sectionsEn.forEach((s, i) => { s.position = i })
+      translations.he.sections = sectionsHe
       translations.en.sections = sectionsEn
-
       await saveTranslations(translations, false)
       await saveAllTranslationsToDB(translations)
-
       clearTranslationsCache()
       await reloadTranslations(true)
     } catch (error) {

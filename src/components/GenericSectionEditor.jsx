@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from '../contexts/TranslationContext'
 import { getTranslations, saveTranslations, clearTranslationsCache } from '../services/adminService'
 import { saveAllTranslationsToDB } from '../services/firebaseDB'
+import { getSectionsArrays } from '../utils/sectionsUtils'
 import './SectionEditor.css'
 
 const GenericSectionEditor = ({ sectionIndex, onClose, onSave }) => {
@@ -26,56 +27,31 @@ const GenericSectionEditor = ({ sectionIndex, onClose, onSave }) => {
     try {
       setLoading(true)
       const translations = await getTranslations(true)
-      const ensureArray = (v) => {
-        if (Array.isArray(v)) return v
-        if (v && typeof v === 'object') {
-          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
-          if (keys.length) return keys.map((k) => v[k])
-        }
-        return []
-      }
-      const sections = ensureArray(translations.he?.sections)
-      const sectionsEn = ensureArray(translations.en?.sections)
+      const { sectionsHe, sectionsEn } = getSectionsArrays(translations)
 
-      if (sectionIndex !== null && sectionIndex >= 0) {
-        // Editing existing section - sectionIndex is the index in sorted array
-        // Need to find the actual section in the sorted order
-        const sorted = [...sections].sort((a, b) => {
-          const posA = a.position !== undefined ? a.position : 999
-          const posB = b.position !== undefined ? b.position : 999
-          return posA - posB
-        })
-        
-        if (sectionIndex < sorted.length) {
-          const section = sorted[sectionIndex]
-          // Find the actual index in unsorted array
-          const actualIndex = sections.findIndex(s => s === section)
-          const sectionEn = actualIndex >= 0 ? (sectionsEn[actualIndex] || {}) : {}
-          
-          setHebrewTitle(section?.title || '')
-          setHebrewText(section?.text || '')
-          setEnglishTitle(sectionEn?.title || '')
-          setEnglishText(sectionEn?.text || '')
-          setHasImage(!!section?.imageKey)
-          setPosition(section?.position !== undefined ? section.position : sectionIndex)
-        } else {
-          // Invalid index, treat as new
-          setHebrewTitle('')
-          setHebrewText('')
-          setEnglishTitle('')
-          setEnglishText('')
-          setHasImage(false)
-          setPosition(sections.length)
-        }
-      } else {
-        // Adding new section
+      if (sectionIndex !== null && sectionIndex >= 0 && sectionIndex < sectionsHe.length) {
+        const section = sectionsHe[sectionIndex]
+        const sectionEn = sectionsEn[sectionIndex] || {}
+        setHebrewTitle(section?.title || '')
+        setHebrewText(section?.text || '')
+        setEnglishTitle(sectionEn?.title || '')
+        setEnglishText(sectionEn?.text || '')
+        setHasImage(!!section?.imageKey)
+        setPosition(sectionIndex)
+      } else if (sectionIndex !== null && sectionIndex >= 0) {
         setHebrewTitle('')
         setHebrewText('')
         setEnglishTitle('')
         setEnglishText('')
         setHasImage(false)
-        // Set position to end of list
-        setPosition(sections.length)
+        setPosition(sectionsHe.length)
+      } else {
+        setHebrewTitle('')
+        setHebrewText('')
+        setEnglishTitle('')
+        setEnglishText('')
+        setHasImage(false)
+        setPosition(sectionsHe.length)
       }
     } catch (error) {
       console.error('Error loading section data:', error)
@@ -90,34 +66,22 @@ const GenericSectionEditor = ({ sectionIndex, onClose, onSave }) => {
     await new Promise((r) => setTimeout(r, 0))
 
     try {
-      // Load current translations (coerce to array: Firestore can return plain objects)
       const translations = await getTranslations(true)
-      const ensureArray = (v) => {
-        if (Array.isArray(v)) return v
-        if (v && typeof v === 'object') {
-          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
-          if (keys.length) return keys.map((k) => v[k])
-        }
-        return []
-      }
-      const sections = ensureArray(translations.he?.sections)
-      const sectionsEn = ensureArray(translations.en?.sections)
+      const { sectionsHe, sectionsEn } = getSectionsArrays(translations)
 
       const newSection = {
         title: hebrewTitle.trim(),
         text: hebrewText.trim(),
         position: position
       }
-
       const newSectionEn = {
         title: englishTitle.trim(),
         text: englishText.trim(),
         position: position
       }
 
-      // Add image key if has image
       if (hasImage) {
-        const imageIndex = sectionIndex !== null && sectionIndex >= 0 ? sectionIndex : sections.length
+        const imageIndex = sectionIndex !== null && sectionIndex >= 0 ? sectionIndex : sectionsHe.length
         newSection.imageKey = `section.image${imageIndex + 1}`
         newSectionEn.imageKey = `section.image${imageIndex + 1}`
       }
@@ -141,52 +105,17 @@ const GenericSectionEditor = ({ sectionIndex, onClose, onSave }) => {
         return
       }
 
-      // Update translations
-      if (sectionIndex !== null && sectionIndex >= 0) {
-        // Editing existing section - find the actual section in sorted array
-        const sorted = [...sections].sort((a, b) => {
-          const posA = a.position !== undefined ? a.position : 999
-          const posB = b.position !== undefined ? b.position : 999
-          return posA - posB
-        })
-        
-        if (sectionIndex < sorted.length) {
-          const sectionToUpdate = sorted[sectionIndex]
-          // Find the actual index in unsorted array
-          const actualIndex = sections.findIndex(s => s === sectionToUpdate)
-          
-          if (actualIndex >= 0) {
-            // Update existing
-            sections[actualIndex] = newSection
-            sectionsEn[actualIndex] = newSectionEn
-          } else {
-            // Fallback: add new
-            sections.push(newSection)
-            sectionsEn.push(newSectionEn)
-          }
-        } else {
-          // Invalid index, add new
-          sections.push(newSection)
-          sectionsEn.push(newSectionEn)
-        }
+      if (sectionIndex !== null && sectionIndex >= 0 && sectionIndex < sectionsHe.length) {
+        sectionsHe[sectionIndex] = newSection
+        sectionsEn[sectionIndex] = newSectionEn
       } else {
-        // Add new
-        sections.push(newSection)
+        sectionsHe.push(newSection)
         sectionsEn.push(newSectionEn)
       }
 
-      // Sort by position
-      sections.sort((a, b) => (a.position || 0) - (b.position || 0))
-      sectionsEn.sort((a, b) => (a.position || 0) - (b.position || 0))
-
-      // Update translations object
-      if (!translations.he.sections) {
-        translations.he.sections = []
-      }
-      if (!translations.en.sections) {
-        translations.en.sections = []
-      }
-      translations.he.sections = sections
+      sectionsHe.forEach((s, i) => { s.position = i })
+      sectionsEn.forEach((s, i) => { s.position = i })
+      translations.he.sections = sectionsHe
       translations.en.sections = sectionsEn
 
       // Save to localStorage
