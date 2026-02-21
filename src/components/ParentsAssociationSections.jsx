@@ -5,10 +5,38 @@ import { useAdmin } from '../contexts/AdminContext'
 import EditableText from './EditableText'
 import EditableImage from './EditableImage'
 import { getTranslations, saveTranslations, clearTranslationsCache } from '../services/adminService'
-import { saveAllTranslationsToDB } from '../services/firebaseDB'
+import { saveAllTranslationsToDB, saveImagePathToDB } from '../services/firebaseDB'
+import { ensureSectionsArray, getSectionsArraysFor } from '../utils/sectionsUtils'
 import './About.css' // Reuse About styles for now
 import './GenericSections.css'
 import './SectionEditor.css'
+
+const SECTION_KEY = 'parentsAssociationSections'
+
+async function migrateParentsAssociationSectionsToNumeric(getTranslations, saveTranslations, saveAllTranslationsToDB, clearTranslationsCache, reloadTranslations) {
+  const translations = await getTranslations(true)
+  const heSections = translations.he?.[SECTION_KEY]
+  const enSections = translations.en?.[SECTION_KEY]
+  if (!heSections || typeof heSections !== 'object') return false
+  const keys = Object.keys(heSections)
+  const hasNonNumeric = keys.some((k) => !/^\d+$/.test(k))
+  if (!hasNonNumeric) return false
+
+  const order = [...keys].sort((a, b) => {
+    const posA = heSections[a]?.position ?? 999
+    const posB = heSections[b]?.position ?? 999
+    return posA - posB
+  })
+  const newHe = order.map((k, i) => ({ ...heSections[k], position: i }))
+  const newEn = order.map((k, i) => ({ ...(enSections?.[k] || {}), position: i }))
+  translations.he[SECTION_KEY] = newHe
+  translations.en[SECTION_KEY] = newEn
+  await saveTranslations(translations, false)
+  await saveAllTranslationsToDB(translations)
+  clearTranslationsCache()
+  await reloadTranslations(true)
+  return true
+}
 
 const ParentsAssociationSections = () => {
   const { t, reloadTranslations } = useTranslation()
@@ -16,65 +44,49 @@ const ParentsAssociationSections = () => {
   const [editingIndex, setEditingIndex] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [deletingIndex, setDeletingIndex] = useState(null)
+  const migratedRef = useRef(false)
 
-  // Get parents association sections (separate from home page sections)
-  const sections = t('parentsAssociationSections')
-  const displaySections = Array.isArray(sections) && sections.length > 0 ? sections : []
+  const rawSections = t(SECTION_KEY)
+  const sortedSections = ensureSectionsArray(rawSections)
 
-  // Sort by position
-  const sortedSections = [...displaySections].sort((a, b) => {
-    const posA = a.position !== undefined ? a.position : 999
-    const posB = b.position !== undefined ? b.position : 999
-    return posA - posB
-  })
+  useEffect(() => {
+    if (migratedRef.current) return
+    migratedRef.current = true
+    migrateParentsAssociationSectionsToNumeric(getTranslations, saveTranslations, saveAllTranslationsToDB, clearTranslationsCache, reloadTranslations).catch(() => {})
+  }, [])
 
   const handleDelete = async (index) => {
     if (!confirm('האם אתה בטוח שברצונך למחוק סעיף זה?')) {
       return
     }
     setDeletingIndex(index)
-
     try {
       const translations = await getTranslations(true)
-      const ensureArray = (v) => {
-        if (Array.isArray(v)) return [...v]
-        if (v && typeof v === 'object') {
-          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
-          if (keys.length) return keys.map((k) => v[k])
-        }
-        return []
-      }
-      let sections = ensureArray(translations.he?.parentsAssociationSections)
-      let sectionsEn = ensureArray(translations.en?.parentsAssociationSections)
-
-      // Find the actual index in unsorted array
-      const sorted = [...sections].sort((a, b) => {
-        const posA = a.position !== undefined ? a.position : 999
-        const posB = b.position !== undefined ? b.position : 999
-        return posA - posB
-      })
-      const sectionToDelete = sorted[index]
-      const actualIndex = sections.findIndex(s => s === sectionToDelete)
-
-      if (actualIndex < 0 || actualIndex >= sections.length) {
-        console.error('Invalid index for deletion:', index, 'sections length:', sections.length)
+      const { sectionsHe, sectionsEn } = getSectionsArraysFor(translations, SECTION_KEY)
+      if (index < 0 || index >= sectionsHe.length) {
         alert('שגיאה: אינדקס לא תקין')
         return
       }
-
-      // Remove the section
-      sections.splice(actualIndex, 1)
-      sectionsEn.splice(actualIndex, 1)
-
-      // Update translations
-      translations.he.parentsAssociationSections = sections
-      translations.en.parentsAssociationSections = sectionsEn
-
-      // Save to localStorage and Firebase
+      const sectionToDelete = sectionsHe[index]
+      const imageKey = sectionToDelete?.imageKey
+      if (imageKey) {
+        try {
+          await saveImagePathToDB(imageKey, null)
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem(`image_${imageKey}`)
+          }
+        } catch (imgErr) {
+          console.warn('Could not clear section image from storage:', imgErr)
+        }
+      }
+      sectionsHe.splice(index, 1)
+      sectionsEn.splice(index, 1)
+      sectionsHe.forEach((s, i) => { s.position = i })
+      sectionsEn.forEach((s, i) => { s.position = i })
+      translations.he[SECTION_KEY] = sectionsHe
+      translations.en[SECTION_KEY] = sectionsEn
       await saveTranslations(translations, false)
       await saveAllTranslationsToDB(translations)
-
-      // Clear cache and reload
       clearTranslationsCache()
       await reloadTranslations(true)
     } catch (error) {
@@ -87,46 +99,21 @@ const ParentsAssociationSections = () => {
 
   const handleMoveUp = async (index) => {
     if (index === 0) return
-
     try {
       const translations = await getTranslations(true)
-      const ensureArray = (v) => {
-        if (Array.isArray(v)) return v
-        if (v && typeof v === 'object') {
-          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
-          if (keys.length) return keys.map((k) => v[k])
-        }
-        return []
-      }
-      const sections = ensureArray(translations.he?.parentsAssociationSections)
-      const sectionsEn = ensureArray(translations.en?.parentsAssociationSections)
-
-      // Sort to get current order
-      const sorted = [...sections].map((s, i) => ({ ...s, originalIndex: i }))
-        .sort((a, b) => {
-          const posA = a.position !== undefined ? a.position : 999
-          const posB = b.position !== undefined ? b.position : 999
-          return posA - posB
-        })
-
-      const temp = sorted[index]
-      sorted[index] = sorted[index - 1]
-      sorted[index - 1] = temp
-
-      // Update positions
-      sorted.forEach((s, i) => {
-        sections[s.originalIndex].position = i
-        if (sectionsEn[s.originalIndex]) {
-          sectionsEn[s.originalIndex].position = i
-        }
-      })
-
-      translations.he.parentsAssociationSections = sections
-      translations.en.parentsAssociationSections = sectionsEn
-
+      const { sectionsHe, sectionsEn } = getSectionsArraysFor(translations, SECTION_KEY)
+      const tempHe = sectionsHe[index]
+      const tempEn = sectionsEn[index]
+      sectionsHe[index] = sectionsHe[index - 1]
+      sectionsHe[index - 1] = tempHe
+      sectionsEn[index] = sectionsEn[index - 1]
+      sectionsEn[index - 1] = tempEn
+      sectionsHe.forEach((s, i) => { s.position = i })
+      sectionsEn.forEach((s, i) => { s.position = i })
+      translations.he[SECTION_KEY] = sectionsHe
+      translations.en[SECTION_KEY] = sectionsEn
       await saveTranslations(translations, false)
       await saveAllTranslationsToDB(translations)
-
       clearTranslationsCache()
       await reloadTranslations(true)
     } catch (error) {
@@ -136,47 +123,22 @@ const ParentsAssociationSections = () => {
   }
 
   const handleMoveDown = async (index) => {
-    if (index === sortedSections.length - 1) return
-
+    if (index >= sortedSections.length - 1) return
     try {
       const translations = await getTranslations(true)
-      const ensureArray = (v) => {
-        if (Array.isArray(v)) return v
-        if (v && typeof v === 'object') {
-          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
-          if (keys.length) return keys.map((k) => v[k])
-        }
-        return []
-      }
-      const sections = ensureArray(translations.he?.parentsAssociationSections)
-      const sectionsEn = ensureArray(translations.en?.parentsAssociationSections)
-
-      // Sort to get current order
-      const sorted = [...sections].map((s, i) => ({ ...s, originalIndex: i }))
-        .sort((a, b) => {
-          const posA = a.position !== undefined ? a.position : 999
-          const posB = b.position !== undefined ? b.position : 999
-          return posA - posB
-        })
-
-      const temp = sorted[index]
-      sorted[index] = sorted[index + 1]
-      sorted[index + 1] = temp
-
-      // Update positions
-      sorted.forEach((s, i) => {
-        sections[s.originalIndex].position = i
-        if (sectionsEn[s.originalIndex]) {
-          sectionsEn[s.originalIndex].position = i
-        }
-      })
-
-      translations.he.parentsAssociationSections = sections
-      translations.en.parentsAssociationSections = sectionsEn
-
+      const { sectionsHe, sectionsEn } = getSectionsArraysFor(translations, SECTION_KEY)
+      const tempHe = sectionsHe[index]
+      const tempEn = sectionsEn[index]
+      sectionsHe[index] = sectionsHe[index + 1]
+      sectionsHe[index + 1] = tempHe
+      sectionsEn[index] = sectionsEn[index + 1]
+      sectionsEn[index + 1] = tempEn
+      sectionsHe.forEach((s, i) => { s.position = i })
+      sectionsEn.forEach((s, i) => { s.position = i })
+      translations.he[SECTION_KEY] = sectionsHe
+      translations.en[SECTION_KEY] = sectionsEn
       await saveTranslations(translations, false)
       await saveAllTranslationsToDB(translations)
-
       clearTranslationsCache()
       await reloadTranslations(true)
     } catch (error) {
@@ -194,7 +156,7 @@ const ParentsAssociationSections = () => {
     reloadTranslations()
   }
 
-  if (displaySections.length === 0 && !isAdminMode) {
+  if (sortedSections.length === 0 && !isAdminMode) {
     return null
   }
 
@@ -327,50 +289,31 @@ const ParentsAssociationSectionEditor = ({ sectionIndex, onClose, onSave }) => {
     try {
       setLoading(true)
       const translations = await getTranslations(true)
-      const ensureArray = (v) => {
-        if (Array.isArray(v)) return v
-        if (v && typeof v === 'object') {
-          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
-          if (keys.length) return keys.map((k) => v[k])
-        }
-        return []
-      }
-      const sections = ensureArray(translations.he?.parentsAssociationSections)
-      const sectionsEn = ensureArray(translations.en?.parentsAssociationSections)
+      const { sectionsHe, sectionsEn } = getSectionsArraysFor(translations, SECTION_KEY)
 
-      if (sectionIndex !== null && sectionIndex >= 0) {
-        const sorted = [...sections].sort((a, b) => {
-          const posA = a.position !== undefined ? a.position : 999
-          const posB = b.position !== undefined ? b.position : 999
-          return posA - posB
-        })
-        
-        if (sectionIndex < sorted.length) {
-          const section = sorted[sectionIndex]
-          const actualIndex = sections.findIndex(s => s === section)
-          const sectionEn = actualIndex >= 0 ? (sectionsEn[actualIndex] || {}) : {}
-          
-          setHebrewTitle(section?.title || '')
-          setHebrewText(section?.text || '')
-          setEnglishTitle(sectionEn?.title || '')
-          setEnglishText(sectionEn?.text || '')
-          setHasImage(!!section?.imageKey)
-          setPosition(section?.position !== undefined ? section.position : sectionIndex)
-        } else {
-          setHebrewTitle('')
-          setHebrewText('')
-          setEnglishTitle('')
-          setEnglishText('')
-          setHasImage(false)
-          setPosition(sections.length)
-        }
+      if (sectionIndex !== null && sectionIndex >= 0 && sectionIndex < sectionsHe.length) {
+        const section = sectionsHe[sectionIndex]
+        const sectionEn = sectionsEn[sectionIndex] || {}
+        setHebrewTitle(section?.title || '')
+        setHebrewText(section?.text || '')
+        setEnglishTitle(sectionEn?.title || '')
+        setEnglishText(sectionEn?.text || '')
+        setHasImage(!!section?.imageKey)
+        setPosition(sectionIndex)
+      } else if (sectionIndex !== null && sectionIndex >= 0) {
+        setHebrewTitle('')
+        setHebrewText('')
+        setEnglishTitle('')
+        setEnglishText('')
+        setHasImage(false)
+        setPosition(sectionsHe.length)
       } else {
         setHebrewTitle('')
         setHebrewText('')
         setEnglishTitle('')
         setEnglishText('')
         setHasImage(false)
-        setPosition(sections.length)
+        setPosition(sectionsHe.length)
       }
     } catch (error) {
       console.error('Error loading section data:', error)
@@ -386,23 +329,13 @@ const ParentsAssociationSectionEditor = ({ sectionIndex, onClose, onSave }) => {
 
     try {
       const translations = await getTranslations(true)
-      const ensureArray = (v) => {
-        if (Array.isArray(v)) return v
-        if (v && typeof v === 'object') {
-          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
-          if (keys.length) return keys.map((k) => v[k])
-        }
-        return []
-      }
-      const sections = ensureArray(translations.he?.parentsAssociationSections)
-      const sectionsEn = ensureArray(translations.en?.parentsAssociationSections)
+      const { sectionsHe, sectionsEn } = getSectionsArraysFor(translations, SECTION_KEY)
 
       const newSection = {
         title: hebrewTitle.trim(),
         text: hebrewText.trim(),
         position: position
       }
-
       const newSectionEn = {
         title: englishTitle.trim(),
         text: englishText.trim(),
@@ -410,7 +343,7 @@ const ParentsAssociationSectionEditor = ({ sectionIndex, onClose, onSave }) => {
       }
 
       if (hasImage) {
-        const imageIndex = sectionIndex !== null && sectionIndex >= 0 ? sectionIndex : sections.length
+        const imageIndex = sectionIndex !== null && sectionIndex >= 0 ? sectionIndex : sectionsHe.length
         newSection.imageKey = `parentsAssociationSections.image${imageIndex + 1}`
         newSectionEn.imageKey = `parentsAssociationSections.image${imageIndex + 1}`
       }
@@ -433,43 +366,19 @@ const ParentsAssociationSectionEditor = ({ sectionIndex, onClose, onSave }) => {
         return
       }
 
-      if (sectionIndex !== null && sectionIndex >= 0) {
-        const sorted = [...sections].sort((a, b) => {
-          const posA = a.position !== undefined ? a.position : 999
-          const posB = b.position !== undefined ? b.position : 999
-          return posA - posB
-        })
-        
-        if (sectionIndex < sorted.length) {
-          const sectionToUpdate = sorted[sectionIndex]
-          const actualIndex = sections.findIndex(s => s === sectionToUpdate)
-          
-          if (actualIndex >= 0) {
-            sections[actualIndex] = newSection
-            sectionsEn[actualIndex] = newSectionEn
-          } else {
-            sections.push(newSection)
-            sectionsEn.push(newSectionEn)
-          }
-        } else {
-          sections.push(newSection)
-          sectionsEn.push(newSectionEn)
-        }
+      if (sectionIndex !== null && sectionIndex >= 0 && sectionIndex < sectionsHe.length) {
+        sectionsHe[sectionIndex] = newSection
+        sectionsEn[sectionIndex] = newSectionEn
       } else {
-        sections.push(newSection)
+        sectionsHe.push(newSection)
         sectionsEn.push(newSectionEn)
       }
 
-      sections.sort((a, b) => (a.position || 0) - (b.position || 0))
-      sectionsEn.sort((a, b) => (a.position || 0) - (b.position || 0))
+      sectionsHe.forEach((s, i) => { s.position = i })
+      sectionsEn.forEach((s, i) => { s.position = i })
+      translations.he[SECTION_KEY] = sectionsHe
+      translations.en[SECTION_KEY] = sectionsEn
 
-      if (!translations.he.parentsAssociationSections) translations.he.parentsAssociationSections = []
-      if (!translations.en.parentsAssociationSections) translations.en.parentsAssociationSections = []
-      
-      translations.he.parentsAssociationSections = sections
-      translations.en.parentsAssociationSections = sectionsEn
-
-      // Save to localStorage
       await saveTranslations(translations, false)
 
       // Save to Firebase

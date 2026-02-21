@@ -21,10 +21,12 @@ export function ensureSectionsArray(v) {
 
 /**
  * Get sections as arrays in same order (by position from he). For mutate-then-save.
+ * @param {object} translations - { he, en }
+ * @param {string} sectionKey - e.g. 'sections' or 'parentsAssociationSections'
  */
-export function getSectionsArrays(translations) {
-  const heRaw = translations.he?.sections
-  const enRaw = translations.en?.sections
+export function getSectionsArraysFor(translations, sectionKey) {
+  const heRaw = translations.he?.[sectionKey]
+  const enRaw = translations.en?.[sectionKey]
   if (Array.isArray(heRaw)) {
     const indices = heRaw.map((_, i) => i).sort((a, b) => (heRaw[a]?.position ?? 999) - (heRaw[b]?.position ?? 999))
     const enArr = Array.isArray(enRaw) ? enRaw : []
@@ -43,4 +45,9 @@ export function getSectionsArrays(translations) {
     return { sectionsHe, sectionsEn }
   }
   return { sectionsHe: [], sectionsEn: [] }
+}
+
+/** Main page sections (backward compatible). */
+export function getSectionsArrays(translations) {
+  return getSectionsArraysFor(translations, 'sections')
 }
