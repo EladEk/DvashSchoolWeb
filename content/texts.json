@@ -40,40 +40,6 @@
       "confirmReset": "לאפס לערכי ברירת מחדל?",
       "title": "עריכת תרגום"
     },
-    "common": {
-      "cancel": "ביטול",
-      "template": "תבנית",
-      "import": "ייבא",
-      "edit": "ערוך",
-      "save": "שמור",
-      "show": "הצג",
-      "delete": "מחק",
-      "schoolSubtitle": "בית הספר הדמוקרטי בבאר שבע",
-      "importing": "מייבא...",
-      "saving": "שומר...",
-      "hide": "הסתר",
-      "search": "חיפוש",
-      "create": "צור",
-      "schoolName": "בית ספר דב״ש",
-      "actions": "פעולות",
-      "close": "סגור",
-      "export": "ייצא",
-      "exit": "יציאה",
-      "logout": "התנתק",
-      "dashboard": "לוח בקרה"
-    },
-    "admin": {
-      "saveToFirebase": "שמור ל-Firebase",
-      "usersManagement": "ניהול משתמשים",
-      "exportTranslations": "ייצא תרגומים לקבצי JSON",
-      "translationEditor": "עורך תרגומים",
-      "unsavedChanges": "יש לך שינויים שלא נשמרו",
-      "exportJsonFiles": "ייצא קבצי JSON",
-      "importTranslations": "ייבא תרגומים מקבצי JSON",
-      "exitAdminMode": "יציאה ממצב מנהל",
-      "goToAdminDashboard": "עבור ללוח בקרה מנהל",
-      "dashboard": "לוח בקרה מנהל"
-    },
     "contact": {
       "firstName": "שם",
       "lastName": "שם משפחה",
@@ -159,11 +125,6 @@
       "recipientEmail": "Dvashschool@gmail.com",
       "send": "שלח",
       "email": "כתובת מייל"
-    },
-    "hero": {
-      "image": "תמונה ראשית",
-      "subtitle": "בית הספר הדמוקרטי בבאר שבע",
-      "title": "בית ספר דב״ש"
     },
     "nav": {
       "contact": "צור קשר",
@@ -271,30 +232,81 @@
       ]
     },
     "parentsAssociationSections": [],
+    "hero": {
+      "image": "תמונה ראשית",
+      "subtitle": "בית הספר הדמוקרטי בבאר שבע",
+      "title": "בית ספר דב״ש"
+    },
+    "a11y": {
+      "skipToMainContent": "דלג לתוכן הראשי"
+    },
+    "common": {
+      "cancel": "ביטול",
+      "template": "תבנית",
+      "import": "ייבא",
+      "edit": "ערוך",
+      "save": "שמור",
+      "show": "הצג",
+      "delete": "מחק",
+      "schoolSubtitle": "בית הספר הדמוקרטי בבאר שבע",
+      "importing": "מייבא...",
+      "saving": "שומר...",
+      "hide": "הסתר",
+      "search": "חיפוש",
+      "create": "צור",
+      "schoolName": "בית ספר דב״ש",
+      "actions": "פעולות",
+      "close": "סגור",
+      "export": "ייצא",
+      "exit": "יציאה",
+      "logout": "התנתק",
+      "dashboard": "לוח בקרה",
+      "add": "הוסף"
+    },
+    "unauthorized": {
+      "backHome": "חזור לדף הבית",
+      "message": "אין לך את ההרשאות הנדרשות לגשת לדף זה.",
+      "title": "אין לך הרשאה לגשת לדף זה"
+    },
+    "admin": {
+      "saveToFirebase": "שמור ל-Firebase",
+      "usersManagement": "ניהול משתמשים",
+      "exportTranslations": "ייצא תרגומים לקבצי JSON",
+      "translationEditor": "עורך תרגומים",
+      "unsavedChanges": "יש לך שינויים שלא נשמרו",
+      "exportJsonFiles": "ייצא קבצי JSON",
+      "importTranslations": "ייבא תרגומים מקבצי JSON",
+      "exitAdminMode": "יציאה ממצב מנהל",
+      "goToAdminDashboard": "עבור ללוח בקרה מנהל",
+      "dashboard": "לוח בקרה מנהל",
+      "saveJsonFiles": "שמור קבצי JSON",
+      "publish": "פרסם",
+      "clearSiteCache": "נקה מטמון האתר"
+    },
     "sections": [
       {
-        "text": "בית ספר הדמוקרטי הוקם בתשפ\"ה לאחר 4 שנים בהן היה מסלול.\nבית הספר הינו מוכר ורשמי תחת פיקוח משרד החינוך ותמיכת הרשות, ומהווה חלק ממערכת החינוך הדמוקרטית בארץ ובעולם. בשנת תשפ״ה יש כתה אחת בכל שכבה (א-ה), ובשנת תשפ״ו ביה\"ס יכלול כיתות א - ו",
-        "imageKey": "section.image1",
+        "title": "רקע",
+        "text": "בית ספר הדמוקרטי הוקם בתשפ\"ה לאחר 4 שנים בהן היה מסלול. בית הספר הינו מוכר ורשמי תחת פיקוח משרד החינוך ותמיכת הרשות, ומהווה חלק ממערכת החינוך הדמוקרטית בארץ ובעולם. בשנת תשפ״ה יש כתה אחת בכל שכבה (א-ה), ובשנת תשפ״ו ביה\"ס יכלול כיתות א - ו",
         "position": 0,
-        "title": "רקע"
+        "imageKey": "section.image1"
       },
       {
-        "imageKey": "section.image2",
         "title": "רשויות",
-        "position": 1,
-        "text": "בית הספר מתנהל באופן דמוקרטי, במודל 3 הרשויות (רשות מחוקקת, רשות שופטת ורשות מבצעת), מתוך אמונה ביכולתם של הילדים להיות שותפים לעיצוב חייהם, תוך כדי אכפתיות לצרכיהם וצרכי הזולת."
+        "text": "בית הספר מתנהל באופן דמוקרטי, במודל 3 הרשויות (רשות מחוקקת, רשות שופטת ורשות מבצעת), מתוך אמונה ביכולתם של הילדים להיות שותפים לעיצוב חייהם, תוך כדי אכפתיות לצרכיהם וצרכי הזולת.",
+        "position": 2,
+        "imageKey": "section.image2"
       },
       {
-        "position": 2,
-        "imageKey": "section.image3",
+        "title": "קהילה",
         "text": "ההורים והמשפחות הם חלק אינטגרלי מקהילת בית-הספר, מקבלת ההחלטות בו, ומהכח המניע אותו. ההורים פעילים בהתנדבות במגוון אפיקים, ושותפים בעשייה ובתמיכה.",
-        "title": "קהילה"
+        "position": 2,
+        "imageKey": "section.image3"
       },
       {
         "title": "למידה",
-        "imageKey": "section.image4",
-        "position": 4,
-        "text": "בבית הספר מערכת שעות עשירה המציעה מגוון פעילויות בכל שעה נתונה. כל ילד מרכיב לעצמו מערכת שעות אישית ביחד עם החונכ/ת ובהתאם למטרות שהגדירו ביחד בתחילת השנה."
+        "text": "בבית הספר מערכת שעות עשירה המציעה מגוון פעילויות בכל שעה נתונה. כל ילד מרכיב לעצמו מערכת שעות אישית ביחד עם החונכ/ת ובהתאם למטרות שהגדירו ביחד בתחילת השנה.",
+        "position": 3,
+        "imageKey": "section.image4"
       }
     ]
   },
@@ -389,40 +401,6 @@
       "resetBoth": "Reset Both to Default",
       "confirmReset": "Reset to default values?",
       "title": "Edit Translation"
-    },
-    "common": {
-      "cancel": "Cancel",
-      "template": "Template",
-      "import": "Import",
-      "edit": "Edit",
-      "save": "Save",
-      "show": "Show",
-      "delete": "Delete",
-      "schoolSubtitle": "The Democratic School in Be'er Sheva",
-      "importing": "Importing...",
-      "saving": "Saving...",
-      "hide": "Hide",
-      "search": "Search",
-      "create": "Create",
-      "schoolName": "Dvash School",
-      "actions": "Actions",
-      "close": "Close",
-      "export": "Export",
-      "exit": "Exit",
-      "logout": "Logout",
-      "dashboard": "Dashboard"
-    },
-    "admin": {
-      "saveToFirebase": "Save to Firebase",
-      "usersManagement": "Users Management",
-      "exportTranslations": "Export translations to JSON files",
-      "translationEditor": "Translation Editor",
-      "unsavedChanges": "You have unsaved changes",
-      "exportJsonFiles": "Export JSON Files",
-      "importTranslations": "Import translations from JSON files",
-      "exitAdminMode": "Exit admin mode",
-      "goToAdminDashboard": "Go to Admin Dashboard",
-      "dashboard": "Admin Dashboard"
     },
     "contact": {
       "firstName": "First Name",
@@ -569,30 +547,76 @@
       ]
     },
     "parentsAssociationSections": [],
+    "a11y": {
+      "skipToMainContent": "Skip to main content"
+    },
+    "common": {
+      "cancel": "Cancel",
+      "template": "Template",
+      "import": "Import",
+      "edit": "Edit",
+      "save": "Save",
+      "show": "Show",
+      "delete": "Delete",
+      "schoolSubtitle": "The Democratic School in Be'er Sheva",
+      "importing": "Importing...",
+      "saving": "Saving...",
+      "hide": "Hide",
+      "search": "Search",
+      "create": "Create",
+      "schoolName": "Dvash School",
+      "actions": "Actions",
+      "close": "Close",
+      "export": "Export",
+      "exit": "Exit",
+      "logout": "Logout",
+      "dashboard": "Dashboard",
+      "add": "Add"
+    },
+    "unauthorized": {
+      "backHome": "Back to Home",
+      "message": "You don't have the required permissions to access this page.",
+      "title": "You don't have permission to access this page"
+    },
+    "admin": {
+      "saveToFirebase": "Save to Firebase",
+      "usersManagement": "Users Management",
+      "exportTranslations": "Export translations to JSON files",
+      "translationEditor": "Translation Editor",
+      "unsavedChanges": "You have unsaved changes",
+      "exportJsonFiles": "Export JSON Files",
+      "importTranslations": "Import translations from JSON files",
+      "exitAdminMode": "Exit admin mode",
+      "goToAdminDashboard": "Go to Admin Dashboard",
+      "dashboard": "Admin Dashboard",
+      "saveJsonFiles": "Save JSON Files",
+      "publish": "Publish",
+      "clearSiteCache": "Clear site cache"
+    },
     "sections": [
       {
-        "position": 0,
         "title": "Background",
-        "imageKey": "section.image1",
-        "text": "The Democratic School was established in תשפ\"ה after 4 years of being a track.\nThe school is recognized and official under the supervision of the Ministry of Education and the support of the Authority, and is part of the democratic education system in Israel and around the world. In 1975 there is one class in each grade (1-5), and in תשפ\"ו the school will include grades 1-6."
+        "text": "The Democratic School was established in תשפ\"ה after 4 years of being a track. The school is recognized and official under the supervision of the Ministry of Education and the support of the Authority, and is part of the democratic education system in Israel and around the world. In 1975 there is one class in each grade (1-5), and in תשפ\"ו the school will include grades 1-6.",
+        "position": 0,
+        "imageKey": "section.image1"
       },
       {
-        "position": 1,
-        "text": "The school is run democratically, in the 3-branch model (legislative, judicial, and executive), with the belief in the children's ability to be partners in shaping their lives, while caring for their needs and the needs of others.",
         "title": "Authorities",
+        "text": "The school is run democratically, in the 3-branch model (legislative, judicial, and executive), with the belief in the children's ability to be partners in shaping their lives, while caring for their needs and the needs of others.",
+        "position": 2,
         "imageKey": "section.image2"
       },
       {
+        "title": "Community",
         "text": "Parents and families are an integral part of the school community, its decision-makers, and its driving force. Parents are active volunteers in a variety of ways, and are partners in action and support.",
         "position": 2,
-        "title": "Community",
         "imageKey": "section.image3"
       },
       {
-        "position": 4,
-        "imageKey": "section.image4",
+        "title": "Learning",
         "text": "The school has a rich schedule that offers a variety of activities at any given time. Each child creates their own personal schedule together with their tutor and according to the goals they defined together at the beginning of the year.",
-        "title": "Learning"
+        "position": 3,
+        "imageKey": "section.image4"
       }
     ]
   },
