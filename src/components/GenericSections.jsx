@@ -157,7 +157,7 @@ const GenericSections = () => {
     reloadTranslations()
   }
 
-  if (displaySections.length === 0 && !isAdminMode) {
+  if (sortedSections.length === 0 && !isAdminMode) {
     return null
   }
 
