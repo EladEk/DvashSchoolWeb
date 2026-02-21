@@ -69,6 +69,7 @@ const ParentCommittee = () => {
       <DocumentHead 
         title={t('meta.parentCommitteeTitle')}
         description={t('meta.parentCommitteeDescription')}
+        canonicalPath="/parent-committee"
       />
       <section id="parents" className="parent-committee-page">
         <div className="container">

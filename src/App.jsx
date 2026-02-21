@@ -1,7 +1,9 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAdmin } from './contexts/AdminContext'
 import { useTranslation } from './contexts/TranslationContext'
 import Header from './components/Header'
+import OrganizationSchema from './components/OrganizationSchema'
+import BreadcrumbSchema from './components/BreadcrumbSchema'
 import Footer from './components/Footer'
 import AdminIndicator from './components/AdminIndicator'
 import Home from './pages/Home'
@@ -45,6 +47,8 @@ function AppContent() {
 
   return (
     <div className={`App ${isAdminMode ? 'admin-mode' : ''}`}>
+      <OrganizationSchema />
+      <BreadcrumbSchema pathname={location.pathname} />
       <a href="#main-content" className="skip-link">
         {t('a11y.skipToMainContent')}
       </a>

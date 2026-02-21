@@ -11,6 +11,7 @@ function ParentsAssociation() {
       <DocumentHead 
         title={t('meta.parentsAssociationTitle')}
         description={t('meta.parentsAssociationDescription')}
+        canonicalPath="/parents-association"
       />
       <Hero />
       <ParentsAssociationSections />

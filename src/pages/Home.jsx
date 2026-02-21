@@ -11,6 +11,7 @@ function Home() {
       <DocumentHead 
         title={t('meta.homeTitle')}
         description={t('meta.homeDescription')}
+        canonicalPath="/"
       />
       <Hero />
       <GenericSections />

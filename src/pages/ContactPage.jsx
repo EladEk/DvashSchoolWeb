@@ -10,6 +10,7 @@ function ContactPage() {
       <DocumentHead 
         title={t('meta.contactTitle')}
         description={t('meta.contactDescription')}
+        canonicalPath="/contact"
       />
       <Contact />
     </>
