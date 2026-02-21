@@ -33,13 +33,16 @@ const GenericSections = () => {
 
     try {
       const translations = await getTranslations(true)
-      
-      // Ensure sections exist and are arrays
-      if (!translations.he.sections) translations.he.sections = []
-      if (!translations.en.sections) translations.en.sections = []
-      
-      let sections = Array.isArray(translations.he.sections) ? [...translations.he.sections] : []
-      let sectionsEn = Array.isArray(translations.en.sections) ? [...translations.en.sections] : []
+      const ensureArray = (v) => {
+        if (Array.isArray(v)) return [...v]
+        if (v && typeof v === 'object') {
+          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
+          if (keys.length) return keys.map((k) => v[k])
+        }
+        return []
+      }
+      let sections = ensureArray(translations.he?.sections)
+      let sectionsEn = ensureArray(translations.en?.sections)
 
       // Find the actual index in unsorted array
       const sorted = [...sections].sort((a, b) => {
@@ -82,8 +85,16 @@ const GenericSections = () => {
 
     try {
       const translations = await getTranslations(true)
-      const sections = translations.he?.sections || []
-      const sectionsEn = translations.en?.sections || []
+      const ensureArray = (v) => {
+        if (Array.isArray(v)) return v
+        if (v && typeof v === 'object') {
+          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
+          if (keys.length) return keys.map((k) => v[k])
+        }
+        return []
+      }
+      const sections = ensureArray(translations.he?.sections)
+      const sectionsEn = ensureArray(translations.en?.sections)
 
       // Sort to get current order
       const sorted = [...sections].map((s, i) => ({ ...s, originalIndex: i }))
@@ -124,8 +135,16 @@ const GenericSections = () => {
 
     try {
       const translations = await getTranslations(true)
-      const sections = translations.he?.sections || []
-      const sectionsEn = translations.en?.sections || []
+      const ensureArray = (v) => {
+        if (Array.isArray(v)) return v
+        if (v && typeof v === 'object') {
+          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
+          if (keys.length) return keys.map((k) => v[k])
+        }
+        return []
+      }
+      const sections = ensureArray(translations.he?.sections)
+      const sectionsEn = ensureArray(translations.en?.sections)
 
       // Sort to get current order
       const sorted = [...sections].map((s, i) => ({ ...s, originalIndex: i }))

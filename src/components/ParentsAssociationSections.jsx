@@ -34,13 +34,16 @@ const ParentsAssociationSections = () => {
 
     try {
       const translations = await getTranslations(true)
-      
-      // Ensure sections exist and are arrays
-      if (!translations.he.parentsAssociationSections) translations.he.parentsAssociationSections = []
-      if (!translations.en.parentsAssociationSections) translations.en.parentsAssociationSections = []
-      
-      let sections = Array.isArray(translations.he.parentsAssociationSections) ? [...translations.he.parentsAssociationSections] : []
-      let sectionsEn = Array.isArray(translations.en.parentsAssociationSections) ? [...translations.en.parentsAssociationSections] : []
+      const ensureArray = (v) => {
+        if (Array.isArray(v)) return [...v]
+        if (v && typeof v === 'object') {
+          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
+          if (keys.length) return keys.map((k) => v[k])
+        }
+        return []
+      }
+      let sections = ensureArray(translations.he?.parentsAssociationSections)
+      let sectionsEn = ensureArray(translations.en?.parentsAssociationSections)
 
       // Find the actual index in unsorted array
       const sorted = [...sections].sort((a, b) => {
@@ -83,8 +86,16 @@ const ParentsAssociationSections = () => {
 
     try {
       const translations = await getTranslations(true)
-      const sections = translations.he?.parentsAssociationSections || []
-      const sectionsEn = translations.en?.parentsAssociationSections || []
+      const ensureArray = (v) => {
+        if (Array.isArray(v)) return v
+        if (v && typeof v === 'object') {
+          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
+          if (keys.length) return keys.map((k) => v[k])
+        }
+        return []
+      }
+      const sections = ensureArray(translations.he?.parentsAssociationSections)
+      const sectionsEn = ensureArray(translations.en?.parentsAssociationSections)
 
       // Sort to get current order
       const sorted = [...sections].map((s, i) => ({ ...s, originalIndex: i }))
@@ -125,8 +136,16 @@ const ParentsAssociationSections = () => {
 
     try {
       const translations = await getTranslations(true)
-      const sections = translations.he?.parentsAssociationSections || []
-      const sectionsEn = translations.en?.parentsAssociationSections || []
+      const ensureArray = (v) => {
+        if (Array.isArray(v)) return v
+        if (v && typeof v === 'object') {
+          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
+          if (keys.length) return keys.map((k) => v[k])
+        }
+        return []
+      }
+      const sections = ensureArray(translations.he?.parentsAssociationSections)
+      const sectionsEn = ensureArray(translations.en?.parentsAssociationSections)
 
       // Sort to get current order
       const sorted = [...sections].map((s, i) => ({ ...s, originalIndex: i }))
@@ -298,8 +317,16 @@ const ParentsAssociationSectionEditor = ({ sectionIndex, onClose, onSave }) => {
     try {
       setLoading(true)
       const translations = await getTranslations(true)
-      const sections = translations.he?.parentsAssociationSections || []
-      const sectionsEn = translations.en?.parentsAssociationSections || []
+      const ensureArray = (v) => {
+        if (Array.isArray(v)) return v
+        if (v && typeof v === 'object') {
+          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
+          if (keys.length) return keys.map((k) => v[k])
+        }
+        return []
+      }
+      const sections = ensureArray(translations.he?.parentsAssociationSections)
+      const sectionsEn = ensureArray(translations.en?.parentsAssociationSections)
 
       if (sectionIndex !== null && sectionIndex >= 0) {
         const sorted = [...sections].sort((a, b) => {
@@ -348,8 +375,16 @@ const ParentsAssociationSectionEditor = ({ sectionIndex, onClose, onSave }) => {
       setSaveMessage('')
 
       const translations = await getTranslations(true)
-      const sections = translations.he?.parentsAssociationSections || []
-      const sectionsEn = translations.en?.parentsAssociationSections || []
+      const ensureArray = (v) => {
+        if (Array.isArray(v)) return v
+        if (v && typeof v === 'object') {
+          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
+          if (keys.length) return keys.map((k) => v[k])
+        }
+        return []
+      }
+      const sections = ensureArray(translations.he?.parentsAssociationSections)
+      const sectionsEn = ensureArray(translations.en?.parentsAssociationSections)
 
       const newSection = {
         title: hebrewTitle.trim(),

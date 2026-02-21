@@ -25,8 +25,16 @@ const SectionEditor = ({ sectionKey, sectionIndex, onClose, onSave }) => {
     try {
       setLoading(true)
       const translations = await getTranslations(true)
-      const sections = translations.he?.[sectionKey]?.sections || []
-      const sectionsEn = translations.en?.[sectionKey]?.sections || []
+      const ensureArray = (v) => {
+        if (Array.isArray(v)) return v
+        if (v && typeof v === 'object') {
+          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
+          if (keys.length) return keys.map((k) => v[k])
+        }
+        return []
+      }
+      const sections = ensureArray(translations.he?.[sectionKey]?.sections)
+      const sectionsEn = ensureArray(translations.en?.[sectionKey]?.sections)
 
       if (sectionIndex !== null && sectionIndex >= 0 && sectionIndex < sections.length) {
         // Editing existing section
@@ -57,10 +65,18 @@ const SectionEditor = ({ sectionKey, sectionIndex, onClose, onSave }) => {
       setSaving(true)
       setSaveMessage('')
 
-      // Load current translations
+      // Load current translations (coerce to array: Firestore can return plain objects)
       const translations = await getTranslations(true)
-      const sections = translations.he?.[sectionKey]?.sections || []
-      const sectionsEn = translations.en?.[sectionKey]?.sections || []
+      const ensureArray = (v) => {
+        if (Array.isArray(v)) return v
+        if (v && typeof v === 'object') {
+          const keys = Object.keys(v).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b))
+          if (keys.length) return keys.map((k) => v[k])
+        }
+        return []
+      }
+      const sections = ensureArray(translations.he?.[sectionKey]?.sections)
+      const sectionsEn = ensureArray(translations.en?.[sectionKey]?.sections)
 
       const newSection = {
         title: hebrewTitle.trim(),
