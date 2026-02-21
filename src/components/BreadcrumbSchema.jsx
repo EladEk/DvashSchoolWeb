@@ -2,9 +2,10 @@
 
 const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://dvashschool.vercel.app'
 
+// URL path is /FAQ; display text stays Hebrew "שאלות ותשובות"
 const pathToName = {
   '': 'בית',
-  'שאלות-תשובות': 'שאלות ותשובות',
+  'FAQ': 'שאלות ותשובות',
   'contact': 'צור קשר',
   'parent-committee': 'וועד ההורים',
   'parents-association': 'התאחדות ההורים',

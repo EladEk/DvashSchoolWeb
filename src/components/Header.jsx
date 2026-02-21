@@ -90,7 +90,7 @@ const Header = () => {
 
   const menuItems = [
     { id: 'home', labelKey: 'nav.home', href: '/', hash: '' },
-    { id: 'faq', labelKey: 'nav.faq', href: '/שאלות-תשובות', hash: '' },
+    { id: 'faq', labelKey: 'nav.faq', href: '/FAQ', hash: '' },
     { id: 'parents', labelKey: 'nav.parents', href: '/parent-committee', hash: '' },
     { id: 'parentsAssociation', labelKey: 'nav.parentsAssociation', href: '/parents-association', hash: '' },
     { id: 'parliament', labelKey: 'nav.parliament', href: '/parliament', hash: '' },

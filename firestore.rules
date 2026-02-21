@@ -1,0 +1,64 @@
+rules_version = '2';
+// Firestore Security Rules for Dvash School Website
+// Deploy with: firebase deploy --only firestore:rules
+// (Requires Firebase CLI and firebase.json with "firestore": { "rules": "firestore.rules" })
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Site translations (he/en) – public read, authenticated write (admin)
+    match /translations/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Image paths (hero, sections, etc.) – public read, authenticated write
+    match /images/{imageKey} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Contact form submissions – anyone can create, only auth can read/delete
+    match /contacts/{contactId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+
+    // Parliament dates – public read (parliament page), authenticated write
+    match /parliamentDates/{dateId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Parliament subjects – public read, authenticated write
+    match /parliamentSubjects/{subjectId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Parliament notes – public read, authenticated write
+    match /parliamentNotes/{noteId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Parliament history (archives) – public read, authenticated write
+    match /parliamentHistory/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // App users (login by username) – read needed for login check; restrict write to admin
+    match /appUsers/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+      // To restrict write to admins only, use Firebase Auth custom claims:
+      // allow write: if request.auth != null && request.auth.token.role == 'admin';
+    }
+
+    // Deny any other collection by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

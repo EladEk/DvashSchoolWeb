@@ -5,7 +5,7 @@ import EditableText from './EditableText'
 import EditableImage from './EditableImage'
 import GenericSectionEditor from './GenericSectionEditor'
 import { getTranslations, saveTranslations, clearTranslationsCache } from '../services/adminService'
-import { saveAllTranslationsToDB } from '../services/firebaseDB'
+import { saveAllTranslationsToDB, saveImagePathToDB } from '../services/firebaseDB'
 import './About.css' // Reuse About styles for now
 import './GenericSections.css'
 
@@ -14,6 +14,7 @@ const GenericSections = () => {
   const { isAdminMode } = useAdmin()
   const [editingIndex, setEditingIndex] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [deletingIndex, setDeletingIndex] = useState(null)
 
   // Get generic sections
   const sections = t('sections')
@@ -30,6 +31,7 @@ const GenericSections = () => {
     if (!confirm('האם אתה בטוח שברצונך למחוק סעיף זה?')) {
       return
     }
+    setDeletingIndex(index)
 
     try {
       const translations = await getTranslations(true)
@@ -59,6 +61,19 @@ const GenericSections = () => {
         return
       }
 
+      // If the section had an image, remove it from storage so a new section won't show it
+      const imageKey = sectionToDelete?.imageKey
+      if (imageKey) {
+        try {
+          await saveImagePathToDB(imageKey, null)
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem(`image_${imageKey}`)
+          }
+        } catch (imgErr) {
+          console.warn('Could not clear section image from storage:', imgErr)
+        }
+      }
+
       // Remove the section
       sections.splice(actualIndex, 1)
       sectionsEn.splice(actualIndex, 1)
@@ -77,6 +92,8 @@ const GenericSections = () => {
     } catch (error) {
       console.error('Error deleting section:', error)
       alert('שגיאה במחיקת הסעיף: ' + error.message)
+    } finally {
+      setDeletingIndex(null)
     }
   }
 
@@ -195,6 +212,12 @@ const GenericSections = () => {
 
   return (
     <>
+      {deletingIndex !== null && (
+        <div className="action-loader-overlay" role="status" aria-live="polite">
+          <div className="action-loader-spinner" aria-hidden />
+          <p>{t('common.deleting') || 'מוחק...'}</p>
+        </div>
+      )}
       {sortedSections.map((section, index) => {
         const hasImage = !!section.imageKey
         const sectionId = `section-${index}`

@@ -57,7 +57,7 @@ function AppContent() {
       <main id="main-content">
         <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/שאלות-תשובות" element={<FAQ />} />
+        <Route path="/FAQ" element={<FAQ />} />
         <Route path="/contact-8" element={<ContactPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/parent-committee" element={<ParentCommittee />} />

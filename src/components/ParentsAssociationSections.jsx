@@ -15,6 +15,7 @@ const ParentsAssociationSections = () => {
   const { isAdminMode } = useAdmin()
   const [editingIndex, setEditingIndex] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [deletingIndex, setDeletingIndex] = useState(null)
 
   // Get parents association sections (separate from home page sections)
   const sections = t('parentsAssociationSections')
@@ -31,6 +32,7 @@ const ParentsAssociationSections = () => {
     if (!confirm('האם אתה בטוח שברצונך למחוק סעיף זה?')) {
       return
     }
+    setDeletingIndex(index)
 
     try {
       const translations = await getTranslations(true)
@@ -78,6 +80,8 @@ const ParentsAssociationSections = () => {
     } catch (error) {
       console.error('Error deleting section:', error)
       alert('שגיאה במחיקת הסעיף: ' + error.message)
+    } finally {
+      setDeletingIndex(null)
     }
   }
 
@@ -196,6 +200,12 @@ const ParentsAssociationSections = () => {
 
   return (
     <>
+      {deletingIndex !== null && (
+        <div className="action-loader-overlay" role="status" aria-live="polite">
+          <div className="action-loader-spinner" aria-hidden />
+          <p>{t('common.deleting') || 'מוחק...'}</p>
+        </div>
+      )}
       {sortedSections.map((section, index) => {
         const hasImage = !!section.imageKey
         const sectionId = `parents-association-section-${index}`
@@ -370,10 +380,11 @@ const ParentsAssociationSectionEditor = ({ sectionIndex, onClose, onSave }) => {
   }
 
   const handleSave = async () => {
-    try {
-      setSaving(true)
-      setSaveMessage('')
+    setSaving(true)
+    setSaveMessage('')
+    await new Promise((r) => setTimeout(r, 0))
 
+    try {
       const translations = await getTranslations(true)
       const ensureArray = (v) => {
         if (Array.isArray(v)) return v
@@ -507,6 +518,12 @@ const ParentsAssociationSectionEditor = ({ sectionIndex, onClose, onSave }) => {
   const modalContent = (
     <div className="section-editor-overlay" onClick={handleClose}>
       <div className="section-editor-modal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
+        {saving && (
+          <div className="section-editor-saving-overlay" aria-hidden="false">
+            <div className="action-loader-spinner" />
+            <p>{t('common.saving') || 'שומר...'}</p>
+          </div>
+        )}
         <div className="section-editor-header">
           <h3>
             {sectionIndex !== null ? 'עריכת סעיף' : 'הוספת סעיף חדש'}

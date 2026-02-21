@@ -61,10 +61,11 @@ const SectionEditor = ({ sectionKey, sectionIndex, onClose, onSave }) => {
   }
 
   const handleSave = async () => {
-    try {
-      setSaving(true)
-      setSaveMessage('')
+    setSaving(true)
+    setSaveMessage('')
+    await new Promise((r) => setTimeout(r, 0))
 
+    try {
       // Load current translations (coerce to array: Firestore can return plain objects)
       const translations = await getTranslations(true)
       const ensureArray = (v) => {
@@ -179,6 +180,12 @@ const SectionEditor = ({ sectionKey, sectionIndex, onClose, onSave }) => {
   const modalContent = (
     <div className="section-editor-overlay" onClick={handleClose}>
       <div className="section-editor-modal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
+        {saving && (
+          <div className="section-editor-saving-overlay" aria-hidden="false">
+            <div className="action-loader-spinner" />
+            <p>{t('common.saving') || 'שומר...'}</p>
+          </div>
+        )}
         <div className="section-editor-header">
           <h3>
             {sectionIndex !== null ? 'עריכת סעיף' : 'הוספת סעיף חדש'}

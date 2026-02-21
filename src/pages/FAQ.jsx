@@ -305,7 +305,7 @@ const FAQ = () => {
       <DocumentHead 
         title={t('meta.faqTitle')}
         description={t('meta.faqDescription')}
-        canonicalPath="/שאלות-תשובות"
+        canonicalPath="/FAQ"
       />
       <FAQSchema questions={faqData} />
       <section id="faq" className="faq-page">

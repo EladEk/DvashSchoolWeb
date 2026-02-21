@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useEffectiveRole, UserRole } from '../utils/requireRole'
+import DocumentHead from '../components/DocumentHead'
 import EditableText from '../components/EditableText'
 import SubjectSubmitForm from '../components/parliament/SubjectSubmitForm'
 import {
@@ -351,6 +352,11 @@ export default function Parliament() {
 
   return (
     <div className="parliament-page">
+      <DocumentHead
+        title={t('meta.parliamentTitle')}
+        description={t('meta.parliamentDescription')}
+        canonicalPath="/parliament"
+      />
       <div className="parliament-header-row">
         <h2 className="parliament-title">
           {t('parliament.headline') || 'הציעו, סקרו ודונו בנושאי הפרלמנט'}
