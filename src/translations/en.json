@@ -17,7 +17,14 @@
   },
   "meta": {
     "parliamentTitle": "Parliament - Dvash School",
-    "parliamentDescription": "Submit, review and discuss school parliament topics"
+    "parliamentDescription": "Submit, review and discuss school parliament topics",
+    "notFoundTitle": "Page Not Found - Dvash School",
+    "notFoundDescription": "The page you are looking for does not exist. Return to the Democratic School in Be'er Sheva homepage."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "message": "The page you are looking for does not exist or has been removed.",
+    "backHome": "Back to home"
   },
   "parliament": {
     "title": "Parliament",

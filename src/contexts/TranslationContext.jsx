@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
-import { loadTexts, isEditMode } from '../services/textService'
+import { loadTexts, getDefaults, isEditMode } from '../services/textService'
 
 const TranslationContext = createContext()
 
@@ -10,19 +10,23 @@ export const TranslationProvider = ({ children }) => {
     return savedLanguage || 'he'
   })
 
-  const [translations, setTranslations] = useState(null) // Start with null instead of defaults
-  const [isLoading, setIsLoading] = useState(true) // Track loading state
+  const isE2E = typeof window !== 'undefined' && (
+    window.location?.search?.includes('e2e=1') || sessionStorage.getItem('e2e') === '1'
+  )
+  const [translations, setTranslations] = useState(() => (isE2E ? getDefaults() : null))
+  const [isLoading, setIsLoading] = useState(!isE2E)
   const loadingRef = useRef(false) // Prevent double loading in Strict Mode
   const editModeRef = useRef(false) // Track edit mode changes
 
   useEffect(() => {
+    if (isE2E) return
     // Prevent double execution in React Strict Mode
     if (loadingRef.current) return
     loadingRef.current = true
-    
+
     // Load translations using new text service
     loadTranslations()
-  }, [])
+  }, [isE2E])
 
   // When edit mode changes, reload from cache for the new mode (no network clear – cache is split by mode)
   useEffect(() => {
@@ -45,14 +49,30 @@ export const TranslationProvider = ({ children }) => {
     document.documentElement.lang = language
   }, [language])
 
+  const LOAD_TIMEOUT_MS = 8000
+  const SAFETY_MAX_MS = 12000
+
+  // Safety: if still loading after SAFETY_MAX_MS, force show app (e.g. E2E / slow env)
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setTranslations((prev) => (prev == null ? getDefaults() : prev))
+      setIsLoading(false)
+    }, SAFETY_MAX_MS)
+    return () => clearTimeout(id)
+  }, [])
+
   const loadTranslations = async (forceRefresh = false) => {
     try {
       setIsLoading(true)
-      const texts = await loadTexts(forceRefresh)
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Translation load timeout')), LOAD_TIMEOUT_MS)
+      )
+      const texts = await Promise.race([loadTexts(forceRefresh), timeout])
       setTranslations(texts)
     } catch (error) {
-      console.error('Error loading translations:', error)
-      const { getDefaults } = await import('../services/textService')
+      if (error?.message !== 'Translation load timeout') {
+        console.error('Error loading translations:', error)
+      }
       setTranslations(getDefaults())
     } finally {
       setIsLoading(false)

@@ -8,7 +8,18 @@
     "build": "vite build",
     "preview": "vite preview",
     "auth-server": "node server/auth-server.js",
-    "dev:all": "concurrently \"npm run auth-server\" \"npm run dev\""
+    "dev:all": "concurrently \"npm run auth-server\" \"npm run dev\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:api": "vitest run tests/api tests/backend",
+    "test:ui": "vitest run src tests/components",
+    "ensure-test-env": "node scripts/ensure-test-env.js",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:all": "vitest run tests/api tests/backend src tests/components && npm run test:e2e && node scripts/generate-test-dashboard.js",
+    "test:all:no-e2e": "vitest run tests/api tests/backend src tests/components && node scripts/generate-test-dashboard.js",
+    "test:dashboard": "node scripts/generate-test-dashboard.js",
+    "test:dashboard:serve": "node scripts/test-dashboard-server.js"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -19,9 +30,14 @@
     "react-router-dom": "^6.26.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.0.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.2"
+    "jsdom": "^25.0.1",
+    "vite": "^5.4.2",
+    "vitest": "^2.1.6"
   }
 }

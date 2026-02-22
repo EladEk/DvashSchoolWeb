@@ -16,6 +16,7 @@ import Parliament from './pages/Parliament'
 import ParliamentAdmin from './pages/ParliamentAdmin'
 import ParliamentLogin from './pages/ParliamentLogin'
 import Unauthorized from './pages/Unauthorized'
+import NotFound from './pages/NotFound'
 import AdminRoute from './components/AdminRoute'
 import { RequireRole } from './utils/requireRole'
 import { useScrollToHash } from './hooks/useScrollToHash'
@@ -23,6 +24,7 @@ import './App.css'
 import './components/Loader.css'
 
 function AppContent() {
+  const location = useLocation()
   const { isAdminMode } = useAdmin()
   const { isLoading, t } = useTranslation()
   useScrollToHash() // Now this is inside Router context
@@ -58,7 +60,7 @@ function AppContent() {
         <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/FAQ" element={<FAQ />} />
-        <Route path="/contact-8" element={<ContactPage />} />
+        <Route path="/contact-8" element={<Navigate to="/contact" replace />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/parent-committee" element={<ParentCommittee />} />
         <Route path="/parents-association" element={<ParentsAssociation />} />
@@ -83,7 +85,7 @@ function AppContent() {
             </RequireRole>
           }
         />
-        <Route path="*" element={<div style={{ padding: '2rem', textAlign: 'center' }}>Page not found</div>} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       </main>
       <Footer />
@@ -93,7 +95,7 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AppContent />
     </Router>
   )

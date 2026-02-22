@@ -2,6 +2,11 @@ rules_version = '2';
 // Firestore Security Rules for Dvash School Website
 // Deploy with: firebase deploy --only firestore:rules
 // (Requires Firebase CLI and firebase.json with "firestore": { "rules": "firestore.rules" })
+//
+// Client (React) uses Firestore JS SDK; API uses Admin SDK (bypasses these rules).
+// All write rules require request.auth != null (Firebase Auth). If the app uses
+// only custom login (appUsers), client writes will be denied unless you enable
+// Firebase Auth (e.g. signInWithEmailAndPassword) or perform writes via API.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -54,6 +59,18 @@ service cloud.firestore {
       allow write: if request.auth != null;
       // To restrict write to admins only, use Firebase Auth custom claims:
       // allow write: if request.auth != null && request.auth.token.role == 'admin';
+    }
+
+    // Optional Firebase Auth users (getRoleByDocId/getRoleByField fallback)
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // FAQs (referenced in firebase.js; enable when used)
+    match /faqs/{faqId} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
 
     // Deny any other collection by default

@@ -9,7 +9,20 @@
     <title>בית ספר דב״ש - בית הספר הדמוקרטי בבאר שבע</title>
   </head>
   <body>
+    <div id="e2e-marker" data-e2e="0" aria-hidden="true"></div>
     <div id="root"></div>
+    <script>
+      (function() {
+        try {
+          var isE2E = typeof location !== 'undefined' && (location.search.indexOf('e2e=1') !== -1 || sessionStorage.getItem('e2e') === '1');
+          if (isE2E) {
+            sessionStorage.setItem('e2e', '1');
+            var m = document.getElementById('e2e-marker');
+            if (m) m.setAttribute('data-e2e', '1');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

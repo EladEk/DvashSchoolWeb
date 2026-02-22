@@ -17,7 +17,14 @@
   },
   "meta": {
     "parliamentTitle": "פרלמנט - בית ספר דב״ש",
-    "parliamentDescription": "הציעו, סקרו ודונו בנושאי הפרלמנט"
+    "parliamentDescription": "הציעו, סקרו ודונו בנושאי הפרלמנט",
+    "notFoundTitle": "דף לא נמצא - בית ספר דב״ש",
+    "notFoundDescription": "הדף שחיפשת לא קיים. חזור לדף הבית של בית הספר הדמוקרטי בבאר שבע."
+  },
+  "notFound": {
+    "title": "דף לא נמצא",
+    "message": "הדף שחיפשת לא קיים או הוסר.",
+    "backHome": "חזור לדף הבית"
   },
   "parliament": {
     "title": "פרלמנט",
