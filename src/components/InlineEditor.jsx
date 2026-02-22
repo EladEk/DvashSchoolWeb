@@ -130,6 +130,18 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
     current[finalKey] = value
   }
 
+  const pathTouchesArray = (root, keyPath) => {
+    if (!root || typeof root !== 'object') return false
+    const parts = keyPath.split('.')
+    let current = root
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (Array.isArray(current)) return true
+      current = current?.[parts[i]]
+      if (current == null) return false
+    }
+    return Array.isArray(current)
+  }
+
   // Auto-save to localStorage when closing
   const saveChanges = useCallback(async (skipOnSave = false) => {
     try {
@@ -169,6 +181,8 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
           console.error('Error in onSave callback:', saveError)
         }
       }
+
+      return current
     } catch (error) {
       console.error('Error saving:', error)
       throw error // Re-throw to allow caller to handle
@@ -188,8 +202,9 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
       
       // Step 1: Save to localStorage first (fast, synchronous)
       // Skip onSave callback to avoid re-render issues during save
+      let updatedTranslations
       try {
-        await saveChanges(true) // Pass true to skip onSave
+        updatedTranslations = await saveChanges(true) // Pass true to skip onSave
       } catch (localError) {
         console.error('Error saving to localStorage:', localError)
         setSaveMessage('Error saving locally: ' + (localError.message || 'Unknown error'))
@@ -197,12 +212,20 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
         return
       }
       
-      // Step 2: Save to Firebase - SINGLE batch write operation
-      // This is the ONLY database write - updates only the changed field
-      // Uses batch.commit() which sends both Hebrew and English updates in ONE network call
+      // Step 2: Save to Firebase
+      // Array paths (e.g. sections.0.title) must save the full object, otherwise
+      // Firestore partial merge can replace the whole array with just one index.
       try {
-        const { saveTranslationToDB } = await import('../services/firebaseDB')
-        await saveTranslationToDB(translationKey, hebrewValue, englishValue)
+        const { saveTranslationToDB, saveAllTranslationsToDB } = await import('../services/firebaseDB')
+        const mustSaveWholeDoc =
+          pathTouchesArray(updatedTranslations?.he, translationKey) ||
+          pathTouchesArray(updatedTranslations?.en, translationKey)
+
+        if (mustSaveWholeDoc) {
+          await saveAllTranslationsToDB(updatedTranslations || {})
+        } else {
+          await saveTranslationToDB(translationKey, hebrewValue, englishValue)
+        }
       } catch (firebaseError) {
         console.error('❌ Error saving to Firebase:', firebaseError)
         // Even if Firebase fails, localStorage save succeeded, so show warning

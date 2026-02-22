@@ -4,6 +4,7 @@ import { useTranslation } from '../contexts/TranslationContext'
 import { useEffectiveRole } from '../utils/requireRole'
 import { getTranslations, saveTranslations } from '../services/adminService'
 import { publishTexts } from '../services/textService'
+import { saveAllTranslationsToDB } from '../services/firebaseDB'
 import UsersAdmin from '../components/admin/UsersAdmin'
 import './AdminDashboard.css'
 
@@ -231,6 +232,52 @@ const AdminDashboard = () => {
       setTimeout(() => setMessage(''), 10000) // Show longer for detailed errors
     } finally {
       setPublishing(false)
+    }
+  }
+
+  const handleReset = async () => {
+    if (resetting) return
+    const shouldReset = confirm('לאפס את מסד הנתונים לטקסטים מתוך Git (content/texts.json)?')
+    if (!shouldReset) return
+
+    setResetting(true)
+    setMessage('')
+
+    try {
+      const response = await fetch(`/content/texts.json?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to load Git texts: HTTP ${response.status}`)
+      }
+
+      const gitTexts = await response.json()
+      const resetTranslations = {
+        he: gitTexts?.he || {},
+        en: gitTexts?.en || {}
+      }
+
+      await saveAllTranslationsToDB(resetTranslations)
+
+      setTranslations(resetTranslations)
+      setEditedTranslations(resetTranslations)
+      setHasChanges(false)
+      translationsLoadedRef.current = true
+
+      await reloadTranslations(true)
+      setMessage('✅ בוצע איפוס: טקסטים נטענו מ-Git ונשמרו ל-DB')
+      setTimeout(() => setMessage(''), 5000)
+    } catch (error) {
+      setMessage(`❌ Error resetting DB from Git: ${error.message || 'Unknown error'}`)
+      setTimeout(() => setMessage(''), 7000)
+    } finally {
+      setResetting(false)
     }
   }
 
