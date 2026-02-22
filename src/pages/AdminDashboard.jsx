@@ -34,6 +34,7 @@ const AdminDashboard = () => {
   const [publishing, setPublishing] = useState(false)
   const [savingJson, setSavingJson] = useState(false)
   const [exportingAll, setExportingAll] = useState(false)
+  const [resetting, setResetting] = useState(false)
   const [message, setMessage] = useState('')
   const [activeTab, setActiveTab] = useState('translations')
   const [isTranslationEditorOpen, setIsTranslationEditorOpen] = useState(false)
@@ -390,6 +391,21 @@ const AdminDashboard = () => {
               </>
             ) : (
               (t('admin.exportAll') || 'הורד הכל (Git + DB)')
+            )}
+          </button>
+          <button
+            onClick={handleReset}
+            disabled={resetting || hasChanges}
+            className="export-btn"
+            title="Take text from Git (content/texts.json) and push to DB — opposite of Publish"
+          >
+            {resetting ? (
+              <>
+                <span className="spinner"></span>
+                איפוס...
+              </>
+            ) : (
+              'אפס'
             )}
           </button>
         </div>

@@ -41,4 +41,17 @@ test.describe('Admin dashboard export', () => {
     await page.waitForTimeout(3000)
     await expect(page.locator('.admin-dashboard, .export-btn')).toBeVisible()
   })
+
+  test('אפס (Git → DB) button exists and is clickable', async ({ page }) => {
+    await loginAsAdmin(page)
+    await gotoE2E(page, '/admin/dashboard')
+    await waitForAppReady(page)
+    const resetBtn = page.getByRole('button', { name: 'אפס' })
+    await expect(resetBtn).toBeVisible()
+    // Cancel the confirm dialog so we don't actually reset DB
+    page.once('dialog', (dialog) => dialog.dismiss())
+    await resetBtn.click()
+    await page.waitForTimeout(500)
+    await expect(page.locator('.admin-dashboard')).toBeVisible()
+  })
 })
