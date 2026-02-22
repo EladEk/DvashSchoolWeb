@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useEffectiveRole } from '../utils/requireRole'
-import { getTranslations, saveTranslations } from '../services/adminService'
+import { getTranslations, saveTranslations, clearTranslationsCache } from '../services/adminService'
 import { publishTexts } from '../services/textService'
 import { saveAllTranslationsToDB } from '../services/firebaseDB'
 import UsersAdmin from '../components/admin/UsersAdmin'
@@ -102,8 +102,9 @@ const AdminDashboard = () => {
       await saveTranslations(editedTranslations)
       setTranslations(editedTranslations)
       setHasChanges(false)
+      clearTranslationsCache()
       // Reload translations in the app context
-      await reloadTranslations()
+      await reloadTranslations(true)
       setMessage('Translations saved successfully! The website will now use the updated translations.')
       setTimeout(() => setMessage(''), 5000)
     } catch (error) {

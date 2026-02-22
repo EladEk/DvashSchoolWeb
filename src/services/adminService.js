@@ -2,6 +2,8 @@
 // This file keeps the same API for admin components; the single text system owns
 // content/texts.json vs Firebase, defaults, and merge.
 
+import * as websiteCache from './cacheService'
+
 const STORAGE_KEY = 'admin_translations'
 let translationsCache = null
 let defaultTranslationsCache = null
@@ -69,7 +71,9 @@ export const saveTranslations = async (translations, firebaseOnly = false) => {
 export const clearTranslationsCache = () => {
   translationsCache = null
   defaultTranslationsCache = null
-  import('./textService').then((m) => { if (m.clearCache) m.clearCache() })
+  // Keep behavior aligned with "Clear Site Cache" button in edit mode:
+  // remove both public/edit website caches immediately after save.
+  websiteCache.clearAll()
 }
 
 // Export translations as downloadable JSON files
