@@ -142,6 +142,15 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
     return Array.isArray(current)
   }
 
+  // Paths like sections.0.title or parentsAssociationSections.0.text must save full doc;
+  // otherwise Firestore merge can replace the whole array/object with one index (same fix as main sections).
+  const SECTION_ARRAY_KEYS = ['sections', 'parentsAssociationSections']
+  const pathIsSectionArrayIndex = (keyPath) => {
+    const parts = keyPath.split('.')
+    if (parts.length < 2) return false
+    return SECTION_ARRAY_KEYS.includes(parts[0]) && /^\d+$/.test(parts[1])
+  }
+
   // Auto-save to localStorage when closing
   const saveChanges = useCallback(async (skipOnSave = false) => {
     try {
@@ -219,7 +228,8 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
         const { saveTranslationToDB, saveAllTranslationsToDB } = await import('../services/firebaseDB')
         const mustSaveWholeDoc =
           pathTouchesArray(updatedTranslations?.he, translationKey) ||
-          pathTouchesArray(updatedTranslations?.en, translationKey)
+          pathTouchesArray(updatedTranslations?.en, translationKey) ||
+          pathIsSectionArrayIndex(translationKey)
 
         if (mustSaveWholeDoc) {
           await saveAllTranslationsToDB(updatedTranslations || {})
