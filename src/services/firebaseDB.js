@@ -16,7 +16,6 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot,
   limit
 } from 'firebase/firestore'
 
@@ -993,38 +992,43 @@ export const subscribeToUserParliamentSubjects = (userUid, callback) => {
     return () => {}
   }
   
-  const q = query(
-    collection(db, 'parliamentSubjects'),
-    where('createdByUid', '==', userUid)
-  )
-  
-  // Add timeout to detect connection issues
-  let timeoutId = setTimeout(() => {
-    console.warn('Firestore real-time subscription timeout - connection may be slow or unavailable')
-  }, 20000) // 20 second warning
-  
-  const unsubscribe = onSnapshot(
-    q, 
-    (snap) => {
-      clearTimeout(timeoutId)
+  // Use controlled polling instead of onSnapshot to avoid noisy /Listen/channel
+  // timeout errors in restricted networks/browsers.
+  let cancelled = false
+  let inFlight = false
+
+  const loadUserSubjects = async () => {
+    if (cancelled || inFlight) return
+    inFlight = true
+    try {
+      const q = query(
+        collection(db, 'parliamentSubjects'),
+        where('createdByUid', '==', userUid)
+      )
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Firestore polling timeout')), 15000)
+      })
+      const queryPromise = getDocs(q)
+      const snap = await Promise.race([queryPromise, timeoutPromise])
+      if (cancelled) return
       const subjects = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       callback(subjects)
-    }, 
-    (error) => {
-      clearTimeout(timeoutId)
-      console.error('Firestore subscription error:', error)
-      // If it's a connection error, return empty array but log it
-      if (error.code === 'unavailable' || error.code === 'deadline-exceeded' || 
-          error.message?.includes('CONNECTION') || error.message?.includes('timeout')) {
-        console.warn('Firestore connection unavailable - using cached data or empty array')
-      }
+    } catch (error) {
+      if (cancelled) return
+      console.error('Firestore polling error:', error)
       callback([])
+    } finally {
+      inFlight = false
     }
-  )
-  
+  }
+
+  // Initial fetch + periodic refresh (same public API as subscribe)
+  loadUserSubjects()
+  const intervalId = setInterval(loadUserSubjects, 10000)
+
   return () => {
-    clearTimeout(timeoutId)
-    unsubscribe()
+    cancelled = true
+    clearInterval(intervalId)
   }
 }
 
