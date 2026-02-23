@@ -9,4 +9,7 @@ export default defineConfig({
     imagekitAuth(),
     apiSaveJsonLocal()
   ],
+  build: {
+    sourcemap: true
+  }
 })
