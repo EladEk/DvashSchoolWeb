@@ -260,7 +260,9 @@ const AdminDashboard = () => {
     setMessage('')
 
     try {
-      const response = await fetch(`/content/texts.json?t=${Date.now()}`, {
+      const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL.replace(/\/+$/, '') : ''
+      const contentPath = `${base || ''}/content/texts.json`
+      const response = await fetch(`${contentPath}?t=${Date.now()}`, {
         cache: 'no-store',
         headers: {
           'Accept': 'application/json',

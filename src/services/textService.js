@@ -211,8 +211,10 @@ const loadFromProduction = async () => {
   }
 
   try {
+    const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL.replace(/\/+$/, '') : ''
+    const contentPath = `${base || ''}/content/texts.json`
     const cacheBuster = `?t=${Date.now()}`
-    const response = await fetch(`/content/texts.json${cacheBuster}`, {
+    const response = await fetch(`${contentPath}${cacheBuster}`, {
       cache: 'no-store',
       headers: {
         'Accept': 'application/json',

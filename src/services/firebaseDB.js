@@ -496,8 +496,10 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
 
   if (!isEditModeForImages()) {
     try {
+      const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL.replace(/\/+$/, '') : ''
+      const contentPath = `${base || ''}/content/texts.json`
       const cacheBuster = `?t=${Date.now()}`
-      const response = await fetch(`/content/texts.json${cacheBuster}`, {
+      const response = await fetch(`${contentPath}${cacheBuster}`, {
         cache: 'no-store',
         headers: {
           'Accept': 'application/json',
@@ -506,9 +508,11 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
         }
       })
       if (!response.ok) return null
+      const contentType = response.headers.get('Content-Type') || ''
+      if (!contentType.includes('application/json')) return websiteCache.get(cacheKey, 'public') ?? null
       const texts = await response.json()
-      const images = texts.images || texts.he?.images || {}
-      const imagePath = images[imageKey] || null
+      const images = (texts && typeof texts === 'object' && (texts.images || texts.he?.images)) ? (texts.images || texts.he?.images || {}) : {}
+      const imagePath = images[imageKey] ?? null
       const normalizedPath = imagePath ? normalizeImagePath(imagePath) : null
       websiteCache.set(cacheKey, normalizedPath, 'public', IMAGE_CACHE_TTL_PUBLIC_MS)
       return normalizedPath
