@@ -21,8 +21,16 @@ function getAdmin() {
 
 function parseServiceAccount(raw) {
   if (!raw || typeof raw !== 'string') return null
-  const trimmed = raw.trim()
+  // Strip BOM and trim
+  let trimmed = raw.replace(/^\uFEFF/, '').trim()
   if (!trimmed) return null
+
+  // Fix: if private_key contains real newlines (invalid JSON), escape them as \n
+  trimmed = trimmed.replace(/"private_key"\s*:\s*"([\s\S]*?)"/g, (_, keyContent) =>
+    '"private_key": "' + keyContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\\n') + '"'
+  )
+  // Fix: smart/curly quotes from paste
+  trimmed = trimmed.replace(/\u201C|\u201D/g, '"').replace(/\u2018|\u2019/g, "'")
 
   const normalized = trimmed.replace(/\\n/g, '\n')
 
@@ -33,8 +41,11 @@ function parseServiceAccount(raw) {
 
   // Try base64 (common when pasting multi-line JSON into Vercel)
   try {
-    const decoded = Buffer.from(trimmed, 'base64').toString('utf8')
-    const parsed = JSON.parse(decoded.replace(/\\n/g, '\n'))
+    const decoded = Buffer.from(raw.replace(/^\uFEFF/, '').trim(), 'base64').toString('utf8')
+    const fixed = decoded.replace(/"private_key"\s*:\s*"([\s\S]*?)"/g, (_, keyContent) =>
+      '"private_key": "' + keyContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\\n') + '"'
+    )
+    const parsed = JSON.parse(fixed.replace(/\\n/g, '\n'))
     if (parsed && (parsed.private_key || parsed.client_email)) return parsed
   } catch (_) {}
 
@@ -51,7 +62,10 @@ async function ensureFirebaseAdmin(admin) {
   }
   const serviceAccount = parseServiceAccount(raw)
   if (!serviceAccount) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON. Use the full JSON from Firebase Console → Project Settings → Service accounts → Generate new private key. Paste as one line with \\n for newlines in private_key, or base64-encode the JSON.')
+    const hint = raw.trim().length < 100
+      ? ' Value may be truncated (Vercel often saves only one line). Paste the entire JSON as a single line in the env value.'
+      : ' Paste as one line with \\n for newlines in private_key, or base64-encode the JSON.'
+    throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON.' + hint)
   }
   if (!serviceAccount.private_key || !serviceAccount.client_email || !serviceAccount.project_id) {
     throw new Error('FIREBASE_SERVICE_ACCOUNT is missing required fields (private_key, client_email, project_id)')
