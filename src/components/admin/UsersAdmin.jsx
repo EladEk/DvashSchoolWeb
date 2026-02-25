@@ -4,7 +4,7 @@ import { useEffectiveRole } from '../../utils/requireRole'
 import {
   loadUsers,
   checkUsernameExists,
-  createUser,
+  createUser as createUserApi,
   updateUser,
   deleteUser,
 } from '../../services/firebaseDB'
@@ -34,14 +34,14 @@ async function sha256Hex(text) {
 
 export default function UsersAdmin() {
   const { t } = useTranslation()
-  const { role } = useEffectiveRole()
+  const { role, roles: effectiveRoles } = useEffectiveRole()
   const [items, setItems] = useState([])
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [toast, setToast] = useState({ show: false, kind: '', message: '' })
   
   // Only admins can manage users
-  const canManageUsers = role === 'admin'
+  const canManageUsers = (roles && roles.length) ? roles.some(r => ['admin', 'manager'].includes(String(r).toLowerCase())) : role === 'admin'
 
   const [form, setForm] = useState({
     username: '',
@@ -56,6 +56,42 @@ export default function UsersAdmin() {
 
   const [edit, setEdit] = useState({ open: false, row: null, birthdayRaw: '', passwordRaw: '' })
   const [saving, setSaving] = useState(false)
+  const [permissionsModal, setPermissionsModal] = useState({ open: false, user: null })
+  const [permissionsEdit, setPermissionsEdit] = useState([]) // roles array while editing in modal
+  const [savingPermissions, setSavingPermissions] = useState(false)
+
+  const openPermissions = (user) => {
+    const roles = Array.isArray(user.roles) ? [...user.roles] : (user.role ? [user.role] : ['student'])
+    setPermissionsEdit(roles.map(r => String(r).trim().toLowerCase()))
+    setPermissionsModal({ open: true, user })
+  }
+  const closePermissions = () => {
+    setPermissionsModal({ open: false, user: null })
+    setPermissionsEdit([])
+  }
+  const togglePermission = (role) => {
+    const r = String(role).toLowerCase()
+    setPermissionsEdit(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])
+  }
+  const hasPermission = (role) => permissionsEdit.includes(String(role).toLowerCase())
+  async function savePermissions() {
+    const { user } = permissionsModal
+    if (!user?.id || savingPermissions) return
+    const base = permissionsEdit.filter(r => ['student', 'parent'].includes(r))
+    const roles = base.length ? permissionsEdit : [...permissionsEdit, 'student']
+    try {
+      setSavingPermissions(true)
+      await updateUser(user.id, { roles, role: roles[0] || 'student' })
+      showToast('success', t('users.toasts.permissionsUpdated') || 'הרשאות עודכנו')
+      closePermissions()
+      const list = await loadUsers(true)
+      setItems(list)
+    } catch (e) {
+      showToast('error', t('users.toasts.updateFail', { msg: e?.message }) || 'Error updating permissions')
+    } finally {
+      setSavingPermissions(false)
+    }
+  }
 
   // Use polling instead of real-time to reduce DB connections
   // Users list doesn't need instant updates
@@ -85,9 +121,11 @@ export default function UsersAdmin() {
   const filtered = useMemo(() => {
     const s = normLower(search)
     return items.filter(u => {
-      // Hide system admin user (uid === 'system-admin')
       if (u.uid === 'system-admin' || u.id === 'system-admin') return false
-      if (roleFilter !== 'all' && u.role !== roleFilter) return false
+      if (roleFilter !== 'all') {
+        const userRoles = u.roles || (u.role ? [u.role] : [])
+        if (!userRoles.map(r => String(r).toLowerCase()).includes(roleFilter.toLowerCase())) return false
+      }
       if (!s) return true
       const hay = `${u.username} ${u.firstName} ${u.lastName} ${u.birthday || ''}`.toLowerCase()
       return hay.includes(s)
@@ -117,12 +155,13 @@ export default function UsersAdmin() {
 
       const passwordHash = await sha256Hex(norm(form.password))
 
-      await createUser({
+      await createUserApi({
         username,
         usernameLower,
         firstName: norm(form.firstName),
         lastName: norm(form.lastName),
         role: form.role,
+        roles: [form.role],
         birthday: form.birthdayRaw,
         classId: form.classId,
         passwordHash,
@@ -172,12 +211,14 @@ export default function UsersAdmin() {
         }
       }
 
+      const userRoles = Array.isArray(row.roles) ? row.roles : (row.role ? [row.role] : ['student'])
       const payload = {
         username,
         usernameLower,
         firstName: norm(row.firstName || ''),
         lastName: norm(row.lastName || ''),
-        role: row.role || 'student',
+        role: userRoles[0] || 'student',
+        roles: userRoles,
         birthday: birthdayRaw,
         classId: norm(row.classId || ''),
       }
@@ -254,7 +295,8 @@ export default function UsersAdmin() {
               <option value="parent">{t('users.role.parent') || 'הורה'}</option>
               <option value="committee">{t('users.role.committee') || 'וועד'}</option>
               <option value="editor">{t('users.role.editor') || 'עורך'}</option>
-              <option value="admin">{t('users.role.admin') || 'מנהל'}</option>
+              <option value="manager">{t('users.role.manager') || 'מנהל'}</option>
+              <option value="admin">{t('users.role.admin') || 'מנהל מערכת'}</option>
             </select>
             {form.role === 'admin' && (
               <div className="users-note" style={{ gridColumn: '1 / -1', fontSize: '0.9rem', color: '#666', marginTop: '-0.5rem' }}>
@@ -312,7 +354,8 @@ export default function UsersAdmin() {
           <option value="parent">{t('users.filter.parent') || 'הורים'}</option>
           <option value="committee">{t('users.filter.committee') || 'וועד'}</option>
           <option value="editor">{t('users.filter.editor') || 'עורכים'}</option>
-          <option value="admin">{t('users.filter.admin') || 'מנהלים'}</option>
+          <option value="manager">{t('users.filter.manager') || 'מנהלים'}</option>
+          <option value="admin">{t('users.filter.admin') || 'מנהלי מערכת'}</option>
         </select>
       </div>
 
@@ -334,11 +377,19 @@ export default function UsersAdmin() {
               <tr key={u.id}>
                 <td>{u.username}</td>
                 <td>{labelUser(u)}</td>
-                <td><span className="users-badge">{u.role}</span></td>
+                <td><span className="users-badge">{(u.roles && u.roles.length) ? u.roles.join(', ') : (u.role || '-')}</span></td>
                 <td>{u.birthday || '-'}</td>
                 <td>{u.classId || '-'}</td>
                 <td>
                   <div className="users-actions">
+                    <button
+                      type="button"
+                      className="btn btn-small btn-permissions"
+                      onClick={() => openPermissions(u)}
+                      title={t('users.permissions') || 'הרשאות'}
+                    >
+                      {t('users.permissions') || 'הרשאות'}
+                    </button>
                     <button className="btn btn-small" onClick={() => openEdit(u)}>
                       {t('common.edit') || 'Edit'}
                     </button>
@@ -387,7 +438,8 @@ export default function UsersAdmin() {
                 <option value="parent">{t('users.role.parent') || 'הורה'}</option>
                 <option value="committee">{t('users.role.committee') || 'וועד'}</option>
                 <option value="editor">{t('users.role.editor') || 'עורך'}</option>
-                <option value="admin">{t('users.role.admin') || 'מנהל'}</option>
+                <option value="manager">{t('users.role.manager') || 'מנהל'}</option>
+                <option value="admin">{t('users.role.admin') || 'מנהל מערכת'}</option>
               </select>
               <input
                 type="date"
@@ -422,6 +474,72 @@ export default function UsersAdmin() {
               </button>
               <button className="btn btn-ghost" onClick={closeEdit}>
                 {t('common.cancel') || 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Permissions modal (הרשאות) */}
+      {permissionsModal.open && permissionsModal.user && (
+        <div className="users-modal-backdrop" onClick={closePermissions}>
+          <div className="users-modal users-permissions-modal" onClick={e => e.stopPropagation()}>
+            <h3>{t('users.permissions') || 'הרשאות'} – {labelUser(permissionsModal.user)}</h3>
+            <p className="users-permissions-hint">{t('users.permissionsHint') || 'בחר תפקידים והרשאות. ניתן לבחור יותר מאחד.'}</p>
+            <div className="users-permissions-grid">
+              <label className="users-permissions-label">
+                <input
+                  type="checkbox"
+                  checked={hasPermission('student')}
+                  onChange={() => togglePermission('student')}
+                />
+                <span>{t('users.role.student') || 'תלמיד'}</span>
+              </label>
+              <label className="users-permissions-label">
+                <input
+                  type="checkbox"
+                  checked={hasPermission('parent')}
+                  onChange={() => togglePermission('parent')}
+                />
+                <span>{t('users.role.parent') || 'הורה'}</span>
+              </label>
+              <label className="users-permissions-label">
+                <input
+                  type="checkbox"
+                  checked={hasPermission('editor')}
+                  onChange={() => togglePermission('editor')}
+                />
+                <span>{t('users.role.editor') || 'עורך'}</span>
+              </label>
+              <label className="users-permissions-label">
+                <input
+                  type="checkbox"
+                  checked={hasPermission('committee')}
+                  onChange={() => togglePermission('committee')}
+                />
+                <span>{t('users.role.committee') || 'וועד'}</span>
+              </label>
+              <label className="users-permissions-label">
+                <input
+                  type="checkbox"
+                  checked={hasPermission('admin') || hasPermission('manager')}
+                  onChange={() => {
+                    const has = hasPermission('admin') || hasPermission('manager')
+                    setPermissionsEdit(prev => {
+                      const without = prev.filter(x => x !== 'admin' && x !== 'manager')
+                      return has ? without : [...without, 'admin']
+                    })
+                  }}
+                />
+                <span>{t('users.role.admin') || 'מנהל'}</span>
+              </label>
+            </div>
+            <div className="users-modal-actions">
+              <button className="btn btn-primary" onClick={savePermissions} disabled={savingPermissions}>
+                {savingPermissions ? (t('common.saving') || 'שומר…') : (t('common.save') || 'שמור')}
+              </button>
+              <button className="btn btn-ghost" onClick={closePermissions}>
+                {t('common.cancel') || 'ביטול'}
               </button>
             </div>
           </div>

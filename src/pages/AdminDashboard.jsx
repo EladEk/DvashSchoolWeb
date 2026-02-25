@@ -5,13 +5,16 @@ import { useEffectiveRole } from '../utils/requireRole'
 import { getTranslations, saveTranslations, clearTranslationsCache } from '../services/adminService'
 import { publishTexts } from '../services/textService'
 import { saveAllTranslationsToDB } from '../services/firebaseDB'
+import { auth } from '../services/firebase'
+import { signOut } from 'firebase/auth'
+import { hasEditAccess, hasUserManagementAccess } from '../utils/requireRole'
 import UsersAdmin from '../components/admin/UsersAdmin'
 import './AdminDashboard.css'
 
 const AdminDashboard = () => {
   const navigate = useNavigate()
   const { t, reloadTranslations } = useTranslation()
-  const { role, phase } = useEffectiveRole()
+  const { role, roles, phase } = useEffectiveRole()
   
   // Also check session directly as fallback - use useMemo to ensure it's calculated correctly
   const session = (() => {
@@ -41,11 +44,14 @@ const AdminDashboard = () => {
   const [isTranslationEditorOpen, setIsTranslationEditorOpen] = useState(false)
   const translationsLoadedRef = useRef(false)
   
-  // Check if user has permission (editor or admin can edit translations, only admin can manage users)
-  // Use sessionRole immediately if effectiveRole is not yet loaded
-  const currentRole = effectiveRole || sessionRole
-  const canEditTranslations = currentRole === 'admin' || currentRole === 'editor'
-  const canManageUsers = currentRole === 'admin'
+  const effectiveRoles = roles.length ? roles : (() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('session') || '{}')
+      return s?.roles || (s?.role ? [s.role] : [])
+    } catch { return [] }
+  })()
+  const canEditTranslations = hasEditAccess(effectiveRoles)
+  const canManageUsers = hasUserManagementAccess(effectiveRoles)
   
 
   const loadTranslations = async () => {
@@ -72,7 +78,12 @@ const AdminDashboard = () => {
     return <div style={{ padding: '2rem', textAlign: 'center' }}>בודק הרשאות...</div>
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (auth) {
+      try {
+        await signOut(auth)
+      } catch (_) { /* ignore */ }
+    }
     sessionStorage.removeItem('adminAuthenticated')
     navigate('/admin')
   }

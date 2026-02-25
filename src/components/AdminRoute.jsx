@@ -1,10 +1,8 @@
 import { Navigate } from 'react-router-dom'
-import { useEffectiveRole } from '../utils/requireRole'
+import { useEffectiveRole, hasEditAccess, hasParliamentAdminAccess } from '../utils/requireRole'
 
 const AdminRoute = ({ children, requireRole = null }) => {
-  const { role, phase } = useEffectiveRole()
-  
-  // Check if user has admin session
+  const { role, roles, phase } = useEffectiveRole()
   const session = (() => {
     try {
       return JSON.parse(localStorage.getItem('session') || '{}') || {}
@@ -12,12 +10,10 @@ const AdminRoute = ({ children, requireRole = null }) => {
       return {}
     }
   })()
-  
-  const sessionRole = session?.role || ''
-  const effectiveRole = role || sessionRole
-  
-  const isAdminRole = effectiveRole === 'admin' || effectiveRole === 'editor' || effectiveRole === 'committee'
-  const hasAdminSession = sessionStorage.getItem('adminAuthenticated') === 'true' || isAdminRole
+  const effectiveRoles = roles.length ? roles : (session?.roles || (session?.role ? [session.role] : []))
+  const canEnterAdmin = hasEditAccess(effectiveRoles) || hasParliamentAdminAccess(effectiveRoles)
+  const hasAdminSession = sessionStorage.getItem('adminAuthenticated') === 'true' || canEnterAdmin
+  const effectiveRole = role || session?.role
 
   if (phase === 'checking' && !sessionRole) {
     return <div style={{ color: '#fff', textAlign: 'center', paddingTop: '20%' }}>בודק הרשאות...</div>
@@ -27,9 +23,10 @@ const AdminRoute = ({ children, requireRole = null }) => {
     return <Navigate to="/parliament/login" replace />
   }
 
-  // If specific role is required, check it
-  if (requireRole && (phase === 'allowed' || sessionRole)) {
-    if (!effectiveRole || !requireRole.includes(effectiveRole)) {
+  if (requireRole && Array.isArray(requireRole) && (phase === 'allowed' || effectiveRoles.length)) {
+    const normalized = effectiveRoles.map(r => String(r).trim().toLowerCase())
+    const hasRequired = requireRole.some(r => normalized.includes(String(r).trim().toLowerCase()))
+    if (!hasRequired) {
       return <Navigate to="/unauthorized" replace />
     }
   }

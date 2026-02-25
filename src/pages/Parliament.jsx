@@ -54,7 +54,7 @@ function formatParliamentDate(dateObj) {
 export default function Parliament() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { role: userRole } = useEffectiveRole()
+  const { roles } = useEffectiveRole()
   const [dates, setDates] = useState([])
   const [subjects, setSubjects] = useState([])
   const [myPending, setMyPending] = useState([])
@@ -88,7 +88,12 @@ export default function Parliament() {
 
   const isLoggedIn = !!userUid
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      const { auth } = await import('../services/firebase')
+      const { signOut } = await import('firebase/auth')
+      if (auth) await signOut(auth)
+    } catch (_) { /* ignore */ }
     localStorage.removeItem('session')
     window.location.reload()
   }
@@ -224,10 +229,10 @@ export default function Parliament() {
     return { openGroups, closedGroups }
   }, [subjects, dates])
 
-  const sessionRole = session?.role || ''
-  const effectiveRole = userRole || sessionRole
-  const canDeleteNotes = effectiveRole === UserRole.ADMIN || effectiveRole === UserRole.COMMITTEE
-  const canEditAnyNote = effectiveRole === UserRole.ADMIN || effectiveRole === UserRole.COMMITTEE
+  const sessionRoles = session?.roles || (session?.role ? [session.role] : [])
+  const effectiveRoles = roles.length ? roles : sessionRoles.map(r => String(r).trim().toLowerCase())
+  const canDeleteNotes = effectiveRoles.some(r => [UserRole.ADMIN, UserRole.MANAGER, UserRole.COMMITTEE].includes(r))
+  const canEditAnyNote = effectiveRoles.some(r => [UserRole.ADMIN, UserRole.MANAGER, UserRole.COMMITTEE].includes(r))
   
   const canEditNote = (note) => {
     if (!note || !isLoggedIn) return false
@@ -443,7 +448,10 @@ export default function Parliament() {
         )}
       </section>
 
-      {isLoggedIn && (session?.role === 'student' || session?.role === 'parent' || session?.role === 'admin' || session?.role === 'editor' || session?.role === 'committee') ? (
+      {isLoggedIn && (() => {
+        const r = session?.roles || (session?.role ? [session.role] : [])
+        return r.some(x => ['student', 'parent', 'admin', 'manager', 'editor', 'committee'].includes(String(x).toLowerCase()))
+      })() ? (
         <section className="parliament-section">
           <SubjectSubmitForm dates={dates} currentUser={user || session} />
         </section>

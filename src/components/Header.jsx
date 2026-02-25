@@ -16,14 +16,15 @@ const Header = () => {
   const isHomePage = location.pathname === '/'
   const isParentsAssociationPage = location.pathname === '/parents-association'
 
-  // Check if user is logged in and has admin/editor/committee role
+  // Check if user is logged in and has edit-capable role (admin, manager, editor)
   useEffect(() => {
     const checkAdminAccess = () => {
       try {
         const session = JSON.parse(localStorage.getItem('session') || 'null')
         if (session) {
-          const role = (session.role || '').trim().toLowerCase()
-          const hasAccess = role === 'admin' || role === 'editor' || role === 'committee' || session.mode === 'system-admin'
+          const sessionRoles = session?.roles || (session?.role ? [session.role] : [])
+          const r = sessionRoles.map(x => String(x).trim().toLowerCase())
+          const hasAccess = r.some(x => ['admin', 'manager', 'editor', 'committee'].includes(x)) || session.mode === 'system-admin'
           setHasAdminAccess(hasAccess)
         } else {
           setHasAdminAccess(false)
@@ -60,8 +61,9 @@ const Header = () => {
       try {
         const session = JSON.parse(localStorage.getItem('session') || 'null')
         if (session) {
-          const role = (session.role || '').trim().toLowerCase()
-          if (role === 'admin' || role === 'editor' || role === 'committee' || session.mode === 'system-admin') {
+          const sessionRoles = session?.roles || (session?.role ? [session.role] : [])
+            const r = sessionRoles.map(x => String(x).trim().toLowerCase())
+            if (r.some(x => ['admin', 'manager', 'editor', 'committee'].includes(x)) || session.mode === 'system-admin') {
             sessionStorage.setItem('adminAuthenticated', 'true')
             sessionStorage.removeItem('justExitedAdminMode')
             if (!isAdminMode) {

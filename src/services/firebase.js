@@ -1,6 +1,7 @@
 // Firebase configuration and service
 import { initializeApp } from 'firebase/app'
 import { getAnalytics } from 'firebase/analytics'
+import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
@@ -26,6 +27,9 @@ if (typeof window !== 'undefined') {
 
 // Initialize Firestore
 export const db = getFirestore(app)
+
+// Firebase Auth (used for Firestore write rules: sign in with custom token in edit mode)
+export const auth = typeof window !== 'undefined' ? getAuth(app) : null
 
 // Initialize Storage
 export const storage = getStorage(app)

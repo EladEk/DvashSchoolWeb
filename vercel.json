@@ -1,9 +1,1 @@
-{
-  "rewrites": [
-    { "source": "/api/auth", "destination": "/api/auth.js" },
-    { "source": "/api/publish-texts", "destination": "/api/publish-texts.js" },
-    { "source": "/api/save-json-local", "destination": "/api/save-json-local.js" },
-    { "source": "/api/export-all", "destination": "/api/export-all.js" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
+{"rewrites":[{"source":"/api/auth","destination":"/api/auth.js"},{"source":"/api/custom-token","destination":"/api/custom-token.js"},{"source":"/api/publish-texts","destination":"/api/publish-texts.js"},{"source":"/api/save-json-local","destination":"/api/save-json-local.js"},{"source":"/api/export-all","destination":"/api/export-all.js"},{"source":"/(.*)","destination":"/index.html"}]}

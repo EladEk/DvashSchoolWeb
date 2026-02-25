@@ -1373,7 +1373,11 @@ export const loadUsers = async (forceRefresh = false) => {
     }
     
     const snap = await getDocs(query(collection(db, 'appUsers'), orderBy('usernameLower')))
-    const users = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    const users = snap.docs.map(d => {
+      const data = d.data()
+      const roles = Array.isArray(data.roles) ? data.roles : (data.role ? [data.role] : ['student'])
+      return { id: d.id, ...data, roles, role: data.role || roles[0] }
+    })
     
     // Save to cache
     saveToCache(cacheKey, users)
@@ -1492,13 +1496,15 @@ export const checkUsernameExists = async (usernameLower, excludeId = null) => {
 export const createUser = async (userData) => {
   try {
     if (!db) throw new Error('Firebase not configured')
-    
+    const roles = Array.isArray(userData.roles) ? userData.roles : [userData.role || 'student']
+    const primaryRole = roles[0] || 'student'
     const docRef = await addDoc(collection(db, 'appUsers'), {
       username: userData.username,
       usernameLower: userData.usernameLower,
       firstName: userData.firstName || '',
       lastName: userData.lastName || '',
-      role: userData.role || 'student',
+      role: primaryRole,
+      roles,
       birthday: userData.birthday || '',
       classId: userData.classId || '',
       passwordHash: userData.passwordHash,
@@ -1567,21 +1573,26 @@ export const deleteUser = async (userId) => {
  * @param {string} docId - Document ID
  * @returns {Promise<string>} Role string or empty string
  */
+/** Normalize roles from doc: array or single role */
+export const getRolesFromDoc = (data) => {
+  if (!data) return []
+  if (Array.isArray(data.roles)) return data.roles.map(r => String(r).trim().toLowerCase()).filter(Boolean)
+  if (data.role) return [String(data.role).trim().toLowerCase()]
+  return []
+}
+
 export const getRoleByDocId = async (collectionName, docId) => {
   try {
     if (!db || !docId) return ''
-    
     const docSnap = await getDoc(doc(db, collectionName, docId))
     if (!docSnap.exists()) return ''
-    
     const data = docSnap.data()
+    const roles = collectionName === 'appUsers' ? getRolesFromDoc(data) : []
+    if (roles.length) return roles[0] // primary for backward compat
     const role = (data?.role || '').trim().toLowerCase()
-    const validRoles = ['admin', 'editor', 'committee', 'parent', 'student']
+    const validRoles = ['admin', 'manager', 'editor', 'committee', 'parent', 'student']
     if (validRoles.includes(role)) return role
-    
-    // Fallback for 'users' collection
     if (collectionName === 'users' && data?.isAdmin) return 'admin'
-    
     return ''
   } catch (error) {
     return ''
@@ -1607,19 +1618,54 @@ export const getRoleByField = async (collectionName, fieldName, fieldValue) => {
     const snap = await getDocs(q)
     
     if (snap.empty) return ''
-    
     const data = snap.docs[0].data()
+    if (collectionName === 'appUsers') {
+      const roles = getRolesFromDoc(data)
+      if (roles.length) return roles[0]
+    }
     const role = (data?.role || '').trim().toLowerCase()
-    const validRoles = ['admin', 'editor', 'committee', 'parent', 'student']
+    const validRoles = ['admin', 'manager', 'editor', 'committee', 'parent', 'student']
     if (validRoles.includes(role)) return role
-    
-    // Fallback for 'users' collection
     if (collectionName === 'users' && data?.isAdmin) return 'admin'
-    
     return ''
   } catch (error) {
     return ''
   }
+}
+
+/**
+ * Get roles array for a user by document ID (appUsers)
+ */
+export const getRolesByDocId = async (docId) => {
+  try {
+    if (!db || !docId) return []
+    const docSnap = await getDoc(doc(db, 'appUsers', docId))
+    if (!docSnap.exists()) return []
+    return getRolesFromDoc(docSnap.data())
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Resolve user roles array from database (appUsers by uid/usernameLower)
+ */
+export const resolveUserRoles = async (ident) => {
+  if (!ident) return []
+  const tryDoc = async (id) => (id ? getRolesByDocId(id) : [])
+  if (ident.uid) {
+    const roles = await tryDoc(ident.uid)
+    if (roles.length) return roles
+  }
+  if (!db || !ident.usernameLower) return []
+  const q = query(
+    collection(db, 'appUsers'),
+    where('usernameLower', '==', ident.usernameLower),
+    limit(1)
+  )
+  const snap = await getDocs(q)
+  if (snap.empty) return []
+  return getRolesFromDoc(snap.docs[0].data())
 }
 
 /**
@@ -1711,9 +1757,12 @@ export default {
   updateUser,
   deleteUser,
   // Roles
+  getRolesFromDoc,
+  getRolesByDocId,
   getRoleByDocId,
   getRoleByField,
   resolveUserRole,
+  resolveUserRoles,
   // Cache
   clearAllCache,
 }

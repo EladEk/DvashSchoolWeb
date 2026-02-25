@@ -16,6 +16,26 @@ function norm(v) {
   return (v || '').trim()
 }
 
+/** Get Firebase custom token from API and sign in so Firestore write rules (request.auth != null) allow saves in edit mode. */
+async function signInFirebaseWithCustomToken(username, password) {
+  const base = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : ''
+  const res = await fetch(`${base}/api/custom-token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: norm(username), password: norm(password) }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || err.error || 'Failed to sign in for edit mode')
+  }
+  const { token } = await res.json()
+  if (!token) throw new Error('No token returned')
+  const { signInWithCustomToken } = await import('firebase/auth')
+  const { auth } = await import('../services/firebase')
+  if (!auth) throw new Error('Firebase Auth not available')
+  await signInWithCustomToken(auth, token)
+}
+
 export default function ParliamentLogin() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -52,6 +72,7 @@ export default function ParliamentLogin() {
 
       // Special admin user (hidden, system-level)
       if (usernameLower === 'admin' && norm(loginPassword) === 'Panda123') {
+        await signInFirebaseWithCustomToken(loginUsername, loginPassword)
         const adminSession = {
           uid: 'system-admin',
           username: 'admin',
@@ -99,25 +120,32 @@ export default function ParliamentLogin() {
         return
       }
 
-      // Create session
+      // Sign in to Firebase Auth so Firestore write rules allow saves in edit mode
+      await signInFirebaseWithCustomToken(loginUsername, loginPassword)
+
+      // Support multiple roles per user (roles array or legacy single role)
+      const roles = Array.isArray(userData.roles) ? userData.roles : (userData.role ? [userData.role] : [])
+      const primaryRole = roles[0] || userData.role || 'student'
+
       const session = {
         uid: userResult.id,
         username: userData.username,
         usernameLower: userData.usernameLower,
         firstName: userData.firstName,
         lastName: userData.lastName,
-        role: userData.role,
+        role: primaryRole,
+        roles,
         displayName: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.username,
         mode: 'custom-firestore',
       }
 
       localStorage.setItem('session', JSON.stringify(session))
       
-      // If admin/editor/committee login, also set adminAuthenticated and redirect to admin dashboard
-      if (userData.role === 'admin' || userData.role === 'editor' || userData.role === 'committee') {
+      // Editor, committee, admin, manager can access admin area (edit site or parliament admin)
+      const canAccessAdmin = roles.some(r => ['admin', 'manager', 'editor', 'committee'].includes(String(r).toLowerCase()))
+      if (canAccessAdmin) {
         sessionStorage.setItem('adminAuthenticated', 'true')
         sessionStorage.removeItem('justExitedAdminMode') // Remove flag when entering admin mode
-        // Auto-redirect admin/editor/committee to admin dashboard
         navigate('/admin/dashboard', { replace: true })
         return
       }

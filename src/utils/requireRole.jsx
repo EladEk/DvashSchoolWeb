@@ -1,21 +1,29 @@
 // Role-based access control utilities
 import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
-import { resolveUserRole } from '../services/firebaseDB'
+import { resolveUserRoles } from '../services/firebaseDB'
 
 export const UserRole = {
-  ADMIN: 'admin',        // מנהל - כל מה שוועד יכול + עריכת משתמשים + עריכת האתר
-  EDITOR: 'editor',      // עורך - מה שהורה יכול + עריכת האתר (תרגומים בלבד)
-  COMMITTEE: 'committee', // וועד - מה שהורה יכול + פתיחת/סגירת תאריכים + אישור/דחיית נושאים
-  PARENT: 'parent',      // הורה - יכול להציע נושאים לפרלמנט
-  STUDENT: 'student',    // תלמיד - יכול להציע נושאים לפרלמנט
+  ADMIN: 'admin',
+  MANAGER: 'manager',
+  EDITOR: 'editor',
+  COMMITTEE: 'committee',
+  PARENT: 'parent',
+  STUDENT: 'student',
 }
 
-function normalizeRole(v) {
-  if (typeof v !== 'string') return ''
-  const r = v.trim().toLowerCase()
-  const validRoles = ['admin', 'editor', 'committee', 'parent', 'student']
-  return validRoles.includes(r) ? r : ''
+/** Roles that can enter edit mode (site content: translations, images) */
+export const EDIT_CAPABLE_ROLES = ['admin', 'manager', 'editor']
+
+/** Roles that can access parliament admin (dates, approve/delete subjects) */
+export const PARLIAMENT_ADMIN_ROLES = ['admin', 'manager', 'committee']
+
+/** Roles that can manage users (only admin/manager) */
+export const USER_MANAGER_ROLES = ['admin', 'manager']
+
+function normalizeRoles(arr) {
+  if (!Array.isArray(arr)) return []
+  return arr.map(r => String(r).trim().toLowerCase()).filter(Boolean)
 }
 
 function getSession() {
@@ -26,11 +34,45 @@ function getSession() {
   }
 }
 
-// resolveRoleFromDB is now handled by firebaseDB.resolveUserRole
+/** Primary role for display (highest permission) */
+function primaryRole(roles) {
+  const r = normalizeRoles(roles)
+  if (r.includes('admin') || r.includes('manager')) return 'admin'
+  if (r.includes('editor')) return 'editor'
+  if (r.includes('committee')) return 'committee'
+  if (r.includes('parent')) return 'parent'
+  if (r.includes('student')) return 'student'
+  return r[0] || ''
+}
+
+/** Can edit website (translations, images) */
+export function hasEditAccess(roles) {
+  const r = normalizeRoles(roles)
+  return r.some(x => ['admin', 'manager', 'editor'].includes(x))
+}
+
+/** Can do parliament admin (open dates, approve/delete subjects) */
+export function hasParliamentAdminAccess(roles) {
+  const r = normalizeRoles(roles)
+  return r.some(x => ['admin', 'manager', 'committee'].includes(x))
+}
+
+/** Can manage users */
+export function hasUserManagementAccess(roles) {
+  const r = normalizeRoles(roles)
+  return r.some(x => ['admin', 'manager'].includes(x))
+}
+
+/** Can suggest/reply to parliament (student/parent) */
+export function canSuggestParliament(roles) {
+  const r = normalizeRoles(roles)
+  return r.some(x => ['student', 'parent'].includes(x))
+}
 
 export function useEffectiveRole() {
-  const [phase, setPhase] = useState('checking') // 'checking' | 'allowed' | 'denied' | 'none'
+  const [phase, setPhase] = useState('checking')
   const [role, setRole] = useState('')
+  const [roles, setRoles] = useState([])
 
   useEffect(() => {
     let alive = true
@@ -38,88 +80,74 @@ export function useEffectiveRole() {
     const checkRole = async () => {
       try {
         const sess = getSession()
-        
-        // System admin (hidden user)
         if (sess?.mode === 'system-admin' || sess?.uid === 'system-admin') {
           if (!alive) return
+          setRoles(['admin'])
           setRole('admin')
           setPhase('allowed')
           return
         }
-        
-        // First, check if role is in session (faster, no DB call needed)
-        if (sess?.role) {
-          const sessionRole = normalizeRole(sess.role)
-          if (sessionRole) {
-            if (!alive) return
-            setRole(sessionRole)
-            setPhase('allowed')
-            // Still verify with DB in background, but use session role immediately
-          }
+        const sessionRoles = normalizeRoles(sess?.roles || (sess?.role ? [sess.role] : []))
+        if (sessionRoles.length) {
+          if (!alive) return
+          setRoles(sessionRoles)
+          setRole(primaryRole(sessionRoles))
+          setPhase('allowed')
         }
-        
         const ident = {
-          uid: sess?.uid || undefined,
-          email: sess?.email || undefined,
-          usernameLower: sess?.usernameLower || sess?.username ? String(sess.usernameLower || sess.username).toLowerCase() : undefined,
+          uid: sess?.uid,
+          email: sess?.email,
+          usernameLower: sess?.usernameLower || (sess?.username ? String(sess.username).toLowerCase() : undefined),
         }
-
         if (!ident.uid && !ident.email && !ident.usernameLower) {
           if (!alive) return
           setPhase('none')
           setRole('')
+          setRoles([])
           return
         }
-
-        const r = await resolveUserRole(ident)
+        const dbRoles = await resolveUserRoles(ident)
         if (!alive) return
-
-        if (r) {
-          setRole(r)
+        if (dbRoles.length) {
+          setRoles(dbRoles)
+          setRole(primaryRole(dbRoles))
           setPhase('allowed')
-        } else {
-          // If no role from DB but we have session role, keep it
-          if (!sess?.role) {
-            setRole('')
-            setPhase('denied')
-          }
+        } else if (!sessionRoles.length) {
+          setRole('')
+          setRoles([])
+          setPhase('denied')
         }
       } catch (e) {
         console.error('[useEffectiveRole] error:', e)
         if (!alive) return
-        // If we have session role, keep it even on error
         const sess = getSession()
-        if (sess?.role) {
-          const sessionRole = normalizeRole(sess.role)
-          if (sessionRole) {
-            setRole(sessionRole)
-            setPhase('allowed')
-          } else {
-            setRole('')
-            setPhase('denied')
-          }
+        const sessionRoles = normalizeRoles(sess?.roles || (sess?.role ? [sess.role] : []))
+        if (sessionRoles.length) {
+          setRoles(sessionRoles)
+          setRole(primaryRole(sessionRoles))
+          setPhase('allowed')
         } else {
           setRole('')
+          setRoles([])
           setPhase('denied')
         }
       }
     }
 
     checkRole()
-    // Re-check when session changes
     const interval = setInterval(checkRole, 5000)
-
     return () => {
       alive = false
       clearInterval(interval)
     }
   }, [])
 
-  return { phase, role }
+  return { phase, role, roles }
 }
 
 export const RequireRole = ({ allowed, children }) => {
-  const { phase, role } = useEffectiveRole()
+  const { phase, roles } = useEffectiveRole()
+  const hasAllowed = Array.isArray(allowed) && allowed.length && roles.some(r => allowed.includes(r))
 
   if (phase === 'checking') {
     return <div style={{ color: '#fff', textAlign: 'center', paddingTop: '20%' }}>בודק הרשאות...</div>
@@ -127,7 +155,7 @@ export const RequireRole = ({ allowed, children }) => {
   if (phase === 'none') {
     return <Navigate to="/" replace />
   }
-  if (phase === 'denied' || !role || !allowed.includes(role)) {
+  if (phase === 'denied' || !hasAllowed) {
     return <Navigate to="/unauthorized" replace />
   }
   return <>{children}</>
@@ -135,7 +163,8 @@ export const RequireRole = ({ allowed, children }) => {
 
 export function withRole(Component, allowed) {
   const Wrapped = (props) => {
-    const { phase, role } = useEffectiveRole()
+    const { phase, roles } = useEffectiveRole()
+    const hasAllowed = Array.isArray(allowed) && roles.some(r => allowed.includes(r))
 
     if (phase === 'checking') {
       return <div style={{ color: '#fff', textAlign: 'center', paddingTop: '20%' }}>בודק הרשאות...</div>
@@ -143,7 +172,7 @@ export function withRole(Component, allowed) {
     if (phase === 'none') {
       return <Navigate to="/" replace />
     }
-    if (phase === 'denied' || !role || !allowed.includes(role)) {
+    if (phase === 'denied' || !hasAllowed) {
       return <Navigate to="/unauthorized" replace />
     }
     return <Component {...props} />

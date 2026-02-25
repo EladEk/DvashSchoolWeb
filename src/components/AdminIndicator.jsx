@@ -13,15 +13,16 @@ const AdminIndicator = () => {
   const [hasParliamentAccess, setHasParliamentAccess] = useState(false)
   const [hasEditAccess, setHasEditAccess] = useState(false)
 
-  // Check Parliament access (admin/committee) and edit access (admin/editor) for site content
+  // Edit access: admin, manager, editor only. Parliament access: admin, manager, committee.
   useEffect(() => {
     const checkAccess = () => {
       try {
         const session = JSON.parse(localStorage.getItem('session') || 'null')
         if (session) {
-          const role = (session.role || '').trim().toLowerCase()
-          setHasParliamentAccess(role === 'admin' || role === 'committee' || session.mode === 'system-admin')
-          setHasEditAccess(role === 'admin' || role === 'editor' || session.mode === 'system-admin')
+          const sessionRoles = session?.roles || (session?.role ? [session.role] : [])
+          const r = sessionRoles.map(x => String(x).trim().toLowerCase())
+          setHasParliamentAccess(r.some(x => ['admin', 'manager', 'committee'].includes(x)) || session.mode === 'system-admin')
+          setHasEditAccess(r.some(x => ['admin', 'manager', 'editor'].includes(x)) || session.mode === 'system-admin')
         } else {
           setHasParliamentAccess(false)
           setHasEditAccess(false)
@@ -82,9 +83,8 @@ const AdminIndicator = () => {
       const session = JSON.parse(localStorage.getItem('session') || 'null')
       
       if (session) {
-        const role = (session.role || '').trim().toLowerCase()
-        // Check if user has permission to enter admin mode (admin, editor, or committee)
-        if (role === 'admin' || role === 'editor' || role === 'committee' || session.mode === 'system-admin') {
+        const sessionRoles = (session?.roles || (session?.role ? [session.role] : [])).map(x => String(x).trim().toLowerCase())
+        if (sessionRoles.some(x => ['admin', 'manager', 'editor'].includes(x)) || session.mode === 'system-admin') {
           // User is logged in and has permission - activate admin mode directly
           sessionStorage.setItem('adminAuthenticated', 'true')
           // Update state immediately

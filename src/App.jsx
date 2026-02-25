@@ -72,7 +72,7 @@ function AppContent() {
         <Route
           path="/admin/dashboard"
           element={
-            <AdminRoute requireRole={['admin', 'editor']}>
+            <AdminRoute requireRole={['admin', 'manager', 'editor']}>
               <AdminDashboard />
             </AdminRoute>
           }
@@ -80,7 +80,7 @@ function AppContent() {
         <Route
           path="/admin/parliament"
           element={
-            <RequireRole allowed={['admin', 'committee']}>
+            <RequireRole allowed={['admin', 'manager', 'committee']}>
               <ParliamentAdmin />
             </RequireRole>
           }
