@@ -19,22 +19,42 @@ function getAdmin() {
   return import('firebase-admin').then((m) => m.default || m)
 }
 
+function parseServiceAccount(raw) {
+  if (!raw || typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+
+  const normalized = trimmed.replace(/\\n/g, '\n')
+
+  // Try direct JSON parse
+  try {
+    return JSON.parse(normalized)
+  } catch (_) {}
+
+  // Try base64 (common when pasting multi-line JSON into Vercel)
+  try {
+    const decoded = Buffer.from(trimmed, 'base64').toString('utf8')
+    const parsed = JSON.parse(decoded.replace(/\\n/g, '\n'))
+    if (parsed && (parsed.private_key || parsed.client_email)) return parsed
+  } catch (_) {}
+
+  return null
+}
+
 async function ensureFirebaseAdmin(admin) {
   if (admin.apps && admin.apps.length > 0) {
     return admin.apps[0]
   }
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT
   if (!raw) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT is not set')
+    throw new Error('FIREBASE_SERVICE_ACCOUNT is not set. In Vercel: Project Settings → Environment Variables → add FIREBASE_SERVICE_ACCOUNT with the full Firebase service account JSON (single line, use \\n for newlines in private_key).')
   }
-  let serviceAccount
-  try {
-    serviceAccount = typeof raw === 'string' ? JSON.parse(raw.replace(/\\n/g, '\n')) : raw
-  } catch (e) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON')
+  const serviceAccount = parseServiceAccount(raw)
+  if (!serviceAccount) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON. Use the full JSON from Firebase Console → Project Settings → Service accounts → Generate new private key. Paste as one line with \\n for newlines in private_key, or base64-encode the JSON.')
   }
   if (!serviceAccount.private_key || !serviceAccount.client_email || !serviceAccount.project_id) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT is missing required fields')
+    throw new Error('FIREBASE_SERVICE_ACCOUNT is missing required fields (private_key, client_email, project_id)')
   }
   if (serviceAccount.private_key) {
     serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n')
