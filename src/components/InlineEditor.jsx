@@ -22,8 +22,8 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
   const loadValues = async () => {
     try {
       setLoading(true)
-      // Load current translations (skip Firebase for speed)
-      const current = await getTranslations(true)
+      // In edit mode load from DB so editor shows actual texts, not tokens
+      const current = await getTranslations(false, true)
       
       // Load default translations (cached)
       const defaults = await getDefaultTranslations()
@@ -249,10 +249,10 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
         return
       }
       
-      // Step 3: Update UI from localStorage (no Firebase read)
-      clearTranslationsCache() // Clear cache to force reload
-      reloadTranslations().catch(console.error) // Uses getTranslations(true) - skips Firebase
-      
+      // Step 3: Reload texts from DB so the page shows actual text, not keys
+      clearTranslationsCache()
+      await reloadTranslations(true)
+
       // Step 4: Call onSave callback after successful save
       if (onSave && typeof onSave === 'function') {
         try {
@@ -261,7 +261,7 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
           console.error('Error in onSave callback:', saveError)
         }
       }
-      
+
       setSaveMessage('Saved to Firebase!')
       setTimeout(() => {
         setSaveMessage('')
@@ -308,6 +308,12 @@ const InlineEditor = ({ translationKey, onClose, onSave }) => {
   const modalContent = (
     <div className="inline-editor-overlay" onClick={handleClose}>
       <div className="inline-editor-modal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
+        {saving && (
+          <div className="inline-editor-saving-overlay" aria-hidden="false">
+            <div className="action-loader-spinner" />
+            <p>{t('common.saving') || 'שומר...'}</p>
+          </div>
+        )}
         <div className="editor-header">
           <h3>{t('inlineEditor.title') || 'עריכת תרגום'}: {translationKey}</h3>
           <button className="close-btn" onClick={handleClose}>×</button>

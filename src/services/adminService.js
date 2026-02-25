@@ -15,11 +15,11 @@ export const getDefaultTranslations = async () => {
   return defaultTranslationsCache
 }
 
-export const getTranslations = async (skipFirebase = false) => {
+export const getTranslations = async (skipFirebase = false, forceRefresh = false) => {
   try {
     const { loadTexts, isEditMode } = await import('./textService')
-    const forceRefresh = !isEditMode()
-    const translations = await loadTexts(forceRefresh)
+    const shouldRefresh = forceRefresh || !isEditMode()
+    const translations = await loadTexts(shouldRefresh)
     translationsCache = translations
     if (isEditMode()) {
       try {
