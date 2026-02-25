@@ -4,9 +4,9 @@ rules_version = '2';
 // (Requires Firebase CLI and firebase.json with "firestore": { "rules": "firestore.rules" })
 //
 // Client (React) uses Firestore JS SDK; API uses Admin SDK (bypasses these rules).
-// All write rules require request.auth != null (Firebase Auth). If the app uses
-// only custom login (appUsers), client writes will be denied unless you enable
-// Firebase Auth (e.g. signInWithEmailAndPassword) or perform writes via API.
+// Auth is DB-only: appUsers (username + hashed password), session in localStorage.
+// Write rules below use request.auth != null; client writes will be denied unless
+// you route privileged writes through an API that uses Admin SDK and validates session.
 
 service cloud.firestore {
   match /databases/{database}/documents {

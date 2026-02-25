@@ -16,25 +16,7 @@ function norm(v) {
   return (v || '').trim()
 }
 
-/** Get Firebase custom token from API and sign in so Firestore write rules (request.auth != null) allow saves in edit mode. */
-async function signInFirebaseWithCustomToken(username, password) {
-  const base = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : ''
-  const res = await fetch(`${base}/api/custom-token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: norm(username), password: norm(password) }),
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.message || err.error || 'Failed to sign in for edit mode')
-  }
-  const { token } = await res.json()
-  if (!token) throw new Error('No token returned')
-  const { signInWithCustomToken } = await import('firebase/auth')
-  const { auth } = await import('../services/firebase')
-  if (!auth) throw new Error('Firebase Auth not available')
-  await signInWithCustomToken(auth, token)
-}
+// Auth is DB-only: users in Firestore appUsers (username + SHA-256 hashed password). Session stored in localStorage. No Firebase Authentication used.
 
 export default function ParliamentLogin() {
   const { t } = useTranslation()
@@ -72,10 +54,6 @@ export default function ParliamentLogin() {
 
       // Special admin user (hidden, system-level)
       if (usernameLower === 'admin' && norm(loginPassword) === 'Panda123') {
-        const isE2E = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('e2e') === '1'
-        if (!isE2E) {
-          await signInFirebaseWithCustomToken(loginUsername, loginPassword)
-        }
         const adminSession = {
           uid: 'system-admin',
           username: 'admin',
@@ -122,9 +100,6 @@ export default function ParliamentLogin() {
         setLoading(false)
         return
       }
-
-      // Sign in to Firebase Auth so Firestore write rules allow saves in edit mode
-      await signInFirebaseWithCustomToken(loginUsername, loginPassword)
 
       // Support multiple roles per user (roles array or legacy single role)
       const roles = Array.isArray(userData.roles) ? userData.roles : (userData.role ? [userData.role] : [])
