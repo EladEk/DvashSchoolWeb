@@ -105,8 +105,11 @@ export const TranslationProvider = ({ children }) => {
     await loadTranslations(forceRefresh)
   }
 
+  // Content is ready only when we have translations (avoid showing keys like "hero.title" instead of text)
+  const isReady = translations != null
+
   return (
-    <TranslationContext.Provider value={{ t, language, changeLanguage, reloadTranslations, isLoading }}>
+    <TranslationContext.Provider value={{ t, language, changeLanguage, reloadTranslations, isLoading, isReady }}>
       {children}
     </TranslationContext.Provider>
   )

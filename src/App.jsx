@@ -26,11 +26,11 @@ import './components/Loader.css'
 function AppContent() {
   const location = useLocation()
   const { isAdminMode } = useAdmin()
-  const { isLoading, t } = useTranslation()
+  const { isLoading, isReady, t } = useTranslation()
   useScrollToHash() // Now this is inside Router context
 
-  // Show loader while translations are loading
-  if (isLoading) {
+  // Show loader until translations are loaded (avoids flashing keys like "hero" / "hero.title" instead of real text)
+  if (!isReady || isLoading) {
     return (
       <div className="app-loader">
         <img 

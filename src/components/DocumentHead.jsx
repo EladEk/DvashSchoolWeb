@@ -2,8 +2,8 @@
 // SEO: title, description, canonical, Open Graph, Twitter Card (no change to app logic)
 
 const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://dvashschool.vercel.app'
-// Share image: use public/og-image.jpg (1200x630) if you add it; otherwise logo is used
-const DEFAULT_OG_IMAGE = `${SITE_URL}/assets/LOGO.avif`
+// Share image: public/og-image.png (1200×630 recommended for Facebook/WhatsApp/LinkedIn/Twitter)
+const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`
 
 export default function DocumentHead({ title, description, canonicalPath }) {
   const canonical = canonicalPath ? `${SITE_URL}${canonicalPath.startsWith('/') ? canonicalPath : `/${canonicalPath}`}` : null
