@@ -496,13 +496,16 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
     if (cached !== null && cached !== undefined) return cached
   }
 
-  // Public mode: load from Git file (content/texts.json), not from DB
+  // Public mode: load from Git file (content/texts.json) only — no DB fallback
   if (!isEditModeForImages()) {
     try {
       const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL.replace(/\/+$/, '') : ''
-      const contentPath = `${base || ''}/content/texts.json`
+      const pathPart = (base ? base + '/' : '/') + 'content/texts.json'
+      const contentUrl = (typeof window !== 'undefined' && window.location?.origin)
+        ? (window.location.origin + pathPart)
+        : pathPart
       const cacheBuster = `?t=${Date.now()}`
-      const response = await fetch(`${contentPath}${cacheBuster}`, {
+      const response = await fetch(`${contentUrl}${cacheBuster}`, {
         cache: 'no-store',
         headers: {
           'Accept': 'application/json',
@@ -514,7 +517,10 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
       const contentType = response.headers.get('Content-Type') || ''
       if (!contentType.includes('application/json')) return websiteCache.get(cacheKey, 'public') ?? null
       const texts = await response.json()
-      const images = (texts && typeof texts === 'object' && (texts.images || texts.he?.images)) ? (texts.images || texts.he?.images || {}) : {}
+      if (!texts || typeof texts !== 'object') return null
+      const images = texts.images && typeof texts.images === 'object'
+        ? texts.images
+        : (texts.he?.images && typeof texts.he.images === 'object' ? texts.he.images : {})
       const imagePath = images[imageKey] ?? null
       const normalizedPath = imagePath ? normalizeImagePath(imagePath) : null
       websiteCache.set(cacheKey, normalizedPath, 'public', IMAGE_CACHE_TTL_PUBLIC_MS)
