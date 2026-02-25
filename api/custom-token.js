@@ -32,11 +32,11 @@ function parseServiceAccount(raw) {
   // Fix: smart/curly quotes from paste
   trimmed = trimmed.replace(/\u201C|\u201D/g, '"').replace(/\u2018|\u2019/g, "'")
 
-  const normalized = trimmed.replace(/\\n/g, '\n')
+  // Parse as-is: private_key may contain \n (two chars); do NOT replace \\n in the whole string here or JSON becomes invalid. We normalize private_key after parse in ensureFirebaseAdmin.
 
   // Try direct JSON parse
   try {
-    return JSON.parse(normalized)
+    return JSON.parse(trimmed)
   } catch (_) {}
 
   // Try base64 (common when pasting multi-line JSON into Vercel)
@@ -45,7 +45,7 @@ function parseServiceAccount(raw) {
     const fixed = decoded.replace(/"private_key"\s*:\s*"([\s\S]*?)"/g, (_, keyContent) =>
       '"private_key": "' + keyContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\\n') + '"'
     )
-    const parsed = JSON.parse(fixed.replace(/\\n/g, '\n'))
+    const parsed = JSON.parse(fixed)
     if (parsed && (parsed.private_key || parsed.client_email)) return parsed
   } catch (_) {}
 
