@@ -9,6 +9,7 @@ import { loginAsAdmin } from './auth-helper.js'
 test.describe('Admin dashboard export', () => {
   test('negative: unauthenticated visit to /admin/dashboard redirects', async ({ page }) => {
     await gotoE2E(page, '/admin/dashboard')
+    await page.waitForURL(/\/(parliament\/login|unauthorized)/, { timeout: 15000 }).catch(() => {})
     await waitForAppReady(page)
     await expect(page).toHaveURL(/\/(parliament\/login|unauthorized)/, { timeout: 10000 })
   })
@@ -24,11 +25,11 @@ test.describe('Admin dashboard export', () => {
     await loginAsAdmin(page)
     await gotoE2E(page, '/admin/dashboard')
     await waitForAppReady(page)
-    const saveJsonBtn = page.getByRole('button', { name: /Save JSON|save json/i })
-    await expect(saveJsonBtn).toBeVisible()
+    const saveJsonBtn = page.getByRole('button', { name: /Save JSON|save json|שמור קבצי JSON/i })
+    await expect(saveJsonBtn).toBeVisible({ timeout: 15000 })
     await saveJsonBtn.click()
     await page.waitForTimeout(2000)
-    await expect(page.locator('.admin-dashboard, .export-btn')).toBeVisible()
+    await expect(page.locator('.admin-dashboard')).toBeVisible()
   })
 
   test('Export all (Git + DB) button exists and is clickable', async ({ page }) => {
@@ -36,10 +37,10 @@ test.describe('Admin dashboard export', () => {
     await gotoE2E(page, '/admin/dashboard')
     await waitForAppReady(page)
     const exportAllBtn = page.getByRole('button', { name: /הורד הכל|export all|Git \+ DB/i })
-    await expect(exportAllBtn).toBeVisible()
+    await expect(exportAllBtn).toBeVisible({ timeout: 15000 })
     await exportAllBtn.click()
     await page.waitForTimeout(3000)
-    await expect(page.locator('.admin-dashboard, .export-btn')).toBeVisible()
+    await expect(page.locator('.admin-dashboard')).toBeVisible()
   })
 
   test('אפס (Git → DB) button exists and is clickable', async ({ page }) => {

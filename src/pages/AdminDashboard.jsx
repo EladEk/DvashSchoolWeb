@@ -75,7 +75,11 @@ const AdminDashboard = () => {
   
   // Show loading while checking role (after all hooks)
   if (phase === 'checking' && !sessionRole) {
-    return <div style={{ padding: '2rem', textAlign: 'center' }}>בודק הרשאות...</div>
+    return (
+      <div className="admin-dashboard-checking" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-color, #333)', minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        בודק הרשאות...
+      </div>
+    )
   }
 
   const handleLogout = async () => {

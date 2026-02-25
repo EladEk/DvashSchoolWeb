@@ -33,14 +33,24 @@ export default function apiCustomToken() {
 
           const handler = (await import('./api/custom-token.js')).default
 
+          const headers = {}
           const resWrapper = {
             _statusCode: 200,
+            setHeader(name, value) {
+              headers[name] = value
+              return this
+            },
             status(code) {
               this._statusCode = code
               return this
             },
+            end(body) {
+              res.writeHead(this._statusCode, { ...headers, 'Content-Type': 'application/json' })
+              res.end(body != null ? body : '')
+              return this
+            },
             json(obj) {
-              res.writeHead(this._statusCode, { 'Content-Type': 'application/json' })
+              res.writeHead(this._statusCode, { ...headers, 'Content-Type': 'application/json' })
               res.end(JSON.stringify(obj))
               return this
             }

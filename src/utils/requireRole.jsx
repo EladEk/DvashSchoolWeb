@@ -150,7 +150,11 @@ export const RequireRole = ({ allowed, children }) => {
   const hasAllowed = Array.isArray(allowed) && allowed.length && roles.some(r => allowed.includes(r))
 
   if (phase === 'checking') {
-    return <div style={{ color: '#fff', textAlign: 'center', paddingTop: '20%' }}>בודק הרשאות...</div>
+    return (
+      <div className="require-role-checking" style={{ textAlign: 'center', paddingTop: '20%', padding: '2rem', color: 'var(--text-color, #333)', minHeight: '40vh' }}>
+        בודק הרשאות...
+      </div>
+    )
   }
   if (phase === 'none') {
     return <Navigate to="/" replace />
@@ -167,7 +171,11 @@ export function withRole(Component, allowed) {
     const hasAllowed = Array.isArray(allowed) && roles.some(r => allowed.includes(r))
 
     if (phase === 'checking') {
-      return <div style={{ color: '#fff', textAlign: 'center', paddingTop: '20%' }}>בודק הרשאות...</div>
+      return (
+        <div className="require-role-checking" style={{ textAlign: 'center', paddingTop: '20%', padding: '2rem', color: 'var(--text-color, #333)', minHeight: '40vh' }}>
+          בודק הרשאות...
+        </div>
+      )
     }
     if (phase === 'none') {
       return <Navigate to="/" replace />

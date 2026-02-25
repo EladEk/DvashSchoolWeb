@@ -1,4 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+
+function RedirectToLogin() {
+  const location = useLocation()
+  return <Navigate to={`/parliament/login${location.search || ''}`} replace />
+}
 import { useAdmin } from './contexts/AdminContext'
 import { useTranslation } from './contexts/TranslationContext'
 import Header from './components/Header'
@@ -26,11 +31,11 @@ import './components/Loader.css'
 function AppContent() {
   const location = useLocation()
   const { isAdminMode } = useAdmin()
-  const { isLoading, isReady, t } = useTranslation()
+  const { textsLoaded, t } = useTranslation()
   useScrollToHash() // Now this is inside Router context
 
-  // Show loader until translations are loaded (avoids flashing keys like "hero" / "hero.title" instead of real text)
-  if (!isReady || isLoading) {
+  // Show loader until all texts are loaded (avoids showing translation keys instead of real text)
+  if (!textsLoaded) {
     return (
       <div className="app-loader">
         <img 
@@ -67,8 +72,8 @@ function AppContent() {
         <Route path="/parliament" element={<Parliament />} />
         <Route path="/parliament/login" element={<ParliamentLogin />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
-        <Route path="/admin" element={<Navigate to="/parliament/login" replace />} />
-        <Route path="/admin/" element={<Navigate to="/parliament/login" replace />} />
+        <Route path="/admin" element={<RedirectToLogin />} />
+        <Route path="/admin/" element={<RedirectToLogin />} />
         <Route
           path="/admin/dashboard"
           element={

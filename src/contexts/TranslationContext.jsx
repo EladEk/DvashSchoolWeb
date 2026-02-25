@@ -20,12 +20,16 @@ export const TranslationProvider = ({ children }) => {
 
   useEffect(() => {
     if (isE2E) return
-    // Prevent double execution in React Strict Mode
+    // Prevent double execution in React Strict Mode (same mount), but allow load after remount
     if (loadingRef.current) return
     loadingRef.current = true
 
     // Load translations using new text service
     loadTranslations()
+
+    return () => {
+      loadingRef.current = false
+    }
   }, [isE2E])
 
   // When edit mode changes, reload from cache for the new mode (no network clear – cache is split by mode)
@@ -105,11 +109,11 @@ export const TranslationProvider = ({ children }) => {
     await loadTranslations(forceRefresh)
   }
 
-  // Content is ready only when we have translations (avoid showing keys like "hero.title" instead of text)
-  const isReady = translations != null
+  // Show page only when all texts are loaded: we have translations and loading has finished
+  const textsLoaded = translations != null && !isLoading
 
   return (
-    <TranslationContext.Provider value={{ t, language, changeLanguage, reloadTranslations, isLoading, isReady }}>
+    <TranslationContext.Provider value={{ t, language, changeLanguage, reloadTranslations, isLoading, textsLoaded }}>
       {children}
     </TranslationContext.Provider>
   )

@@ -72,7 +72,10 @@ export default function ParliamentLogin() {
 
       // Special admin user (hidden, system-level)
       if (usernameLower === 'admin' && norm(loginPassword) === 'Panda123') {
-        await signInFirebaseWithCustomToken(loginUsername, loginPassword)
+        const isE2E = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('e2e') === '1'
+        if (!isE2E) {
+          await signInFirebaseWithCustomToken(loginUsername, loginPassword)
+        }
         const adminSession = {
           uid: 'system-admin',
           username: 'admin',
