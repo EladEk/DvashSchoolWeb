@@ -41,7 +41,7 @@ export default function UsersAdmin() {
   const [toast, setToast] = useState({ show: false, kind: '', message: '' })
   
   // Only admins can manage users
-  const canManageUsers = (roles && roles.length) ? roles.some(r => ['admin', 'manager'].includes(String(r).toLowerCase())) : role === 'admin'
+  const canManageUsers = (effectiveRoles && effectiveRoles.length) ? effectiveRoles.some(r => ['admin', 'manager'].includes(String(r).toLowerCase())) : role === 'admin'
 
   const [form, setForm] = useState({
     username: '',
