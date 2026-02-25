@@ -75,6 +75,13 @@ const ParentsAssociationSections = () => {
           if (typeof localStorage !== 'undefined') {
             localStorage.removeItem(`image_${imageKey}`)
           }
+          // Remove key from translations.images so it is gone everywhere (saved docs, publish)
+          if (translations.he?.images && typeof translations.he.images === 'object') {
+            delete translations.he.images[imageKey]
+          }
+          if (translations.en?.images && typeof translations.en.images === 'object') {
+            delete translations.en.images[imageKey]
+          }
         } catch (imgErr) {
           console.warn('Could not delete section image from images list:', imgErr)
         }

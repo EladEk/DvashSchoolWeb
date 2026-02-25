@@ -4,7 +4,7 @@ import { useTranslation } from '../contexts/TranslationContext'
 import { useEffectiveRole } from '../utils/requireRole'
 import { getTranslations, saveTranslations, clearTranslationsCache } from '../services/adminService'
 import { publishTexts } from '../services/textService'
-import { saveAllTranslationsToDB } from '../services/firebaseDB'
+import { saveAllTranslationsToDB, saveImagePathToDB, clearAllImageCaches } from '../services/firebaseDB'
 import { auth } from '../services/firebase'
 import { signOut } from 'firebase/auth'
 import { hasEditAccess, hasUserManagementAccess } from '../utils/requireRole'
@@ -283,13 +283,24 @@ const AdminDashboard = () => {
 
       await saveAllTranslationsToDB(resetTranslations)
 
+      // Sync images from Git to DB (content/texts.json images → Firestore images collection)
+      const gitImages = gitTexts?.images && typeof gitTexts.images === 'object' ? gitTexts.images : {}
+      for (const [imageKey, imagePath] of Object.entries(gitImages)) {
+        try {
+          await saveImagePathToDB(imageKey, imagePath ?? null)
+        } catch (imgErr) {
+          console.warn(`Could not reset image ${imageKey} to DB:`, imgErr)
+        }
+      }
+      clearAllImageCaches()
+
       setTranslations(resetTranslations)
       setEditedTranslations(resetTranslations)
       setHasChanges(false)
       translationsLoadedRef.current = true
 
       await reloadTranslations(true)
-      setMessage('✅ בוצע איפוס: טקסטים נטענו מ-Git ונשמרו ל-DB')
+      setMessage('✅ בוצע איפוס: טקסטים ותמונות נטענו מ-Git ונשמרו ל-DB')
       setTimeout(() => setMessage(''), 5000)
     } catch (error) {
       setMessage(`❌ Error resetting DB from Git: ${error.message || 'Unknown error'}`)
