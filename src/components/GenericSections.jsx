@@ -5,7 +5,7 @@ import EditableText from './EditableText'
 import EditableImage from './EditableImage'
 import GenericSectionEditor from './GenericSectionEditor'
 import { getTranslations, saveTranslations, clearTranslationsCache } from '../services/adminService'
-import { saveAllTranslationsToDB, saveImagePathToDB } from '../services/firebaseDB'
+import { saveAllTranslationsToDB, deleteImageFromDB } from '../services/firebaseDB'
 import { ensureSectionsArray, getSectionsArrays } from '../utils/sectionsUtils'
 import './About.css' // Reuse About styles for now
 import './GenericSections.css'
@@ -70,12 +70,12 @@ const GenericSections = () => {
       const imageKey = sectionToDelete?.imageKey
       if (imageKey) {
         try {
-          await saveImagePathToDB(imageKey, null)
+          await deleteImageFromDB(imageKey)
           if (typeof localStorage !== 'undefined') {
             localStorage.removeItem(`image_${imageKey}`)
           }
         } catch (imgErr) {
-          console.warn('Could not clear section image from storage:', imgErr)
+          console.warn('Could not delete section image from images list:', imgErr)
         }
       }
 

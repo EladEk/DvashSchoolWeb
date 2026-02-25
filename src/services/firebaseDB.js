@@ -477,6 +477,28 @@ export const saveImagePathToDB = async (imageKey, imagePath) => {
 }
 
 /**
+ * Delete an image from the images collection (removes the key from the images list on publish/export).
+ * Call this when deleting a section that had an imageKey so the image entry is no longer included.
+ * @param {string} imageKey - Image key (e.g. 'section.image4')
+ * @returns {Promise<{success: boolean}>}
+ */
+export const deleteImageFromDB = async (imageKey) => {
+  try {
+    if (!db || !imageKey) return { success: true }
+    const imageDocRef = doc(db, 'images', imageKey)
+    const snapshot = await getDoc(imageDocRef)
+    if (snapshot.exists()) {
+      await deleteDoc(imageDocRef)
+    }
+    websiteCache.clearKeysByPrefix(`image_${imageKey}`, 'edit')
+    websiteCache.clearKeysByPrefix(`image_${imageKey}`, 'public')
+    return { success: true }
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
  * Load image path (ImageKit URL).
  * - Edit mode (admin): read from Firebase DB.
  * - Public mode: read from Git file (content/texts.json).
@@ -1750,6 +1772,7 @@ export default {
   // Images
   saveImagePathToDB,
   loadImagePathFromDB,
+  deleteImageFromDB,
   // Parliament
   loadParliamentDates,
   createParliamentDate,
