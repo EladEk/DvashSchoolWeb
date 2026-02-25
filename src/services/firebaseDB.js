@@ -477,8 +477,10 @@ export const saveImagePathToDB = async (imageKey, imagePath) => {
 }
 
 /**
- * Load image path (ImageKit URL) from Firebase or GitHub JSON.
- * Uses website cache (public/edit) so switching modes does not hit DB/Git every time.
+ * Load image path (ImageKit URL).
+ * - Edit mode (admin): read from Firebase DB.
+ * - Public mode: read from Git file (content/texts.json).
+ * Uses website cache per mode so switching does not hit DB/Git every time.
  * @param {string} imageKey - Image key
  * @param {boolean} forceRefresh - If true, bypass cache and fetch from source
  * @returns {Promise<string|null>} ImageKit path/URL or null
@@ -494,6 +496,7 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
     if (cached !== null && cached !== undefined) return cached
   }
 
+  // Public mode: load from Git file (content/texts.json), not from DB
   if (!isEditModeForImages()) {
     try {
       const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL.replace(/\/+$/, '') : ''
@@ -521,6 +524,7 @@ export const loadImagePathFromDB = async (imageKey, forceRefresh = false) => {
     }
   }
 
+  // Edit mode: load from Firebase DB only
   try {
     if (!db) return websiteCache.get(cacheKey, 'edit') ?? null
     const imageDoc = await getDoc(doc(db, 'images', imageKey))
