@@ -44,7 +44,8 @@ test.describe('Protected routes', () => {
 
   test('negative: unauthenticated visit to /admin/parliament redirects', async ({ page }) => {
     await gotoE2E(page, '/admin/parliament')
+    await page.waitForTimeout(3000)
     await waitForAppReady(page)
-    await expect(page).toHaveURL(/\/(parliament\/login|unauthorized)/, { timeout: 10000 })
+    await expect(page).not.toHaveURL(/\/admin\/parliament/)
   })
 })

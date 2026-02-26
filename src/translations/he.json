@@ -10,7 +10,9 @@
     "publish": "פרסם",
     "saveJsonFiles": "שמור קבצי JSON",
     "exportAll": "הורד הכל (Git + DB)",
-    "clearSiteCache": "נקה מטמון"
+    "clearSiteCache": "נקה מטמון",
+    "testDashboard": "לוח בדיקות",
+    "testDashboardTitle": "פתח לוח תוצאות בדיקות (הרץ Sanity, הרץ הכל, צפה בתוצאות)"
   },
   "nav": {
     "parliament": "פרלמנט"
@@ -144,7 +146,13 @@
     "addSummary": "הוסף סיכום",
     "editSummary": "ערוך סיכום",
     "saveSummaryError": "שגיאה בשמירת סיכום",
-    "saving": "שומר..."
+    "saving": "שומר...",
+    "deleteTestData": "מחק נתוני בדיקה (E2E)",
+    "deleteTestDataTitle": "מוחק תאריכים ונושאים שמתחילים ב-E2E (נתוני בדיקה)",
+    "deleteTestDataConfirm": "למחוק את כל נתוני הבדיקה (תאריכים ונושאים שמתחילים ב-\"E2E \")?",
+    "testDataDeleted": "נמחקו נתוני בדיקה:",
+    "dates": "תאריכים",
+    "notes": "הערות"
   },
   "parliamentLogin": {
     "loginTitle": "התחבר לפרלמנט",

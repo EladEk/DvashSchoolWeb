@@ -7,9 +7,13 @@ import { MemoryRouter } from 'react-router-dom'
 import AdminRoute from '../../src/components/AdminRoute'
 
 const useEffectiveRole = vi.fn()
-vi.mock('../../src/utils/requireRole', () => ({
-  useEffectiveRole: () => useEffectiveRole(),
-}))
+vi.mock('../../src/utils/requireRole', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useEffectiveRole: () => useEffectiveRole(),
+  }
+})
 
 describe('AdminRoute', () => {
   beforeEach(() => {

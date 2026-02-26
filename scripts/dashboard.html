@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Test Dashboard</title>
+  <style>
+    :root { --bg: #0f0f12; --card: #1a1a20; --border: #2a2a32; --text: #e4e4e7; --muted: #71717a; --pass: #22c55e; --fail: #ef4444; --skip: #a1a1aa; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .top { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+    h1 { margin: 0; font-size: 1.5rem; font-weight: 600; }
+    .actions { display: flex; gap: 0.5rem; align-items: center; }
+    .btn { padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 0.875rem; }
+    .btn:hover { background: #25252c; }
+    .btn.primary { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+    .btn.primary:hover { background: #2563eb; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .summary { display: flex; gap: 1rem; padding: 1rem 1.5rem; flex-wrap: wrap; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; min-width: 140px; }
+    .card h3 { margin: 0 0 0.25rem 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    .card .num { font-size: 1.5rem; font-weight: 700; }
+    .card.backend .num { color: #38bdf8; }
+    .card.frontend .num { color: #a78bfa; }
+    .card.e2e .num { color: var(--pass); }
+    .main { padding: 0 1.5rem 1.5rem; }
+    .section { margin-bottom: 1.5rem; }
+    .section h2 { font-size: 1rem; margin: 0 0 0.75rem 0; color: var(--muted); }
+    .log-area { background: #0c0c0f; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; font-family: 'Consolas', monospace; font-size: 0.8rem; line-height: 1.5; max-height: 280px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+    .log-area:empty::before { content: 'Run Sanity or Run All to see live output here.'; color: var(--muted); }
+    .log-area.running { border-color: #3b82f6; }
+    table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+    th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: #16161a; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #1e1e24; }
+    .status-passed { color: var(--pass); font-weight: 500; }
+    .status-failed { color: var(--fail); font-weight: 500; }
+    .status-skipped { color: var(--skip); }
+    .status-not-run { color: var(--muted); font-style: italic; }
+    .actual { font-size: 0.8rem; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .actual.expand { white-space: pre-wrap; word-break: break-word; max-width: none; }
+    .run-cell { width: 72px; }
+    .run-test-btn { padding: 0.25rem 0.5rem; font-size: 0.75rem; cursor: pointer; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+    .run-test-btn:hover { background: var(--border); }
+    .run-test-btn.running { opacity: 0.7; pointer-events: none; }
+    .ts { font-size: 0.75rem; color: var(--muted); }
+    .empty { text-align: center; padding: 3rem; color: var(--muted); }
+    .filter { margin-bottom: 0.75rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+    .filter label { color: var(--muted); font-size: 0.875rem; }
+    .filter select { padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
+    .filter input { padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); min-width: 180px; }
+    #workers { padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); margin-right: 0.25rem; }
+    th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+    th.sortable:hover { color: var(--text); }
+    th .sort-icon { opacity: 0.5; margin-left: 0.25rem; }
+    td.actual-cell { cursor: pointer; max-width: 320px; }
+    td.actual-cell:hover { text-decoration: underline; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 2rem; }
+    .modal-backdrop.hidden { display: none; }
+    .modal-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; max-width: 90vw; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
+    .modal-box h3 { margin: 0; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+    .modal-box pre { margin: 0; padding: 1rem 1.25rem; overflow: auto; font-size: 0.8rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; flex: 1; color: var(--fail); }
+    .modal-box .modal-actions { padding: 0.75rem 1.25rem; border-top: 1px solid var(--border); }
+    .modal-box .modal-actions button { padding: 0.4rem 0.8rem; cursor: pointer; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <h1>Test Dashboard</h1>
+    <div class="actions">
+      <label for="workers" style="color: var(--muted); font-size: 0.875rem;">E2E workers:</label>
+      <select id="workers" title="Number of parallel Playwright workers (1–4)">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
+      <button type="button" class="btn primary" id="run-sanity">Run Sanity</button>
+      <button type="button" class="btn primary" id="run-all">Run All</button>
+      <button type="button" class="btn" id="refresh">Refresh results</button>
+      <button type="button" class="btn" id="refresh-list" title="Re-discover all E2E and unit tests (e.g. after adding new spec files)">Refresh test list</button>
+      <button type="button" class="btn" id="delete-test-data" title="Delete parliament dates and subjects created by E2E tests (titles starting with E2E )">Delete test data</button>
+    </div>
+  </header>
+
+  <div class="summary" id="summary">
+    <div class="card backend"><h3>Backend</h3><div class="num" id="sum-backend">–/–</div></div>
+    <div class="card frontend"><h3>Frontend</h3><div class="num" id="sum-frontend">–/–</div></div>
+    <div class="card e2e"><h3>E2E</h3><div class="num" id="sum-e2e">–/–</div></div>
+    <div class="card"><h3>Total</h3><div class="num" id="sum-total">– passed</div></div>
+  </div>
+
+  <div class="main">
+    <div class="section">
+      <h2>Running process</h2>
+      <pre class="log-area" id="log"></pre>
+    </div>
+    <div class="section">
+      <h2>All tests</h2>
+      <div class="filter">
+        <label>Layer:</label>
+        <select id="filter-layer">
+          <option value="">All</option>
+          <option value="Backend">Backend</option>
+          <option value="Frontend">Frontend</option>
+          <option value="E2E">E2E</option>
+        </select>
+        <label for="filter-search">Search:</label>
+        <input type="text" id="filter-search" placeholder="Layer, suite, test, error…" />
+        <label for="filter-status">Status:</label>
+        <select id="filter-status">
+          <option value="">All</option>
+          <option value="passed">Passed</option>
+          <option value="failed">Failed</option>
+          <option value="skipped">Skipped</option>
+          <option value="not-run">Not run</option>
+        </select>
+      </div>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="layer">Layer <span class="sort-icon" aria-hidden="true"></span></th>
+              <th class="sortable" data-sort="suite">Suite <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="name">Test <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="expected">Expected <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="status">Status <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="actual">Actual <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="duration">Duration <span class="sort-icon"></span></th>
+              <th class="run-cell">Run</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div id="details-modal" class="modal-backdrop hidden" aria-hidden="true">
+        <div class="modal-box">
+          <h3>Failure / details</h3>
+          <pre id="details-modal-body"></pre>
+          <div class="modal-actions">
+            <button type="button" id="details-modal-close">Close</button>
+          </div>
+        </div>
+      </div>
+      <p class="ts" id="generated-ts"></p>
+      <p class="empty" id="empty-msg" style="display:none;">No tests listed. Run Sanity or Run All to populate results; the list will refresh automatically.</p>
+    </div>
+  </div>
+
+  <script>
+    const logEl = document.getElementById('log')
+    const tbody = document.getElementById('tbody')
+    const runSanityBtn = document.getElementById('run-sanity')
+    const runAllBtn = document.getElementById('run-all')
+    const refreshBtn = document.getElementById('refresh')
+    const refreshListBtn = document.getElementById('refresh-list')
+    const deleteTestDataBtn = document.getElementById('delete-test-data')
+    const filterLayer = document.getElementById('filter-layer')
+    const filterSearch = document.getElementById('filter-search')
+    const filterStatus = document.getElementById('filter-status')
+    const emptyMsg = document.getElementById('empty-msg')
+    const generatedTs = document.getElementById('generated-ts')
+    const detailsModal = document.getElementById('details-modal')
+    const detailsModalBody = document.getElementById('details-modal-body')
+    const detailsModalClose = document.getElementById('details-modal-close')
+
+    let allRows = []
+    let sortCol = 'name'
+    let sortDir = 1
+
+    function setRunning(running) {
+      runSanityBtn.disabled = running
+      runAllBtn.disabled = running
+      logEl.classList.toggle('running', running)
+    }
+
+    function appendLog(text) {
+      logEl.textContent += text
+      logEl.scrollTop = logEl.scrollHeight
+    }
+
+    async function runSuite(kind) {
+      setRunning(true)
+      logEl.textContent = ''
+      const workers = Math.min(4, Math.max(1, parseInt(document.getElementById('workers').value, 10) || 1))
+      appendLog(`Starting ${kind} (${workers} worker(s))...\n\n`)
+      try {
+        const res = await fetch(`/api/run-${kind}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workers })
+        })
+        if (!res.ok) {
+          appendLog(`Error: ${res.status}\n`)
+          return
+        }
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          appendLog(decoder.decode(value, { stream: true }))
+        }
+        appendLog('\n\nDone. Refreshing results...\n')
+        await loadResults()
+      } catch (e) {
+        appendLog('Error: ' + e.message + '\n')
+      } finally {
+        setRunning(false)
+      }
+    }
+
+    function getFilteredRows() {
+      let list = allRows
+      const layerVal = filterLayer.value || ''
+      if (layerVal) list = list.filter(r => r.layer === layerVal)
+      const statusVal = filterStatus.value || ''
+      if (statusVal) list = list.filter(r => (r.status || 'not-run') === statusVal)
+      const q = (filterSearch.value || '').trim().toLowerCase()
+      if (q) {
+        list = list.filter(r => {
+          const layer = (r.layer || '').toLowerCase()
+          const suite = (r.suite || '').toLowerCase()
+          const name = (r.name || '').toLowerCase()
+          const actual = (r.actual || '').toLowerCase()
+          return layer.includes(q) || suite.includes(q) || name.includes(q) || actual.includes(q)
+        })
+      }
+      return list
+    }
+
+    function getSortedRows() {
+      const list = getFilteredRows().slice()
+      const key = sortCol
+      const mult = sortDir
+      list.sort((a, b) => {
+        let va = a[key]
+        let vb = b[key]
+        if (key === 'duration') {
+          va = Number(va) || 0
+          vb = Number(vb) || 0
+          return mult * (va - vb)
+        }
+        va = (va == null ? '' : String(va)).toLowerCase()
+        vb = (vb == null ? '' : String(vb)).toLowerCase()
+        return mult * (va < vb ? -1 : va > vb ? 1 : 0)
+      })
+      return list
+    }
+
+    function renderSortIcons() {
+      document.querySelectorAll('th.sortable').forEach((th) => {
+        const col = th.dataset.sort
+        const icon = th.querySelector('.sort-icon')
+        if (!icon || !col) return
+        icon.textContent = col === sortCol ? (sortDir === 1 ? ' ▲' : ' ▼') : ''
+      })
+    }
+
+    function renderTable() {
+      const rows = getSortedRows()
+      if (rows.length === 0) {
+        tbody.innerHTML = ''
+        emptyMsg.style.display = allRows.length ? 'none' : 'block'
+        renderSortIcons()
+        return
+      }
+      emptyMsg.style.display = 'none'
+      tbody.innerHTML = rows.map((r) => {
+        const actualShort = (r.actual || '').slice(0, 80)
+        const actualDisplay = actualShort + ((r.actual && r.actual.length > 80) ? '…' : '')
+        const hasDetails = (r.actual && r.actual.length > 0) || r.status === 'failed'
+        return `
+        <tr data-runner="${escapeAttr(r.runner)}" data-target="${escapeAttr(r.target)}">
+          <td>${escapeHtml(r.layer)}</td>
+          <td>${escapeHtml(r.suite)}</td>
+          <td>${escapeHtml(r.name)}</td>
+          <td>${escapeHtml(r.expected)}</td>
+          <td class="status-${r.status || 'not-run'}">${escapeHtml(r.status === 'not-run' ? 'Not run' : (r.status || 'Not run'))}</td>
+          <td class="actual-cell" data-actual="${escapeAttr(r.actual || '')}" title="${hasDetails ? 'Click for full details' : ''}">${escapeHtml(actualDisplay)}</td>
+          <td>${r.duration ? Math.round(r.duration) + 'ms' : '–'}</td>
+          <td><button type="button" class="run-test-btn">Run</button></td>
+        </tr>
+      `}).join('')
+      renderSortIcons()
+      tbody.querySelectorAll('.actual-cell').forEach(cell => {
+        cell.addEventListener('click', () => {
+          const text = cell.getAttribute('data-actual') || ''
+          if (text) {
+            detailsModalBody.textContent = text
+            detailsModal.classList.remove('hidden')
+            detailsModal.setAttribute('aria-hidden', 'false')
+          }
+        })
+      })
+      tbody.querySelectorAll('.run-test-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const tr = btn.closest('tr')
+          const runner = tr.dataset.runner
+          const target = tr.dataset.target
+          if (!runner || !target) return
+          btn.classList.add('running')
+          btn.textContent = '…'
+          try {
+            const res = await fetch('/api/run-test', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ runner, target })
+            })
+            const data = await res.json()
+            const statusCell = tr.querySelector('td:nth-child(5)')
+            const actualCell = tr.querySelector('td:nth-child(6)')
+            const actual = (data.result?.actual ?? data.output ?? data.actual ?? '') || ''
+            if (statusCell) {
+              statusCell.className = 'status-' + (data.status === 'passed' ? 'passed' : data.status === 'failed' ? 'failed' : data.status === 'skipped' ? 'skipped' : 'not-run')
+              statusCell.textContent = data.status || 'done'
+            }
+            if (actualCell) {
+              actualCell.setAttribute('data-actual', actual)
+              const display = actual.slice(0, 80) + (actual.length > 80 ? '…' : '')
+              actualCell.innerHTML = escapeHtml(display)
+              actualCell.title = 'Click for full details'
+            }
+          } catch (e) {
+            tr.querySelector('td:nth-child(5)').textContent = 'error'
+            const actualCell = tr.querySelector('td:nth-child(6)')
+            actualCell.textContent = e.message
+            actualCell.setAttribute('data-actual', e.message)
+          }
+          btn.classList.remove('running')
+          btn.textContent = 'Run'
+        })
+      })
+    }
+
+    function escapeHtml(s) {
+      if (s == null) return ''
+      const div = document.createElement('div')
+      div.textContent = s
+      return div.innerHTML
+    }
+    function escapeAttr(s) {
+      if (s == null) return ''
+      return String(s).replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    }
+
+    function updateSummary(summary) {
+      const by = summary?.byLayer || {}
+      const b = by.Backend || {}
+      const f = by.Frontend || {}
+      const e = by.E2E || {}
+      document.getElementById('sum-backend').textContent = `${b.passed || 0}/${b.total || 0}`
+      document.getElementById('sum-frontend').textContent = `${f.passed || 0}/${f.total || 0}`
+      document.getElementById('sum-e2e').textContent = `${e.passed || 0}/${e.total || 0}`
+      document.getElementById('sum-total').textContent = `${summary?.passed ?? 0} passed, ${summary?.failed ?? 0} failed, ${summary?.skipped ?? 0} skipped`
+    }
+
+    async function loadResults(forceRefreshList) {
+      try {
+        const url = forceRefreshList ? '/api/tests/list?refresh=1' : '/api/tests/list'
+        if (forceRefreshList) refreshListBtn.disabled = true
+        const res = await fetch(url)
+        const data = await res.json()
+        allRows = data.rows || data.tests || []
+        const summary = data.summary || {}
+        updateSummary(summary)
+        renderTable()
+        generatedTs.textContent = data.generatedAt ? 'Last run: ' + new Date(data.generatedAt).toLocaleString() : (allRows.length ? 'Test list loaded. Run Sanity or Run All to see results.' : '')
+      } catch {
+        updateSummary({})
+        allRows = []
+        renderTable()
+        generatedTs.textContent = ''
+      } finally {
+        if (forceRefreshList) refreshListBtn.disabled = false
+      }
+    }
+
+    function hideDetailsModal() {
+      detailsModal.classList.add('hidden')
+      detailsModal.setAttribute('aria-hidden', 'true')
+    }
+    detailsModalClose.addEventListener('click', hideDetailsModal)
+    detailsModal.addEventListener('click', (e) => { if (e.target === detailsModal) hideDetailsModal() })
+
+    async function deleteTestData() {
+      if (!confirm('Delete all parliament test data (dates and subjects whose titles start with "E2E ")?')) return
+      deleteTestDataBtn.disabled = true
+      try {
+        const res = await fetch('/api/delete-test-data', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        const data = await res.json().catch(() => ({}))
+        if (data.error) {
+          alert('Delete test data failed: ' + data.error)
+        } else {
+          const msg = `Deleted: ${data.deletedDates ?? 0} dates, ${data.deletedSubjects ?? 0} subjects, ${data.deletedNotes ?? 0} notes.`
+          appendLog(msg + '\n')
+          alert(msg)
+        }
+      } catch (e) {
+        appendLog('Delete test data error: ' + e.message + '\n')
+        alert('Delete test data failed: ' + e.message)
+      } finally {
+        deleteTestDataBtn.disabled = false
+      }
+    }
+
+    runSanityBtn.addEventListener('click', () => runSuite('sanity'))
+    runAllBtn.addEventListener('click', () => runSuite('all'))
+    refreshBtn.addEventListener('click', () => loadResults(false))
+    refreshListBtn.addEventListener('click', () => loadResults(true))
+    deleteTestDataBtn.addEventListener('click', deleteTestData)
+    filterLayer.addEventListener('change', () => renderTable())
+    filterStatus.addEventListener('change', () => renderTable())
+    filterSearch.addEventListener('input', () => renderTable())
+    filterSearch.addEventListener('keyup', (e) => { if (e.key === 'Enter') renderTable() })
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.sort
+        if (!col) return
+        if (sortCol === col) sortDir = -sortDir
+        else { sortCol = col; sortDir = 1 }
+        renderTable()
+      })
+    })
+
+    loadResults()
+  </script>
+</body>
+</html>

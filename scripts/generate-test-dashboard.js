@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(__dirname, '..')
-const testResultsDir = path.join(projectRoot, 'test-results')
+const testResultsDir = path.join(projectRoot, 'test-results-dashboard')
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
@@ -40,7 +40,7 @@ function parseVitestResults(data) {
         name,
         expected: name,
         status,
-        actual: actual.slice(0, 200),
+        actual: actual.slice(0, 2000),
         duration: a.duration ?? 0,
         runner: 'vitest',
         target: a.fullName || a.title || name,
@@ -60,16 +60,17 @@ function parsePlaywrightResults(data) {
       const specTitle = spec.title || 'spec'
       const fullTitle = title ? `${title} > ${specTitle}` : specTitle
       for (const test of spec.tests || []) {
-        const outcome = test.results?.[0]?.status || test.outcome || 'unknown'
-        const status = outcome === 'expected' ? 'passed' : outcome === 'unexpected' ? 'failed' : 'skipped'
-        const err = test.results?.[0]?.error?.message
+        const resultStatus = test.results?.[0]?.status
+        const outcome = test.status || test.outcome
+        const status = resultStatus === 'passed' ? 'passed' : resultStatus === 'failed' ? 'failed' : outcome === 'expected' ? 'passed' : outcome === 'unexpected' ? 'failed' : 'skipped'
+        const err = test.results?.[0]?.error?.message || test.results?.[0]?.error?.stack || ''
         rows.push({
           layer: 'E2E',
           suite: spec.file || 'e2e',
           name: fullTitle,
           expected: fullTitle,
           status,
-          actual: err ? err.slice(0, 200) : (status === 'passed' ? 'Pass' : ''),
+          actual: err ? err.slice(0, 2000) : (status === 'passed' ? 'Pass' : ''),
           duration: test.results?.[0]?.duration ?? 0,
           runner: 'playwright',
           target: fullTitle,
@@ -220,6 +221,8 @@ function main() {
   fs.writeFileSync(dashboardPath, html, 'utf-8')
   const dataPath = path.join(testResultsDir, 'dashboard-data.json')
   fs.writeFileSync(dataPath, JSON.stringify({ rows, summary, generatedAt: new Date().toISOString() }, null, 2), 'utf-8')
+  const allTestsPath = path.join(testResultsDir, 'all-tests.json')
+  fs.writeFileSync(allTestsPath, JSON.stringify({ tests: rows, generatedAt: new Date().toISOString() }, null, 2), 'utf-8')
   console.log('Dashboard written to', dashboardPath)
   console.log('Total tests:', rows.length, '| Passed:', summary.passed, '| Failed:', summary.failed)
 }

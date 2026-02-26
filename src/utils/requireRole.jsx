@@ -1,6 +1,6 @@
 // Role-based access control utilities
 import { useState, useEffect } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { resolveUserRoles } from '../services/firebaseDB'
 
 export const UserRole = {
@@ -146,8 +146,10 @@ export function useEffectiveRole() {
 }
 
 export const RequireRole = ({ allowed, children }) => {
+  const location = useLocation()
   const { phase, roles } = useEffectiveRole()
   const hasAllowed = Array.isArray(allowed) && allowed.length && roles.some(r => allowed.includes(r))
+  const search = location.search || ''
 
   if (phase === 'checking') {
     return (
@@ -157,10 +159,10 @@ export const RequireRole = ({ allowed, children }) => {
     )
   }
   if (phase === 'none') {
-    return <Navigate to="/" replace />
+    return <Navigate to={search ? `/${search}` : '/'} replace />
   }
   if (phase === 'denied' || !hasAllowed) {
-    return <Navigate to="/unauthorized" replace />
+    return <Navigate to={`/unauthorized${search}`} replace />
   }
   return <>{children}</>
 }

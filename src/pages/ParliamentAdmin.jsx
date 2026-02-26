@@ -15,6 +15,7 @@ import {
   loadParliamentHistory,
   addSubjectDecision,
   updateParliamentSummary,
+  deleteParliamentTestData,
 } from '../services/firebaseDB'
 import './Parliament.css'
 
@@ -64,6 +65,8 @@ export default function ParliamentAdmin() {
   const [editingParliamentId, setEditingParliamentId] = useState(null)
   const [parliamentSummary, setParliamentSummary] = useState('')
   const [updatingSummary, setUpdatingSummary] = useState(false)
+  const [deletingTestData, setDeletingTestData] = useState(false)
+  const [testDataDeleteResult, setTestDataDeleteResult] = useState(null)
 
   const session = useMemo(() => {
     try {
@@ -292,6 +295,41 @@ export default function ParliamentAdmin() {
     setNewDateTitle('')
     setNewDateWhen('')
     setShowCreateDateModal(true)
+  }
+
+  async function handleDeleteTestData() {
+    const confirmMsg = t('parliament.deleteTestDataConfirm') || 'למחוק את כל נתוני הבדיקה (תאריכים ונושאים שמתחילים ב-"E2E ")?'
+    if (!window.confirm(confirmMsg)) return
+    setDeletingTestData(true)
+    setTestDataDeleteResult(null)
+    try {
+      const result = await deleteParliamentTestData()
+      setTestDataDeleteResult(result)
+      await loadDates()
+      const loadSubjects = async () => {
+        try {
+          const allSubjects = await loadParliamentSubjects(null, true)
+          const pendingList = allSubjects.filter(s => s.status === 'pending')
+          const approvedList = allSubjects.filter(s => s.status === 'approved')
+          const rejectedList = allSubjects.filter(s => s.status === 'rejected')
+          const sortFn = (a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt)
+          pendingList.sort(sortFn)
+          approvedList.sort(sortFn)
+          rejectedList.sort(sortFn)
+          setPending(pendingList)
+          setApproved(approvedList)
+          setRejected(rejectedList)
+        } catch (e) {
+          console.error(e)
+        }
+      }
+      await loadSubjects()
+    } catch (err) {
+      console.error(err)
+      setTestDataDeleteResult({ error: err.message })
+    } finally {
+      setDeletingTestData(false)
+    }
   }
 
   function openEditDateModal(d) {
@@ -773,11 +811,31 @@ export default function ParliamentAdmin() {
 
       {tab === 'dates' && (
         <section className="parliament-section">
-          <div className="parliament-actions" style={{ marginBottom: 12 }}>
+          <div className="parliament-actions" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
             <button className="btn btn-primary" onClick={openCreateDateModal}>
               {t('parliament.createNewParliament') || 'יצירת פרלמנט חדש'}
             </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={handleDeleteTestData}
+              disabled={deletingTestData}
+              title={t('parliament.deleteTestDataTitle') || 'מוחק תאריכים ונושאים שמתחילים ב-E2E (נתוני בדיקה)'}
+              style={{ borderColor: 'var(--danger, #dc2626)', color: 'var(--danger, #dc2626)' }}
+            >
+              {deletingTestData ? (t('parliament.deleting') || 'מוחק...') : (t('parliament.deleteTestData') || 'מחק נתוני בדיקה (E2E)')}
+            </button>
           </div>
+          {testDataDeleteResult && !testDataDeleteResult.error && (
+            <p className="parliament-test-data-result" style={{ marginTop: 8, fontSize: '0.9em', color: 'var(--muted, #666)' }}>
+              {t('parliament.testDataDeleted') || 'נמחקו נתוני בדיקה:'} {testDataDeleteResult.deletedDates} {t('parliament.dates') || 'תאריכים'}, {testDataDeleteResult.deletedSubjects} {t('parliament.subjects') || 'נושאים'}, {testDataDeleteResult.deletedNotes} {t('parliament.notes') || 'הערות'}.
+            </p>
+          )}
+          {testDataDeleteResult?.error && (
+            <p className="parliament-test-data-error" style={{ marginTop: 8, fontSize: '0.9em', color: 'var(--danger, #dc2626)' }}>
+              {testDataDeleteResult.error}
+            </p>
+          )}
           <div className="parliament-grid">
             {dates.map(d => (
               <div className="parliament-card" key={d.id}>

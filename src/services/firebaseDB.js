@@ -1381,6 +1381,65 @@ export const deleteParliamentNote = async (noteId, subjectId = null) => {
   }
 }
 
+/** Prefix used by E2E tests for parliament dates and subjects */
+const E2E_TITLE_PREFIX = 'E2E '
+
+/**
+ * Delete all parliament test data (dates and subjects whose title starts with "E2E ").
+ * Also deletes notes for those subjects. Use after E2E runs to clean up.
+ * @returns {Promise<{ deletedDates: number, deletedSubjects: number, deletedNotes: number }>}
+ */
+export const deleteParliamentTestData = async () => {
+  if (!db) throw new Error('Firebase not configured')
+  const endPrefix = E2E_TITLE_PREFIX + '\uf8ff'
+  let deletedNotes = 0
+  let deletedSubjects = 0
+  let deletedDates = 0
+
+  // 1. Find subjects with title starting with "E2E "
+  const subjectsQ = query(
+    collection(db, 'parliamentSubjects'),
+    where('title', '>=', E2E_TITLE_PREFIX),
+    where('title', '<=', endPrefix)
+  )
+  const subjectsSnap = await getDocs(subjectsQ)
+  const subjectIds = subjectsSnap.docs.map(d => d.id)
+
+  // 2. For each subject, delete its notes then the subject
+  for (const subjectId of subjectIds) {
+    const notesQ = query(collection(db, 'parliamentNotes'), where('subjectId', '==', subjectId))
+    const notesSnap = await getDocs(notesQ)
+    for (const noteDoc of notesSnap.docs) {
+      await deleteDoc(doc(db, 'parliamentNotes', noteDoc.id))
+      deletedNotes++
+    }
+    await deleteDoc(doc(db, 'parliamentSubjects', subjectId))
+    deletedSubjects++
+  }
+
+  // 3. Find and delete dates with title starting with "E2E "
+  const datesQ = query(
+    collection(db, 'parliamentDates'),
+    where('title', '>=', E2E_TITLE_PREFIX),
+    where('title', '<=', endPrefix)
+  )
+  const datesSnap = await getDocs(datesQ)
+  for (const dateDoc of datesSnap.docs) {
+    await deleteDoc(doc(db, 'parliamentDates', dateDoc.id))
+    deletedDates++
+  }
+
+  // 4. Clear caches
+  clearCache(CACHE_KEYS.PARLIAMENT_DATES)
+  clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_all`)
+  clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_pending`)
+  clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_approved`)
+  clearCache(`${CACHE_KEYS.PARLIAMENT_SUBJECTS}_rejected`)
+  clearCache('firebase_cache_parliament_history')
+
+  return { deletedDates, deletedSubjects, deletedNotes }
+}
+
 // ============================================
 // USER OPERATIONS
 // ============================================
@@ -1786,6 +1845,7 @@ export default {
   createParliamentNote,
   updateParliamentNote,
   deleteParliamentNote,
+  deleteParliamentTestData,
   // Users
   loadUsers,
   findUserByUsername,

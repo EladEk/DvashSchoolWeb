@@ -13,7 +13,8 @@ const SKIP_LINK_TIMEOUT = 25000
  */
 export async function gotoE2E(page, path) {
   const sep = path.includes('?') ? '&' : '?'
-  await page.goto(`${path}${sep}e2e=1`)
+  const url = path.startsWith('http') ? path : `${path}${sep}e2e=1`
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.evaluate(() => {
     if (typeof location !== 'undefined' && location.search.indexOf('e2e=1') !== -1) {
       try {

@@ -40,7 +40,15 @@ test.describe('Admin dashboard export', () => {
     await expect(exportAllBtn).toBeVisible({ timeout: 15000 })
     await exportAllBtn.click()
     await page.waitForTimeout(3000)
-    await expect(page.locator('.admin-dashboard')).toBeVisible()
+    await expect(page.locator('.admin-dashboard')).toBeVisible({ timeout: 15000 })
+  })
+
+  test('edit mode: dashboard title and logout visible', async ({ page }) => {
+    await loginAsAdmin(page)
+    await gotoE2E(page, '/admin/dashboard')
+    await waitForAppReady(page)
+    await expect(page.locator('.admin-dashboard')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('.logout-btn')).toBeVisible({ timeout: 10000 })
   })
 
   test('אפס (Git → DB) button exists and is clickable', async ({ page }) => {

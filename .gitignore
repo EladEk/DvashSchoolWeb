@@ -31,4 +31,5 @@ COMPLETE_SETUP_GUIDE.md
 
 # Test outputs
 test-results/
+test-results-dashboard/
 playwright-report/

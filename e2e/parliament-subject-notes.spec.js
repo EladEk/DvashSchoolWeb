@@ -11,7 +11,7 @@ test.describe('Parliament subject and notes', () => {
     await gotoE2E(page, '/parliament')
     await waitForAppReady(page)
     await expect(page).toHaveURL(/\/parliament/)
-    await expect(page.locator('#main-content, .parliament-login-page, .parliament-card')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#main-content')).toBeVisible({ timeout: 10000 })
   })
 
   test('parliament page when logged in shows headline and either subject form or no-open-dates message', async ({ page }) => {

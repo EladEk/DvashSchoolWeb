@@ -10,7 +10,9 @@
     "publish": "Publish",
     "saveJsonFiles": "Save JSON Files",
     "exportAll": "Download all (Git + DB)",
-    "clearSiteCache": "Clear cache"
+    "clearSiteCache": "Clear cache",
+    "testDashboard": "Test dashboard",
+    "testDashboardTitle": "Open test results dashboard (Run Sanity, Run All, view results)"
   },
   "nav": {
     "parliament": "Parliament"
@@ -145,7 +147,13 @@
     "archiving": "Archiving...",
     "deleting": "Deleting...",
     "archive": "Archive",
-    "toggleDateError": "Error toggling date status"
+    "toggleDateError": "Error toggling date status",
+    "deleteTestData": "Delete test data (E2E)",
+    "deleteTestDataTitle": "Deletes dates and subjects whose titles start with E2E (test data)",
+    "deleteTestDataConfirm": "Delete all test data (dates and subjects whose titles start with \"E2E \")?",
+    "testDataDeleted": "Test data deleted:",
+    "dates": "dates",
+    "notes": "notes"
   },
   "parliamentLogin": {
     "loginTitle": "Login to Parliament",

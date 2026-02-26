@@ -12,7 +12,7 @@ const AdminRoute = ({ children, requireRole = null }) => {
     }
   })()
   const sessionRole = session?.role
-  const effectiveRoles = roles.length ? roles : (session?.roles || (session?.role ? [session.role] : []))
+  const effectiveRoles = (Array.isArray(roles) && roles.length) ? roles : (session?.roles || (session?.role ? [session.role] : []))
   const canEnterAdmin = hasEditAccess(effectiveRoles) || hasParliamentAdminAccess(effectiveRoles)
   const hasAdminSession = sessionStorage.getItem('adminAuthenticated') === 'true' || canEnterAdmin
   const effectiveRole = role || session?.role

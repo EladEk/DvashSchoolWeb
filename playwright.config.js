@@ -8,10 +8,14 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 1,
-  workers: process.env.CI ? 1 : 2,
+  workers: (() => {
+    const w = parseInt(process.env.PLAYWRIGHT_WORKERS || '', 10)
+    if (Number.isNaN(w) || w < 1) return process.env.CI ? 1 : 1
+    return Math.min(4, Math.max(1, w))
+  })(),
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
-    ['json', { outputFile: 'test-results/playwright-results.json' }],
+    ['json', { outputFile: 'test-results-dashboard/playwright-results.json' }],
   ],
   use: {
     baseURL,
