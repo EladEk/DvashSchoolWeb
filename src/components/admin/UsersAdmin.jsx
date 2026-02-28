@@ -59,6 +59,7 @@ export default function UsersAdmin() {
   const [permissionsModal, setPermissionsModal] = useState({ open: false, user: null })
   const [permissionsEdit, setPermissionsEdit] = useState([]) // roles array while editing in modal
   const [savingPermissions, setSavingPermissions] = useState(false)
+  const [deletingUserId, setDeletingUserId] = useState(null)
 
   const openPermissions = (user) => {
     const roles = Array.isArray(user.roles) ? [...user.roles] : (user.role ? [user.role] : ['student'])
@@ -241,10 +242,15 @@ export default function UsersAdmin() {
   async function removeUser(id) {
     if (!window.confirm('Are you sure?')) return
     try {
+      setDeletingUserId(id)
       await deleteUser(id)
+      const list = await loadUsers(true)
+      setItems(list)
       showToast('success', t('users.toasts.deleted') || 'User deleted')
     } catch (e) {
       showToast('error', t('users.toasts.deleteFail', { msg: e?.message || 'unknown' }) || 'Error deleting user')
+    } finally {
+      setDeletingUserId(null)
     }
   }
 
@@ -361,6 +367,12 @@ export default function UsersAdmin() {
 
       {/* Users table */}
       <div className="users-table-wrap">
+        {deletingUserId && (
+          <div className="users-table-loader" role="status" aria-live="polite">
+            <div className="users-table-loader-spinner" aria-hidden />
+            <p>{t('common.loading') || 'Loading…'}</p>
+          </div>
+        )}
         <table className="users-table">
           <thead>
             <tr>
@@ -393,8 +405,13 @@ export default function UsersAdmin() {
                     <button className="btn btn-small" onClick={() => openEdit(u)}>
                       {t('common.edit') || 'Edit'}
                     </button>
-                    <button className="btn btn-small btn-danger" onClick={() => removeUser(u.id)}>
-                      {t('common.delete') || 'Delete'}
+                    <button
+                      type="button"
+                      className="btn btn-small btn-danger"
+                      onClick={() => removeUser(u.id)}
+                      disabled={!!deletingUserId}
+                    >
+                      {deletingUserId === u.id ? (t('common.loading') || '…') : (t('common.delete') || 'Delete')}
                     </button>
                   </div>
                 </td>
