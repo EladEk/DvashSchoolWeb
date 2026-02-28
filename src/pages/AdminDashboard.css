@@ -33,20 +33,6 @@
   align-items: center;
 }
 
-.admin-actions .admin-link.test-dashboard-link {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--border-color, #ccc);
-  background: var(--card-bg, #f5f5f5);
-  color: var(--text-color, #333);
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
-.admin-actions .admin-link.test-dashboard-link:hover {
-  background: var(--hover-bg, #e8e8e8);
-}
-
 .admin-link {
   padding: 0.5rem 1rem;
   background-color: var(--text-on-primary);

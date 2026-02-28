@@ -367,15 +367,6 @@ const AdminDashboard = () => {
       <div className="admin-header">
         <h1>{t('admin.dashboard')}</h1>
         <div className="admin-actions">
-          <a
-            href={typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:3456` : 'http://localhost:3456'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="admin-link test-dashboard-link"
-            title={t('admin.testDashboardTitle') || 'Open test results dashboard (Run Sanity, Run All, view results)'}
-          >
-            {t('admin.testDashboard') || 'Test dashboard'}
-          </a>
           <button onClick={handleLogout} className="logout-btn">{t('common.logout')}</button>
         </div>
       </div>
